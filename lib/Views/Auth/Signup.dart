@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:retilda/Views/Auth/Signin.dart';
 import 'package:retilda/Views/Widgets/components.dart';
 import 'package:retilda/Views/Widgets/widgets.dart';
 import 'package:sizer/sizer.dart';
@@ -75,7 +76,7 @@ class _SignupState extends State<Signup> {
 
         CustomTextFormField(
           hintText: 'Password',
-          suffixIcon: Icons.lock,
+          suffixIcon: Icons.visibility_off,
           onChanged: (value) {
    
                     },
@@ -118,7 +119,10 @@ Padding(
 
       GestureDetector(
         onTap: () {
-          
+          Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => Signin()),
+            );
         },
         child: CustomText(
           'Sign in',
