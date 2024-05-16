@@ -21,7 +21,7 @@ class _CarouselPageViewState extends State<CarouselPageView> {
         Padding(
           padding: const EdgeInsets.only(top: 20,left: 20,right: 20),
           child: Container(
-            height: 25.h,
+            height: 22.h,
             child: PageView(
               controller: _controller,
               onPageChanged: (index) {

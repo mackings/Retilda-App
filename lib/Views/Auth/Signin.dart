@@ -1,152 +1,212 @@
 import 'package:flutter/material.dart';
 import 'package:retilda/Views/Auth/Signup.dart';
+import 'package:retilda/Views/Home/dashboard.dart';
 import 'package:retilda/Views/Home/home.dart';
 import 'package:retilda/Views/Widgets/components.dart';
+import 'package:retilda/Views/Widgets/dialogs.dart';
+import 'package:retilda/Views/Widgets/loader.dart';
 import 'package:retilda/Views/Widgets/widgets.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sizer/sizer.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class Signin extends StatefulWidget {
-  const Signin({super.key});
+  const Signin({Key? key}) : super(key: key);
 
   @override
   State<Signin> createState() => _SigninState();
 }
 
 class _SigninState extends State<Signin> {
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  bool _isLoading = false;
+
+
+Future<void> _login() async {
+  setState(() {
+    _isLoading = true;
+  });
+
+  try {
+    final Map<String, String> payload = {
+      'email': _emailController.text,
+      "password": _passwordController.text
+    };
+
+    final String payloadJson = jsonEncode(payload);
+
+    print('Request Payload: $payloadJson');
+
+    final url = Uri.parse('https://retilda.onrender.com/Api/login');
+    final response = await http.post(
+      url,
+      body: payloadJson,
+      headers: <String, String>{
+        'Content-Type': 'application/json',
+      },
+    );
+
+    if (response.statusCode == 200) {
+
+      print(response.body);
+      final responseData = jsonDecode(response.body);
+      final sharedPreferences = await SharedPreferences.getInstance();
+      await sharedPreferences.setString('userData', jsonEncode(responseData));
+      Navigator.push(
+          context, MaterialPageRoute(builder: (context) =>  HomePage()));
+
+    } else {
+      print(response.body);
+      final responseData = jsonDecode(response.body);
+
+      showDialog(
+        context: context,
+        builder: (context) {
+          return CustomAlertDialog(
+            title: 'Error',
+            titleColor: Colors.red,
+            message: responseData['message'],
+            onClosePressed: () {
+              // Handle close button press
+            },
+            onButtonPressed: () {
+            
+            },
+          );
+        },
+      );
+    }
+  } catch (e) {
+    print('Error: $e');
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Error'),
+        content: Text('An error occurred'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+            },
+            child: Text('OK'),
+          ),
+        ],
+      ),
+    );
+  } finally {
+    setState(() {
+      _isLoading = false;
+    });
+  }
+}
+
+
   @override
   Widget build(BuildContext context) {
-    return Sizer(
-      builder: (context, orientation, deviceType) {
-        return Scaffold(
+    return Scaffold(
       body: SingleChildScrollView(
         physics: BouncingScrollPhysics(),
         child: Center(
-          child: Column(
-            children: [
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                SizedBox(height: MediaQuery.of(context).size.height * 0.1),
+                CustomText(
+                  'Retilda',
+                  fontSize: 25.sp,
+                  fontWeight: FontWeight.bold,
+                  color: ROrange,
+                ),
+                SizedBox(height: 4.h),
+                CustomText(
+                  'Sign in',
+                  fontSize: 15.sp,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
+                SizedBox(height: 4.h),
+                CustomTextFormField(
+                  controller: _emailController,
+                  hintText: 'Email',
+                  suffixIcon: Icons.email,
+                  onChanged: (value) {},
+                ),
+                SizedBox(height: 4.h),
+                CustomTextFormField(
+                  controller: _passwordController,
+                  hintText: 'Password',
+                  suffixIcon: Icons.visibility_off,
+                  onChanged: (value) {},
+                ),
+                SizedBox(height: 2.h),
+                GestureDetector(
+                  onTap: () {
+                    // Forgot password action
+                  },
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: CustomText(
+                      'Forgot password',
+                      color: ROrange,
+                    ),
+                  ),
+                ),
+                SizedBox(height: MediaQuery.of(context).size.height * 0.05),
 
-              SizedBox(height: 7.h,),
-        
-        CustomText(
-          'Retilda',
-          fontSize: 25.sp,
-          fontWeight: FontWeight.bold,
-          color: ROrange,
-        ),
+                CustomBtn(
+                  text: _isLoading ? 'Signing in...' : 'Sign in',
+                  onPressed: _isLoading ? null : _login,
+                  backgroundColor: RButtoncolor,
+                  borderRadius: 20.0,
+                ),
 
-        SizedBox(height: 4.h,),
+                SizedBox(height: MediaQuery.of(context).size.height * 0.03),
+                Padding(
+                  padding: const EdgeInsets.only(left: 10),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    children: [
+                      CustomText(
+                        'New user? ',
+                        color: Colors.black,
+                      ),
+                      GestureDetector(
+                        onTap: () {
 
-        CustomText(
-          'Sign in',
-          fontSize: 15.sp,
-          fontWeight: FontWeight.bold,
-          color: Colors.black,
-        ),
-        
-        SizedBox(height: 4.h,),
-
-        CustomTextFormField(
-          hintText: 'Email',
-          suffixIcon: Icons.email,
-          onChanged: (value) {
-   
-                    },
-      ),
-
-
-        SizedBox(height: 4.h,),
-
-        CustomTextFormField(
-          hintText: 'Password',
-          suffixIcon: Icons.visibility_off,
-          onChanged: (value) {
-   
-                    },
-
-      ),
-
-
-
-
-Padding(
-  padding: EdgeInsets.only(left: 0.59 * MediaQuery.of(context).size.width, top: 0.02 * MediaQuery.of(context).size.height),
-  child: SizedBox(
-    width: MediaQuery.of(context).size.width,
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      mainAxisAlignment: MainAxisAlignment.center,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        GestureDetector(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => Signin()),
-            );
-          },
-          child: CustomText(
-            'Forgot password',
-            color: ROrange,
-          ),
-        ),
-      ],
-    ),
-  ),
-),
-
-SizedBox(height: 5.h,),
-
-CustomBtn(
-  text: 'Sign in',
-  onPressed: () {
-
-              Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => HomePage()),
-            );
-  },
-  backgroundColor: RButtoncolor,
-  borderRadius: 20.0,
-),
-
-Padding(
-  padding: EdgeInsets.only(right: 0.55 * MediaQuery.of(context).size.width, top: 0.02 * MediaQuery.of(context).size.height),
-  child: SizedBox(
-    width: MediaQuery.of(context).size.width,
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      mainAxisAlignment: MainAxisAlignment.center,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        CustomText(
-          'New user? ',
-          color: Colors.black,  
-        ),
-
-        GestureDetector(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => Signup()),
-            );
-          },
-          child: CustomText(
-            'Sign up',
-            color: ROrange,
-          ),
-        ),
-      ],
-    ),
-  ),
-),
-
-
-       
-            ],
+                          showDialog(
+                              context: context,
+                              builder: (context) {
+                                return CustomAlertDialog(
+                                  title: 'Success',
+                                  titleColor: Colors.red,
+                                  message: 'Your operation was successful.',
+                                  onClosePressed: () {
+                                    
+                                  },
+                                  onButtonPressed: () {
+                                    
+                                  },
+                                );
+                              });
+                        },
+                        child: CustomText(
+                          'Sign up',
+                          color: ROrange,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
-    );
-      },
     );
   }
 }

@@ -117,7 +117,7 @@ class CustomBtn extends StatelessWidget {
     final adjustedWidth = width - 16.0; 
 
     return Padding(
-      padding: const EdgeInsets.only(left: 20,right: 20),
+      padding: const EdgeInsets.only(left: 5,right: 5),
       child: Container(
         width: width,
         height: height,
