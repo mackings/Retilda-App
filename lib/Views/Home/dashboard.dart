@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:retilda/Views/Auth/Signin.dart';
 import 'package:retilda/Views/Auth/Signup.dart';
+import 'package:retilda/Views/Products/Allproducts.dart';
 import 'package:retilda/Views/Widgets/bottomnavbar.dart';
 import 'package:retilda/Views/Widgets/carousel.dart';
 import 'package:retilda/Views/Widgets/components.dart';
@@ -100,111 +101,120 @@ class _DashboardState extends ConsumerState<Dashboard> {
     return Sizer(
       builder: (context, orientation, deviceType) {
         return Scaffold(
-  body: SingleChildScrollView(
-    physics: BouncingScrollPhysics(),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        SizedBox(height: MediaQuery.of(context).size.height * 0.08),
-        SearchContainer(
-          controller: searchcontroller,
-          onFilterPressed: () {},
-        ),
+          body: SingleChildScrollView(
+            physics: BouncingScrollPhysics(),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                SizedBox(height: MediaQuery.of(context).size.height * 0.08),
+                SearchContainer(
+                  controller: searchcontroller,
+                  onFilterPressed: () {},
+                ),
+                SizedBox(
+                  height: 30.h,
+                  child: PageView(
+                    children: [
+                      CarouselPageView(),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(left: 30),
+                  child: Row(
+                    children: [
+                      CustomText(
+                        "Categories",
+                        fontSize: 12.sp,
+                        color: ROrange,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ],
+                  ),
+                ),
 
-        SizedBox(
-          height: 30.h,
-          child: PageView(
-            children: [
-              CarouselPageView(),
-            ],
-          ),
-        ),
+                SizedBox(
+                  height: 20.h,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: SliderWidget(items: [
+                      SliderItem(imagePath: 'assets/t1.jpg', text: 'Item 1'),
+                      SliderItem(imagePath: 'assets/k1.jpg', text: 'Item 2'),
+                      SliderItem(imagePath: 'assets/k1.jpg', text: 'Item 3'),
+                    ]),
+                  ),
+                ),
+                
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 30),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      CustomText(
+                        "Products",
+                        fontSize: 12.sp,
+                        color: ROrange,
+                        fontWeight: FontWeight.w600,
+                      ),
 
-        Padding(
-          padding: const EdgeInsets.only(left: 30),
-          child: Row(
-            children: [
-              CustomText(
-                "Categories",
-                fontSize: 12.sp,
-                color: ROrange,
-                fontWeight: FontWeight.w600,
-              ),
-            ],
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) => Allproducts()));
+                        },
+                        child: CustomText(
+                          "View all",
+                          fontSize: 12.sp,
+                          color: RButtoncolor,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Padding(
+                    padding: const EdgeInsets.only(top: 20),
+                    child: Token != null
+                        ? FutureBuilder<ApiResponse>(
+                            future: fetchData(Token!),
+                            builder: (context, snapshot) {
+                              if (snapshot.connectionState ==
+                                  ConnectionState.waiting) {
+                                return Center(
+                                  child: CircularProgressIndicator(),
+                                );
+                              } else if (snapshot.hasError) {
+                                return Center(
+                                  child: Text('Error loading products'),
+                                );
+                              } else if (snapshot.hasData) {
+                                return GridView.count(
+                                  crossAxisCount: 2,
+                                  shrinkWrap: true,
+                                  physics: NeverScrollableScrollPhysics(),
+                                  mainAxisSpacing: 10,
+                                  crossAxisSpacing: 10,
+                                  padding: EdgeInsets.symmetric(horizontal: 30),
+                                  children: snapshot.data!.data
+                                      .take(4)
+                                      .map((product) =>
+                                          ProductItem(product: product))
+                                      .toList(),
+                                );
+                              } else {
+                                return Center(
+                                  child: Text('No products available'),
+                                );
+                              }
+                            },
+                          )
+                        : CircularProgressIndicator()),
+              ],
+            ),
           ),
-        ),
-        SizedBox(
-          height: 20.h,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: SliderWidget(items: [
-              SliderItem(imagePath: 'assets/t1.jpg', text: 'Item 1'),
-              SliderItem(imagePath: 'assets/k1.jpg', text: 'Item 2'),
-              SliderItem(imagePath: 'assets/k1.jpg', text: 'Item 3'),
-            ]),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 30),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              CustomText(
-                "Products",
-                fontSize: 12.sp,
-                color: ROrange,
-                fontWeight: FontWeight.w600,
-              ),
-              CustomText(
-                "View all",
-                fontSize: 12.sp,
-                color: RButtoncolor,
-                fontWeight: FontWeight.w600,
-              ),
-            ],
-          ),
-        ),
-
-        Padding(
-          padding: const EdgeInsets.only(top: 20),
-          
-          child: Token != null? FutureBuilder<ApiResponse>(
-            future: fetchData(Token!),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return Center(
-                  child: CircularProgressIndicator(),
-                );
-              } else if (snapshot.hasError) {
-                return Center(
-                  child: Text('Error loading products'),
-                );
-              } else if (snapshot.hasData) {
-                return GridView.count(
-                  crossAxisCount: 2,
-                  shrinkWrap: true,
-                  physics: NeverScrollableScrollPhysics(),
-                  mainAxisSpacing: 10,
-                  crossAxisSpacing: 10,
-                  padding: EdgeInsets.symmetric(horizontal: 30),
-                  children: snapshot.data!.data
-                      .take(4)
-                      .map((product) => ProductItem(product: product))
-                      .toList(),
-                );
-              } else {
-                return Center(
-                  child: Text('No products available'),
-                );
-              }
-            },
-          ):CircularProgressIndicator()
-        ),
-      ],
-    ),
-  ),
-);
-
+        );
       },
     );
   }

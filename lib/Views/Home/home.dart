@@ -76,6 +76,7 @@ class _HomePageState extends State<HomePage> {
         selectedItemColor: ROrange,
         unselectedItemColor: Colors.grey,
         onTap: _onItemTapped,
+        elevation: 0,
 
       ),
     );
