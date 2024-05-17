@@ -89,7 +89,7 @@ class _AllproductsState extends ConsumerState<Allproducts> {
           child: CircularProgressIndicator(), 
         )
       : Padding(
-          padding: const EdgeInsets.all(8.0),
+          padding: const EdgeInsets.all(5.0),
           child: GridView.builder(
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 2,

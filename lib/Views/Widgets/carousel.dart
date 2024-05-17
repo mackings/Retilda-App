@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:retilda/Views/Widgets/widgets.dart';
 import 'package:sizer/sizer.dart';
 
 class SliderWidget extends StatelessWidget {
@@ -33,6 +34,7 @@ class RowOfContainers extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
+              
               Container(
                 width: 20.h, 
                 height: 20.w, 
@@ -45,7 +47,10 @@ class RowOfContainers extends StatelessWidget {
           ),
               ),
               SizedBox(height: 10),
-              Text(item.text),
+              
+              CustomText(item.text,
+              fontWeight: FontWeight.w600,
+              fontSize: 9.sp,)
             ],
           ),
         );

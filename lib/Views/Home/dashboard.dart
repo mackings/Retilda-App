@@ -133,17 +133,21 @@ class _DashboardState extends ConsumerState<Dashboard> {
                   ),
                 ),
 
+                SizedBox(height: 2.h,),
+
                 SizedBox(
                   height: 20.h,
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    padding: const EdgeInsets.symmetric(horizontal: 20,),
                     child: SliderWidget(items: [
-                      SliderItem(imagePath: 'assets/t1.jpg', text: 'Item 1'),
-                      SliderItem(imagePath: 'assets/k1.jpg', text: 'Item 2'),
-                      SliderItem(imagePath: 'assets/k1.jpg', text: 'Item 3'),
+                      SliderItem(imagePath: 'assets/t1.jpg', text: 'Home Appliances'),
+                      SliderItem(imagePath: 'assets/wm2.jpg', text: 'Washing Machines'),
+                      SliderItem(imagePath: 'assets/k1.jpg', text: 'Kitchen Utensils'),
                     ]),
                   ),
                 ),
+
+                SizedBox(height: 3.h,),
                 
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 30),
@@ -174,43 +178,50 @@ class _DashboardState extends ConsumerState<Dashboard> {
                     ],
                   ),
                 ),
-                Padding(
-                    padding: const EdgeInsets.only(top: 20),
-                    child: Token != null
-                        ? FutureBuilder<ApiResponse>(
-                            future: fetchData(Token!),
-                            builder: (context, snapshot) {
-                              if (snapshot.connectionState ==
-                                  ConnectionState.waiting) {
-                                return Center(
-                                  child: CircularProgressIndicator(),
-                                );
-                              } else if (snapshot.hasError) {
-                                return Center(
-                                  child: Text('Error loading products'),
-                                );
-                              } else if (snapshot.hasData) {
-                                return GridView.count(
-                                  crossAxisCount: 2,
-                                  shrinkWrap: true,
-                                  physics: NeverScrollableScrollPhysics(),
-                                  mainAxisSpacing: 10,
-                                  crossAxisSpacing: 10,
-                                  padding: EdgeInsets.symmetric(horizontal: 30),
-                                  children: snapshot.data!.data
-                                      .take(4)
-                                      .map((product) =>
-                                          ProductItem(product: product))
-                                      .toList(),
-                                );
-                              } else {
-                                return Center(
-                                  child: Text('No products available'),
-                                );
-                              }
-                            },
-                          )
-                        : CircularProgressIndicator()),
+
+                Token != null
+                    ? FutureBuilder<ApiResponse>(
+                        future: fetchData(Token!),
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState ==
+                              ConnectionState.waiting) {
+                            return Center(
+                              child: CircularProgressIndicator(),
+                            );
+                          } else if (snapshot.hasError) {
+                            return Center(
+                              child: Text('Error loading products'),
+                            );
+                          } else if (snapshot.hasData) {
+                            return Padding(
+                              padding: const EdgeInsets.only(left: 20,right: 20),
+                              child: GridView.count(
+                                crossAxisCount: 2,
+                                shrinkWrap: true,
+                                mainAxisSpacing: 10,
+                                crossAxisSpacing: 10,
+                                padding: EdgeInsets.symmetric(horizontal: 3),
+                                children: snapshot.data!.data
+                                    .take(4)
+                                    .map(
+                                      (product) => ProductCard2(
+                                        product: product,
+                                        onTap: () {},
+                                      ),
+                                    )
+                                    .toList(),
+                              ),
+                            );
+
+
+                          } else {
+                            return Center(
+                              child: Text('No products available'),
+                            );
+                          }
+                        },
+                      )
+                    : CircularProgressIndicator(),
               ],
             ),
           ),
