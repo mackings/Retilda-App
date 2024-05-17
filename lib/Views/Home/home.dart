@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:retilda/Views/Auth/Signin.dart';
 import 'package:retilda/Views/Auth/Signup.dart';
 import 'package:retilda/Views/Home/dashboard.dart';
+import 'package:retilda/Views/Wallet/Purchasehistory.dart';
 import 'package:retilda/Views/Widgets/bottomnavbar.dart';
 import 'package:retilda/Views/Widgets/components.dart';
 import 'package:retilda/Views/Widgets/widgets.dart';
@@ -23,7 +24,7 @@ class _HomePageState extends State<HomePage> {
   static List<Widget> _pages = <Widget>[
     Dashboard(),
     Signup(),
-    Signin(),
+    Purchasehistory(),
     Signup(),
     Dashboard(),
 

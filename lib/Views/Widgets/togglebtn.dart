@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:retilda/Views/Widgets/widgets.dart';
 import 'package:sizer/sizer.dart';
 
 class ToggleButtonsWidget extends StatefulWidget {
@@ -6,6 +8,7 @@ class ToggleButtonsWidget extends StatefulWidget {
   final String secondButtonText;
   final Function(bool isFirstButtonActive) onToggle;
   final Function(int chipValue, bool isFirstButtonActive) onChipSelected;
+  final Function(String action, int chipValue, bool isFirstButtonActive) onActionSelected;
 
   const ToggleButtonsWidget({
     Key? key,
@@ -13,6 +16,7 @@ class ToggleButtonsWidget extends StatefulWidget {
     required this.secondButtonText,
     required this.onToggle,
     required this.onChipSelected,
+    required this.onActionSelected,
   }) : super(key: key);
 
   @override
@@ -22,10 +26,13 @@ class ToggleButtonsWidget extends StatefulWidget {
 class _ToggleButtonsWidgetState extends State<ToggleButtonsWidget> {
   bool? isFirstButtonActive;
   int? selectedChipValue;
+  String? selectedAction;
 
   void _toggleButtons(bool isFirst) {
     setState(() {
       isFirstButtonActive = isFirst;
+      selectedChipValue = null;
+      selectedAction = null;
     });
     widget.onToggle(isFirst);
   }
@@ -107,6 +114,7 @@ class _ToggleButtonsWidgetState extends State<ToggleButtonsWidget> {
                   onTap: () {
                     setState(() {
                       selectedChipValue = chipValue;
+                      selectedAction = null; // Reset the selected action when a new chip is selected
                     });
                     widget.onChipSelected(chipValue, isFirstButtonActive!);
                   },
@@ -116,6 +124,75 @@ class _ToggleButtonsWidgetState extends State<ToggleButtonsWidget> {
                   ),
                 );
               }).toList(),
+            ),
+          ),
+        if (selectedChipValue != null)
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      selectedAction = "Insurance";
+                    });
+                    widget.onActionSelected("Insurance", selectedChipValue!, isFirstButtonActive!);
+                  },
+                  child: Container(
+                    height: 6.h,
+                    width: 40.w,
+                    decoration: BoxDecoration(
+                      color: selectedAction == "Insurance" ? Colors.orange : Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      border: selectedAction == "Insurance"
+                          ? Border.all(color: Colors.orange, width: 0)
+                          : Border.all(color: Colors.orange, width: 2),
+                    ),
+                    child: Center(
+                      child: Text(
+                        "Add Insurance",
+                        style: GoogleFonts.poppins(
+                          textStyle:TextStyle(
+                          color: selectedAction == "Insurance" ? Colors.white : Colors.orange,
+                          fontSize: 12.sp,
+                        ),
+                      )
+                      ),
+                    ),
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      selectedAction = "Buy Direct without Insurance";
+                    });
+                    widget.onActionSelected("Buy Direct without Insurance", selectedChipValue!, isFirstButtonActive!);
+                  },
+                  child: Container(
+                    height: 6.h,
+                    width: 40.w,
+                    decoration: BoxDecoration(
+                      color: selectedAction == "Buy Direct without Insurance" ? Colors.orange : Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      border: selectedAction == "Buy Direct without Insurance"
+                          ? Border.all(color: Colors.orange, width: 0)
+                          : Border.all(color: Colors.orange, width: 2),
+                    ),
+                    child: Center(
+                     child: Text(
+                        "Buy Direct",
+                        style: GoogleFonts.poppins(
+                          textStyle: TextStyle(
+                            color: selectedAction == "Buy Direct without Insurance" ? Colors.white : Colors.orange,
+                            fontSize: 12.sp,
+                          )
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
       ],
