@@ -5,6 +5,7 @@ import 'package:retilda/Views/Widgets/widgets.dart';
 import 'package:sizer/sizer.dart';
 
 class PaymentSummaryCard extends StatelessWidget {
+  
   final String imageUrl;
   final String title;
   final String subtitle;

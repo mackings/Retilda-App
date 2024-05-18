@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:retilda/Views/Wallet/purchasesummary.dart';
 import 'package:retilda/Views/Widgets/paymentscard.dart';
 import 'package:retilda/Views/Widgets/widgets.dart';
 import 'package:retilda/model/purchases.dart';
@@ -11,7 +12,7 @@ import 'package:sizer/sizer.dart';
 import 'package:http/http.dart' as http;
 
 class Purchasehistory extends ConsumerStatefulWidget {
-  const Purchasehistory({super.key});
+  const Purchasehistory({Key? key}) : super(key: key);
 
   @override
   ConsumerState<ConsumerStatefulWidget> createState() =>
@@ -52,13 +53,13 @@ class _PurchasehistoryState extends ConsumerState<Purchasehistory> {
         _userId = userId;
       });
 
-fetchPurchases(userId, token).then((apiResponse) {
-  setState(() {
-    _purchases = apiResponse.data.purchasesData; // Access purchasesData list
-  });
-}).catchError((error) {
-  print('Error fetching purchases: $error');
-});
+      fetchPurchases(userId, token).then((apiResponse) {
+        setState(() {
+          _purchases = apiResponse.data.purchasesData; 
+        });
+      }).catchError((error) {
+        print('Error fetching purchases: $error');
+      });
 
       print("User >>> $userData");
     }
@@ -75,39 +76,47 @@ fetchPurchases(userId, token).then((apiResponse) {
     return Sizer(
       builder: (context, orientation, deviceType) {
         return Scaffold(
-  appBar: AppBar(
-    automaticallyImplyLeading: false,
-    title: CustomText(
-      "Purchase history",
-      fontSize: 15.sp,
-      fontWeight: FontWeight.w500,
-    ),
-  ),
-  body: _purchases.isEmpty
-      ? Center(child: CircularProgressIndicator())
-      : ListView.builder(
-          itemCount: _purchases.length,
-          itemBuilder: (context, index) {
-            final purchase = _purchases[index];
-            final DateTime paymentDate = purchase.payments.isNotEmpty
-                ? DateTime.parse(purchase.payments.first.paymentDate)
-                : DateTime.now(); 
+           backgroundColor: Colors.white,
+          appBar: AppBar(
+             backgroundColor: Colors.white,
+            automaticallyImplyLeading: false,
+            title: CustomText(
+              "Purchase history",
+              fontSize: 15.sp,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          body: _purchases.isEmpty
+              ? Center(child: CircularProgressIndicator())
+              : ListView.builder(
+                  itemCount: _purchases.length,
+                  itemBuilder: (context, index) {
+                    final purchase = _purchases[index];
+                    final DateTime paymentDate = purchase.payments.isNotEmpty
+                        ? DateTime.parse(purchase.payments.first.paymentDate)
+                        : DateTime.now(); 
 
-            return PaymentSummaryCard(
-              date: paymentDate,
-              imageUrl: purchase.product.images,
-              title: purchase.product.name,
-              subtitle: purchase.paymentPlan == "once"
-                  ? "One time payment of N${purchase.payments.first.amountPaid}"
-                  : "N${purchase.totalPaidForPurchase} out of N${purchase.totalAmountToPay}",
-            );
-          },
-        ),
-);
-
-
-
-
+                    return GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => Purchasesummary(purchase: purchase),
+                          ),
+                        );
+                      },
+                      child: PaymentSummaryCard(
+                        date: paymentDate,
+                        imageUrl: purchase.product.images,
+                        title: purchase.product.name,
+                        subtitle: purchase.paymentPlan == "once"
+                            ? "One time payment of N${purchase.payments.first.amountPaid}"
+                            : "N${purchase.totalPaidForPurchase} out of N${purchase.totalAmountToPay}",
+                      ),
+                    );
+                  },
+                ),
+        );
       },
     );
   }
