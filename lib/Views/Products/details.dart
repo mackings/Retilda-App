@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:retilda/Views/Products/cartpage.dart';
 import 'package:retilda/Views/Widgets/components.dart';
 import 'package:retilda/Views/Widgets/togglebtn.dart';
 import 'package:retilda/Views/Widgets/widgets.dart';
+import 'package:retilda/model/cartmodel.dart';
 import 'package:retilda/model/products.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 import 'package:sizer/sizer.dart';
 
 class ProductDetails extends StatefulWidget {
@@ -19,6 +23,14 @@ class _ProductDetailsState extends State<ProductDetails> {
   int? selectedChipValue;
   String? Insurance;
 
+  List<CartItem> cartItems = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCartItems();
+  }
+
   void handleToggle(bool isFirstButtonActive) {
     setState(() {
       this.isFirstButtonActive = isFirstButtonActive;
@@ -30,17 +42,66 @@ class _ProductDetailsState extends State<ProductDetails> {
     setState(() {
       selectedChipValue = chipValue;
     });
-    print(
-        'Selected Chip: $chipValue, Is First Button Active: $isFirstButtonActive');
+    print('Selected Chip: $chipValue, Is First Button Active: $isFirstButtonActive');
   }
 
-  void handleActionSelected(
-      String action, int chipValue, bool isFirstButtonActive) {
+  void handleActionSelected(String action, int chipValue, bool isFirstButtonActive) {
     setState(() {
       Insurance = action;
     });
-    print(
-        'Action: $action, Chip: $chipValue, Plan: ${isFirstButtonActive ? "Weekly" : "Monthly"}');
+    print('Action: $action, Chip: $chipValue, Plan: ${isFirstButtonActive ? "Weekly" : "Monthly"}');
+  }
+
+  void addToCart() async {
+    setState(() {
+      cartItems.add(CartItem(
+        id: widget.product.id,
+        name: widget.product.name,
+        price: widget.product.price,
+        description: widget.product.description,
+        images: widget.product.images,
+        categories: widget.product.categories,
+        specification: widget.product.specification,
+        brand: widget.product.brand,
+      ));
+    });
+    await _saveCartItems();
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text('Added to cart!'),
+    ));
+  }
+
+  Future<void> _saveCartItems() async {
+    final prefs = await SharedPreferences.getInstance();
+    final cartItemsJson = cartItems.map((item) => jsonEncode(item.toJson())).toList();
+    await prefs.setStringList('cartItems', cartItemsJson);
+  }
+
+  Future<void> _loadCartItems() async {
+    final prefs = await SharedPreferences.getInstance();
+    final cartItemsJson = prefs.getStringList('cartItems');
+    if (cartItemsJson != null) {
+      setState(() {
+        cartItems = cartItemsJson.map((item) => CartItem.fromJson(jsonDecode(item))).toList();
+      });
+    }
+  }
+
+  void goToCartPage() {
+
+        Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CartPage(),
+      ),
+    );
+
+    // Navigator.push(
+    //   context,
+    //   MaterialPageRoute(
+    //     builder: (context) => CartPage(cartItems: cartItems),
+    //   ),
+    // );
   }
 
   @override
@@ -52,6 +113,7 @@ class _ProductDetailsState extends State<ProductDetails> {
           backgroundColor: Colors.white,
           shadowColor: Colors.white,
           title: Text("Product Details"),
+
         ),
         body: SingleChildScrollView(
           child: Center(
@@ -64,8 +126,7 @@ class _ProductDetailsState extends State<ProductDetails> {
                 child: PageView(
                   children: widget.product.images.map((image) {
                     return Container(
-                      margin:
-                          EdgeInsets.symmetric(horizontal: 35.0, vertical: 2),
+                      margin: EdgeInsets.symmetric(horizontal: 35.0, vertical: 2),
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(10),
                         color: Colors.transparent,
@@ -91,7 +152,7 @@ class _ProductDetailsState extends State<ProductDetails> {
                       children: [
                         IconButton(
                           icon: Icon(Icons.add_shopping_cart),
-                          onPressed: () {},
+                          onPressed: addToCart,
                         ),
                         IconButton(
                           icon: Icon(Icons.favorite_border),
@@ -177,7 +238,7 @@ class _ProductDetailsState extends State<ProductDetails> {
                       SizedBox(width: 2.w),
                       Flexible(
                         child: CustomText(
-                          'You Selected: The ${isFirstButtonActive ?  "Weekly" :  "Monthly"} Plan and ${selectedChipValue != null ? selectedChipValue.toString() : "No days selected"} ${isFirstButtonActive ? "Weeks" : "Months"} installments with ${Insurance ==null?"No Insurance":Insurance}.',
+                          'You Selected: The ${isFirstButtonActive ? "Weekly" : "Monthly"} Plan and ${selectedChipValue != null ? selectedChipValue.toString() : "No days selected"} ${isFirstButtonActive ? "Weeks" : "Months"} installments with ${Insurance == null ? "No Insurance" : Insurance}.',
                         ),
                       ),
                     ],
@@ -225,9 +286,7 @@ class _ProductDetailsState extends State<ProductDetails> {
                 padding: const EdgeInsets.only(left: 10, top: 1),
                 child: ListTile(
                   title: CustomText(
-                    widget.product.specification.toString() == null
-                        ? "No Product Specifications"
-                        : "No Specifications",
+                    widget.product.specification ?? "No Product Specifications",
                     fontSize: 12.sp,
                   ),
                 ),
