@@ -14,7 +14,6 @@ import 'package:retilda/model/cartmodel.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sizer/sizer.dart';
 
-
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
 
@@ -23,7 +22,6 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-
   int _selectedIndex = 0;
   late List<CartItem> cartItems;
 
@@ -32,30 +30,27 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    _loadCartItems().then((_) {
-      _initializePages();
-    });
+    _initializePages();
+    _loadCartItems();
   }
-
-
 
   Future<void> _loadCartItems() async {
     final prefs = await SharedPreferences.getInstance();
     final cartItemsJson = prefs.getStringList('cartItems');
     if (cartItemsJson != null) {
       setState(() {
-        cartItems = cartItemsJson.map((item) => CartItem.fromJson(jsonDecode(item))).toList();
+        cartItems = cartItemsJson
+            .map((item) => CartItem.fromJson(jsonDecode(item)))
+            .toList();
       });
     }
   }
-
-
 
   void _initializePages() {
     _pages = [
       Dashboard(),
       CartPage(),
-     // CartPage(cartItems: cartItems),
+      // CartPage(cartItems: cartItems),
       Purchasehistory(),
       Signup(),
       Dashboard(),
