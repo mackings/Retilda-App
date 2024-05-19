@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 import 'package:retilda/Views/Widgets/widgets.dart';
 import 'package:retilda/model/products.dart';
 import 'package:sizer/sizer.dart';
@@ -51,10 +52,10 @@ class ProductCard2 extends StatelessWidget {
                       children: [
                         Flexible(
                           child: CustomText(
-                            'N${product.price}',
-                            fontWeight: FontWeight.w600,
-                            fontSize: 10.sp,
-                          ),
+  'N${NumberFormat("#,##0").format(product.price)}',
+  fontWeight: FontWeight.w600,
+  fontSize: 12.sp,
+),
                         ),
                         IconButton(
                           icon: Icon(
@@ -130,8 +131,11 @@ class ProductCard extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Flexible(child: CustomText('N${product.price}',
-                        fontWeight: FontWeight.w600,)),
+                        Flexible(child: CustomText(
+  'N${NumberFormat("#,##0").format(product.price)}',
+  fontWeight: FontWeight.w600,
+  fontSize: 12.sp,
+),),
                         IconButton(
                           icon: Icon(
                             Icons.favorite_border,

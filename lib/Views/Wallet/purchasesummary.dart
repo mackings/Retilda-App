@@ -85,6 +85,9 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
     }
   }
 
+
+  
+
   Future<void> _loadUserData() async {
     SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
     String? userDataString = sharedPreferences.getString('userData');

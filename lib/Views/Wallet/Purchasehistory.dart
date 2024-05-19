@@ -107,13 +107,14 @@ class _PurchasehistoryState extends ConsumerState<Purchasehistory> {
                         );
                       },
                       child: PaymentSummaryCard(
-                        date: paymentDate,
-                        imageUrl: purchase.product.images,
-                        title: purchase.product.name,
-                        subtitle: purchase.paymentPlan == "once"
-                            ? "One time payment of N${purchase.payments.first.amountPaid}"
-                            : "N${purchase.totalPaidForPurchase} out of N${purchase.totalAmountToPay}",
-                      ),
+  date: paymentDate,
+  imageUrl: purchase.product.images,
+  title: purchase.product.name,
+  subtitle: purchase.paymentPlan == "once"
+      ? "One time payment of N${NumberFormat('#,##0').format(purchase.payments.first.amountPaid)}"
+      : "N${NumberFormat('#,##0').format(purchase.totalPaidForPurchase)} out of N${NumberFormat('#,##0').format(purchase.totalAmountToPay)}",
+),
+
                     );
                   },
                 ),
