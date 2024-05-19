@@ -1,5 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:retilda/Views/Products/details.dart';
+import 'package:retilda/model/products.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:retilda/Views/Widgets/widgets.dart';
 import 'package:retilda/model/cartmodel.dart';
@@ -33,22 +35,50 @@ class _CartPageState extends State<CartPage> {
     }
   }
 
-  // Future<void> _loadCartItems() async {
-  //   final prefs = await SharedPreferences.getInstance();
-  //   final cartItemsJson = prefs.getStringList('cartItems');
-  //   if (cartItemsJson != null) {
-  //     setState(() {
-  //       cartItems = cartItemsJson.map((item) => CartItem.fromJson(item)).toList();
-  //     });
-  //   }
-  // }
+  Future<void> _removeCartItem(int index) async {
+    setState(() {
+      cartItems.removeAt(index);
+    });
+    final prefs = await SharedPreferences.getInstance();
+    final cartItemsJson =
+        cartItems.map((item) => jsonEncode(item.toJson())).toList();
+    await prefs.setStringList('cartItems', cartItemsJson);
+
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: CustomText('Product Removed!'),
+    ));
+  }
+
+  void _navigateToProductDetails(CartItem cartItem) {
+    final product = Product(
+      id: cartItem.id,
+      name: cartItem.name,
+      price: cartItem.price,
+      description: cartItem.description,
+      images: cartItem.images,
+      categories: cartItem.categories,
+      specification: cartItem.specification,
+      brand: cartItem.brand,
+    );
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ProductDetails(product: product),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        title: CustomText('Cart'),
+        title: CustomText(
+          'Cart',
+          fontSize: 15.sp,
+          fontWeight: FontWeight.w500,
+        ),
       ),
       body: ListView.builder(
         itemCount: cartItems.length,
@@ -58,6 +88,8 @@ class _CartPageState extends State<CartPage> {
             padding: const EdgeInsets.only(left: 20, right: 20),
             child: GestureDetector(
               onTap: () {
+                _navigateToProductDetails(cartItem);
+                
                 print(cartItem.name);
               },
               child: Container(
@@ -69,21 +101,18 @@ class _CartPageState extends State<CartPage> {
                 ),
                 child: Row(
                   children: [
-
-CircleAvatar(
-  radius: 30,
-  child: ClipOval(
-    child: Image.network(
-      cartItem.images.isNotEmpty ? cartItem.images[0] : '',
-      width: 80, 
-      height: 80,
-      fit: BoxFit.cover, 
-    ),
-  ),
-),
-SizedBox(width: 3.w,),
-
-
+                    CircleAvatar(
+                      radius: 30,
+                      child: ClipOval(
+                        child: Image.network(
+                          cartItem.images.isNotEmpty ? cartItem.images[0] : '',
+                          width: 80,
+                          height: 80,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 3.w),
                     Expanded(
                       flex: 5,
                       child: Column(
@@ -96,9 +125,11 @@ SizedBox(width: 3.w,),
                           SizedBox(height: 8.0),
                           CustomText(cartItem.description),
                           SizedBox(height: 8.0),
-                          CustomText('N${cartItem.price}',
-                          fontWeight: FontWeight.w600,
-                          fontSize: 12.sp,),
+                          CustomText(
+                            'N${cartItem.price}',
+                            fontWeight: FontWeight.w600,
+                            fontSize: 12.sp,
+                          ),
                         ],
                       ),
                     ),
@@ -114,7 +145,7 @@ SizedBox(width: 3.w,),
                           ),
                           IconButton(
                             onPressed: () {
-                              // Remove item functionality
+                              _removeCartItem(index);
                             },
                             icon: Icon(Icons.remove),
                           ),

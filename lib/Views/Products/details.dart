@@ -52,7 +52,16 @@ class _ProductDetailsState extends State<ProductDetails> {
     print('Action: $action, Chip: $chipValue, Plan: ${isFirstButtonActive ? "Weekly" : "Monthly"}');
   }
 
-  void addToCart() async {
+void addToCart() async {
+  bool productExistsInCart = cartItems.any((item) => item.id == widget.product.id);
+
+  if (productExistsInCart) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: CustomText('Product already exists in cart!'),
+    ));
+    
+  } else {
+    
     setState(() {
       cartItems.add(CartItem(
         id: widget.product.id,
@@ -65,11 +74,15 @@ class _ProductDetailsState extends State<ProductDetails> {
         brand: widget.product.brand,
       ));
     });
+
     await _saveCartItems();
+
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text('Added to cart!'),
+      content: CustomText('Added to cart!'),
     ));
   }
+}
+
 
   Future<void> _saveCartItems() async {
     final prefs = await SharedPreferences.getInstance();
@@ -95,13 +108,6 @@ class _ProductDetailsState extends State<ProductDetails> {
         builder: (context) => CartPage(),
       ),
     );
-
-    // Navigator.push(
-    //   context,
-    //   MaterialPageRoute(
-    //     builder: (context) => CartPage(cartItems: cartItems),
-    //   ),
-    // );
   }
 
   @override
@@ -171,6 +177,7 @@ class _ProductDetailsState extends State<ProductDetails> {
                   ],
                 ),
               ),
+
               Padding(
                 padding: const EdgeInsets.only(left: 25, right: 25, top: 5),
                 child: Divider(
@@ -216,9 +223,11 @@ class _ProductDetailsState extends State<ProductDetails> {
                   ],
                 ),
               ),
+
               SizedBox(
                 height: 2.h,
               ),
+
               ToggleButtonsWidget(
                 firstButtonText: 'Weekly',
                 secondButtonText: 'Monthly',

@@ -20,6 +20,7 @@ class Purchasehistory extends ConsumerStatefulWidget {
 }
 
 class _PurchasehistoryState extends ConsumerState<Purchasehistory> {
+  
   List<Purchase> _purchases = [];
   String? _token;
   String? _userId;
@@ -82,8 +83,8 @@ class _PurchasehistoryState extends ConsumerState<Purchasehistory> {
             automaticallyImplyLeading: false,
             title: CustomText(
               "Purchase history",
-              fontSize: 15.sp,
-              fontWeight: FontWeight.w500,
+                fontSize: 15.sp,
+                fontWeight: FontWeight.w500,
             ),
           ),
           body: _purchases.isEmpty
