@@ -53,10 +53,8 @@ class _HomePageState extends State<HomePage> {
     _pages = [
       Dashboard(),
       CartPage(),
-      // CartPage(cartItems: cartItems),
-      Purchasehistory(),
+      PurchaseHistory(),
       Signup(),
-      Dashboard(),
     ];
   }
 
@@ -84,10 +82,10 @@ class _HomePageState extends State<HomePage> {
             icon: Icon(Icons.history),
             label: 'History',
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.favorite_outline),
-            label: 'Favourites',
-          ),
+          // BottomNavigationBarItem(
+          //   icon: Icon(Icons.favorite_outline),
+          //   label: 'Favourites',
+          // ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person),
             label: 'Account',

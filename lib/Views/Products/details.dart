@@ -232,17 +232,11 @@ class _ProductDetailsState extends State<ProductDetails> {
         },
         body: requestBodyJson,
       );
-      setState(() {
-        loading = true;
-      });
 
       if (response.statusCode == 200) {
         
         print('Buy product request successful');
         print('Response: ${response.body}');
-       setState(() {
-        loading = false;
-      });
 
         showDialog(
           context: context,
@@ -253,6 +247,7 @@ class _ProductDetailsState extends State<ProductDetails> {
               actions: <Widget>[
                 TextButton(
                   onPressed: () {
+                    Navigator.of(context).pop();
                     Navigator.of(context).pop();
                   },
                   child: Text('OK'),
@@ -284,24 +279,22 @@ showDialog(
   },
 );
 
-    setState(() {
-        loading = false;
-      });
         print(response.body);
         print(
             'Buy product request failed with status code: ${response.statusCode}');
       }
     } catch (error) {
 
-      setState(() {
-        loading = false;
-      });
-
       print('Error making buy product request: $error');
     }
   }
 
   Future<void> purchaseProduct() async {
+
+   setState(() {
+      loading = true;
+    });
+
     await _loadUserData();
     if (token != null &&
         userId != null &&
@@ -312,10 +305,15 @@ showDialog(
           token!, userId!, productId!, plan!, instCount!);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: CustomText('You need to Select Insurance or No Insurance'),
+        content: CustomText('Please complete purchase requirements'),
       ));
-      print('Missing required data to purchase the product.');
+      print('Please complete purchase requirements');
     }
+
+    setState(() {
+      loading = false;
+    });
+
   }
 
   @override
@@ -405,25 +403,27 @@ showDialog(
                       fontWeight: FontWeight.w700,
                       fontSize: 12.sp,
                     ),
-                    loading? CustomText('Making payments...'):GestureDetector(
-                      onTap: () {
-                        purchaseProduct();
-                      },
-                      child:Container(
-                        height: 6.h,
-                        width: 50.w,
-                        decoration: BoxDecoration(
-                          color: ROrange,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Center(
-                          child: CustomText(
-                            "Buy Now",
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ),
+                    loading
+        ? CustomText('Making payments...')
+        : GestureDetector(
+            onTap: () {
+              purchaseProduct();
+            },
+            child: Container(
+              height: 6.h,
+              width: 50.w,
+              decoration: BoxDecoration(
+                color: ROrange,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Center(
+                child: CustomText(
+                  "Buy Now",
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
                   ],
                 ),
               ),

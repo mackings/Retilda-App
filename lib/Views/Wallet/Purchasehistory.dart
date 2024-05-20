@@ -11,19 +11,20 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sizer/sizer.dart';
 import 'package:http/http.dart' as http;
 
-class Purchasehistory extends ConsumerStatefulWidget {
-  const Purchasehistory({Key? key}) : super(key: key);
+class PurchaseHistory extends ConsumerStatefulWidget {
+  const PurchaseHistory({Key? key}) : super(key: key);
 
   @override
   ConsumerState<ConsumerStatefulWidget> createState() =>
-      _PurchasehistoryState();
+      _PurchaseHistoryState();
 }
 
-class _PurchasehistoryState extends ConsumerState<Purchasehistory> {
-  
+class _PurchaseHistoryState extends ConsumerState<PurchaseHistory> {
   List<Purchase> _purchases = [];
+
   String? _token;
   String? _userId;
+  bool _isLoading = true;
 
   Future<PurchaseResponse> fetchPurchases(String userId, String token) async {
     final url = 'https://retilda.onrender.com/Api/purchases/$userId';
@@ -56,20 +57,28 @@ class _PurchasehistoryState extends ConsumerState<Purchasehistory> {
 
       fetchPurchases(userId, token).then((apiResponse) {
         setState(() {
-          _purchases = apiResponse.data.purchasesData; 
+          _purchases = apiResponse.data.purchasesData;
+          _isLoading = false;
         });
       }).catchError((error) {
         print('Error fetching purchases: $error');
+        setState(() {
+          _isLoading = false;
+        });
       });
 
       print("User >>> $userData");
+    } else {
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
   @override
   void initState() {
-    _loadUserData();
     super.initState();
+    _loadUserData();
   }
 
   @override
@@ -77,47 +86,64 @@ class _PurchasehistoryState extends ConsumerState<Purchasehistory> {
     return Sizer(
       builder: (context, orientation, deviceType) {
         return Scaffold(
-           backgroundColor: Colors.white,
+          backgroundColor: Colors.white,
           appBar: AppBar(
-             backgroundColor: Colors.white,
+            backgroundColor: Colors.white,
             automaticallyImplyLeading: false,
             title: CustomText(
               "Purchase history",
-                fontSize: 15.sp,
-                fontWeight: FontWeight.w500,
+              fontSize: 15.sp,
+              fontWeight: FontWeight.w500,
             ),
           ),
-          body: _purchases.isEmpty
-              ? Center(child: CircularProgressIndicator())
-              : ListView.builder(
-                  itemCount: _purchases.length,
-                  itemBuilder: (context, index) {
-                    final purchase = _purchases[index];
-                    final DateTime paymentDate = purchase.payments.isNotEmpty
-                        ? DateTime.parse(purchase.payments.first.paymentDate)
-                        : DateTime.now(); 
+          body: _isLoading
+              ? Center(
+                  child: CircularProgressIndicator(),
+                )
+              : _purchases.isEmpty
+                  ? Center(
+                      child: CustomText(
+                        "You have no purchases.",
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.w400,
+                      ),
+                    )
+                  : ListView.builder(
+                      itemCount: _purchases.length,
+                      itemBuilder: (context, index) {
+                        final purchase = _purchases[index];
+                        final DateTime paymentDate =
+                            purchase.payments.isNotEmpty
+                                ? DateTime.parse(
+                                    purchase.payments.first.paymentDate)
+                                : DateTime.now();
 
-                    return GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => Purchasesummary(purchase: purchase),
+                        return GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) =>
+                                        Purchasesummary(purchase: purchase)));
+                            // Navigator.push(
+                            //   context,
+                            //   MaterialPageRoute(
+                            //     builder: (context) =>
+                            //         PurchaseSummary(purchase: purchase),
+                            //   ),
+                            // );
+                          },
+                          child: PaymentSummaryCard(
+                            date: paymentDate,
+                            imageUrl: purchase.product.images,
+                            title: purchase.product.name,
+                            subtitle: purchase.paymentPlan == "once"
+                                ? "One time payment of N${NumberFormat('#,##0').format(purchase.payments.first.amountPaid)}"
+                                : "N${NumberFormat('#,##0').format(purchase.totalPaidForPurchase)} out of N${NumberFormat('#,##0').format(purchase.totalAmountToPay)}",
                           ),
                         );
                       },
-                      child: PaymentSummaryCard(
-  date: paymentDate,
-  imageUrl: purchase.product.images,
-  title: purchase.product.name,
-  subtitle: purchase.paymentPlan == "once"
-      ? "One time payment of N${NumberFormat('#,##0').format(purchase.payments.first.amountPaid)}"
-      : "N${NumberFormat('#,##0').format(purchase.totalPaidForPurchase)} out of N${NumberFormat('#,##0').format(purchase.totalAmountToPay)}",
-),
-
-                    );
-                  },
-                ),
+                    ),
         );
       },
     );

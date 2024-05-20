@@ -186,7 +186,18 @@ class _DashboardState extends ConsumerState<Dashboard> {
                           if (snapshot.connectionState ==
                               ConnectionState.waiting) {
                             return Center(
-                              child: CircularProgressIndicator(),
+                              child: Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Column(
+                                  children: [
+                                    SizedBox(height: 10.h,),
+                                    Padding(
+                                      padding: const EdgeInsets.only(left: 40,right: 40),
+                                      child: LinearProgressIndicator(),
+                                    ),
+                                  ],
+                                ),
+                              )
                             );
                           } else if (snapshot.hasError) {
                             return Center(

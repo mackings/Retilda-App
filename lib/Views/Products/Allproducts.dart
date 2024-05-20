@@ -82,7 +82,11 @@ class _AllproductsState extends ConsumerState<Allproducts> {
   backgroundColor: Colors.white,
   appBar: AppBar(
     backgroundColor: Colors.white,
-    title: CustomText("Products"),
+    title: CustomText(
+            "Products",
+            fontSize: 15.sp,
+            fontWeight: FontWeight.w500,
+          ),
   ),
   body: _products.isEmpty 
       ? Center(
