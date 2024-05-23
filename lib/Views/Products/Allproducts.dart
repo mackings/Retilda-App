@@ -27,6 +27,7 @@ class _AllproductsState extends ConsumerState<Allproducts> {
   String _selectedSortOption = 'lower_to_highest';
   String _selectedFilterOption = 'category';
   String? _selectedCategory;
+  bool _isCategorySelected = false;
 
   @override
   void initState() {
@@ -34,11 +35,9 @@ class _AllproductsState extends ConsumerState<Allproducts> {
     _loadUserData();
   }
 
-
-    Future<ApiCategoryResponse<List<String>>> fetchCategories(
+  Future<ApiCategoryResponse<List<String>>> fetchCategories(
       String token) async {
-    final String url =
-        'https://retilda.onrender.com/Api/products/allcategory';
+    final String url = 'https://retilda.onrender.com/Api/products/allcategory';
 
     try {
       final response = await http.get(
@@ -111,7 +110,6 @@ class _AllproductsState extends ConsumerState<Allproducts> {
           _isLoading = false;
         });
         print('Error fetching products: $error');
-        
       });
 
       fetchCategories(token).then((apiResponse) {
@@ -127,6 +125,35 @@ class _AllproductsState extends ConsumerState<Allproducts> {
       });
 
       print("categories >>> $_categories");
+    }
+  }
+
+  Future<void> fetchProductsByCategory(String category) async {
+    final String url =
+        'https://retilda.onrender.com/Api/products/category/$category';
+    try {
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $_token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> responseData = jsonDecode(response.body);
+        final ApiResponse apiResponse = ApiResponse.fromJson(responseData);
+
+        setState(() {
+          _products = apiResponse.data;
+          _isCategorySelected = true;
+          _selectedCategory = category;
+        });
+      } else {
+        throw Exception('Failed to load products');
+      }
+    } catch (error) {
+      print('Error: $error');
     }
   }
 
@@ -157,7 +184,7 @@ class _AllproductsState extends ConsumerState<Allproducts> {
                       ),
                     ),
                     RadioListTile<String>(
-                      title: const Text('Category'),
+                      title: const CustomText('Category'),
                       value: 'category',
                       groupValue: _selectedFilterOption,
                       onChanged: (value) {
@@ -167,29 +194,19 @@ class _AllproductsState extends ConsumerState<Allproducts> {
                         });
                         setState(() {
                           _selectedFilterOption = value!;
+                          // Reset selected category when switching filter options
+                          _selectedCategory = null;
+                          // Set _isCategorySelected to false when switching filter options
+                          _isCategorySelected = false;
                         });
                       },
                     ),
-                    // RadioListTile<String>(
-                    //   title: const Text('Brands'),
-                    //   value: 'brands',
-                    //   groupValue: _selectedFilterOption,
-                    //   onChanged: (value) {
-                    //     setModalState(() {
-                    //       _selectedFilterOption = value!;
-                    //       _sortEnabled = true;
-                    //     });
-                    //     setState(() {
-                    //       _selectedFilterOption = value!;
-                    //     });
-                    //   },
-                    // ),
                     SizedBox(height: 10),
                     CustomText(
                       'Sort by',
                     ),
                     RadioListTile<String>(
-                      title: const Text('Lower to Highest Price'),
+                      title: const CustomText('Lower to Highest Price'),
                       value: 'lower_to_highest',
                       groupValue: _selectedSortOption,
                       onChanged: _sortEnabled
@@ -240,12 +257,14 @@ class _AllproductsState extends ConsumerState<Allproducts> {
                                 setModalState(() {
                                   _selectedCategory =
                                       selected ? category : null;
+                                  _isCategorySelected = selected;
                                 });
                                 setState(() {
                                   _selectedCategory =
                                       selected ? category : null;
                                   if (_selectedCategory != null) {
-                                    fetchCategories(_selectedCategory!);
+                                    fetchProductsByCategory(category);
+                                    Navigator.pop(context);
                                   }
                                 });
                               },
@@ -263,8 +282,6 @@ class _AllproductsState extends ConsumerState<Allproducts> {
       },
     );
   }
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -298,24 +315,6 @@ class _AllproductsState extends ConsumerState<Allproducts> {
                 )
               : Column(
                   children: [
-                    _categories.isNotEmpty
-                        ? Container(
-                            height: 50,
-                            child: ListView.builder(
-                              scrollDirection: Axis.horizontal,
-                              itemCount: _categories.length,
-                              itemBuilder: (context, index) {
-                                return Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 8.0),
-                                  child: Chip(
-                                    label: Text(_categories[index]),
-                                  ),
-                                );
-                              },
-                            ),
-                          )
-                        : Container(),
                     Expanded(
                       child: Padding(
                         padding: const EdgeInsets.all(5.0),
@@ -327,7 +326,9 @@ class _AllproductsState extends ConsumerState<Allproducts> {
                             mainAxisSpacing: 8.0,
                             childAspectRatio: 0.8,
                           ),
-                          itemCount: _products.length,
+                          itemCount: _isCategorySelected
+                              ? _products.length
+                              : _products.length,
                           itemBuilder: (context, index) {
                             return Padding(
                               padding: const EdgeInsets.all(10.0),
@@ -337,12 +338,17 @@ class _AllproductsState extends ConsumerState<Allproducts> {
                                     context,
                                     MaterialPageRoute(
                                       builder: (context) => ProductDetails(
-                                          product: _products[index]),
+                                        product: _isCategorySelected
+                                            ? _products[index]
+                                            : _products[index],
+                                      ),
                                     ),
                                   );
                                 },
                                 child: ProductCard(
-                                  product: _products[index],
+                                  product: _isCategorySelected
+                                      ? _products[index]
+                                      : _products[index],
                                   onTap: () {},
                                 ),
                               ),
