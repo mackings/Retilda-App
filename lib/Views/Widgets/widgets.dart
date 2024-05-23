@@ -54,7 +54,7 @@ class CustomTextFormField extends StatelessWidget {
     this.onChanged,
     this.onEditingComplete,
     this.onFieldSubmitted,
-    this.validator,
+    this.validator, required void Function() onSuffixIconTap,
   });
 
   @override

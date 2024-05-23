@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:retilda/Views/Products/details.dart';
 import 'package:retilda/Views/Widgets/productcard.dart';
 import 'package:retilda/Views/Widgets/widgets.dart';
+import 'package:retilda/model/categorymodel.dart';
 import 'package:retilda/model/products.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
@@ -19,7 +20,13 @@ class Allproducts extends ConsumerStatefulWidget {
 
 class _AllproductsState extends ConsumerState<Allproducts> {
   late List<Product> _products = [];
+  late List<String> _categories = [];
   late String _token;
+  bool _isLoading = true;
+
+  String _selectedSortOption = 'lower_to_highest';
+  String _selectedFilterOption = 'category';
+  String? _selectedCategory;
 
   @override
   void initState() {
@@ -27,24 +34,35 @@ class _AllproductsState extends ConsumerState<Allproducts> {
     _loadUserData();
   }
 
-  Future<void> _loadUserData() async {
-    SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
-    String? userDataString = sharedPreferences.getString('userData');
-    if (userDataString != null) {
-      Map<String, dynamic> userData = jsonDecode(userDataString);
-      String token = userData['data']['token'];
-      setState(() {
-        _token = token;
-      });
 
-      fetchData(token).then((apiResponse) {
-        setState(() {
-          _products = apiResponse.data;
+    Future<ApiCategoryResponse<List<String>>> fetchCategories(
+      String token) async {
+    final String url =
+        'https://retilda.onrender.com/Api/products/allcategory';
+
+    try {
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> responseData = jsonDecode(response.body);
+        final ApiCategoryResponse<List<String>> apiResponse =
+            ApiCategoryResponse.fromJson(responseData, (data) {
+          return List<String>.from(data);
         });
-      }).catchError((error) {
-        print('Error fetching products: $error');
-      });
-      print("User >>> $userData");
+        print(apiResponse.data);
+        return apiResponse;
+      } else {
+        throw Exception('Failed to load categories');
+      }
+    } catch (error) {
+      print('Error: $error');
+      throw error;
     }
   }
 
@@ -73,57 +91,269 @@ class _AllproductsState extends ConsumerState<Allproducts> {
     }
   }
 
+  Future<void> _loadUserData() async {
+    SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
+    String? userDataString = sharedPreferences.getString('userData');
+    if (userDataString != null) {
+      Map<String, dynamic> userData = jsonDecode(userDataString);
+      String token = userData['data']['token'];
+      setState(() {
+        _token = token;
+      });
+
+      fetchData(token).then((apiResponse) {
+        setState(() {
+          _products = apiResponse.data;
+          _isLoading = false;
+        });
+      }).catchError((error) {
+        setState(() {
+          _isLoading = false;
+        });
+        print('Error fetching products: $error');
+        
+      });
+
+      fetchCategories(token).then((apiResponse) {
+        setState(() {
+          _categories = apiResponse.data;
+          _isLoading = false;
+        });
+      }).catchError((error) {
+        print('Error fetching categories: $error');
+        setState(() {
+          _isLoading = false;
+        });
+      });
+
+      print("categories >>> $_categories");
+    }
+  }
+
+  void _showCategoriesDrawer(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setModalState) {
+            bool _sortEnabled = _selectedFilterOption != null;
+
+            return Scaffold(
+              appBar: AppBar(
+                title: CustomText('Sort and Filter'),
+              ),
+              body: Padding(
+                padding: EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Filter by',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    RadioListTile<String>(
+                      title: const Text('Category'),
+                      value: 'category',
+                      groupValue: _selectedFilterOption,
+                      onChanged: (value) {
+                        setModalState(() {
+                          _selectedFilterOption = value!;
+                          _sortEnabled = true;
+                        });
+                        setState(() {
+                          _selectedFilterOption = value!;
+                        });
+                      },
+                    ),
+                    // RadioListTile<String>(
+                    //   title: const Text('Brands'),
+                    //   value: 'brands',
+                    //   groupValue: _selectedFilterOption,
+                    //   onChanged: (value) {
+                    //     setModalState(() {
+                    //       _selectedFilterOption = value!;
+                    //       _sortEnabled = true;
+                    //     });
+                    //     setState(() {
+                    //       _selectedFilterOption = value!;
+                    //     });
+                    //   },
+                    // ),
+                    SizedBox(height: 10),
+                    CustomText(
+                      'Sort by',
+                    ),
+                    RadioListTile<String>(
+                      title: const Text('Lower to Highest Price'),
+                      value: 'lower_to_highest',
+                      groupValue: _selectedSortOption,
+                      onChanged: _sortEnabled
+                          ? (value) {
+                              setModalState(() {
+                                _selectedSortOption = value!;
+                              });
+                              setState(() {
+                                _selectedSortOption = value!;
+                              });
+                            }
+                          : null,
+                    ),
+                    RadioListTile<String>(
+                      title: const Text('Highest to Lower Price'),
+                      value: 'highest_to_lower',
+                      groupValue: _selectedSortOption,
+                      onChanged: _sortEnabled
+                          ? (value) {
+                              setModalState(() {
+                                _selectedSortOption = value!;
+                              });
+                              setState(() {
+                                _selectedSortOption = value!;
+                              });
+                            }
+                          : null,
+                    ),
+                    SizedBox(height: 10),
+                    Text(
+                      'Categories',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        child: Wrap(
+                          spacing: 8.0,
+                          runSpacing: 8.0,
+                          children: _categories.map((category) {
+                            return ChoiceChip(
+                              label: Text(category),
+                              selected: _selectedCategory == category,
+                              onSelected: (selected) {
+                                setModalState(() {
+                                  _selectedCategory =
+                                      selected ? category : null;
+                                });
+                                setState(() {
+                                  _selectedCategory =
+                                      selected ? category : null;
+                                  if (_selectedCategory != null) {
+                                    fetchCategories(_selectedCategory!);
+                                  }
+                                });
+                              },
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+
+
   @override
   Widget build(BuildContext context) {
     return Sizer(
       builder: (context, orientation, deviceType) {
         return Scaffold(
-  extendBodyBehindAppBar: true,
-  backgroundColor: Colors.white,
-  appBar: AppBar(
-    backgroundColor: Colors.white,
-    title: CustomText(
-            "Products",
-            fontSize: 15.sp,
-            fontWeight: FontWeight.w500,
-          ),
-  ),
-  body: _products.isEmpty 
-      ? Center(
-          child: CircularProgressIndicator(), 
-        )
-      : Padding(
-          padding: const EdgeInsets.all(5.0),
-          child: GridView.builder(
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              crossAxisSpacing: 8.0,
-              mainAxisSpacing: 8.0,
-              childAspectRatio: 0.8,
+          extendBodyBehindAppBar: true,
+          backgroundColor: Colors.white,
+          appBar: AppBar(
+            backgroundColor: Colors.white,
+            title: CustomText(
+              "Products",
+              fontSize: 15.sp,
+              fontWeight: FontWeight.w500,
             ),
-            itemCount: _products.length,
-            itemBuilder: (context, index) {
-              return Padding(
-                padding: const EdgeInsets.all(10.0),
-                child: GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => ProductDetails(product: _products[index]),
-                        ),
-                      );       
-                  },
-                  child: ProductCard(
-                    product: _products[index],
-                    onTap: () {},
-                  ),
-                ),
-              );
-            },
+            actions: [
+              IconButton(
+                icon: Icon(Icons.sort),
+                onPressed: () {
+                  _showCategoriesDrawer(context);
+                },
+              ),
+            ],
           ),
-        ),
-);
+          body: _isLoading
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 40, right: 40),
+                    child: LinearProgressIndicator(),
+                  ),
+                )
+              : Column(
+                  children: [
+                    _categories.isNotEmpty
+                        ? Container(
+                            height: 50,
+                            child: ListView.builder(
+                              scrollDirection: Axis.horizontal,
+                              itemCount: _categories.length,
+                              itemBuilder: (context, index) {
+                                return Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8.0),
+                                  child: Chip(
+                                    label: Text(_categories[index]),
+                                  ),
+                                );
+                              },
+                            ),
+                          )
+                        : Container(),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.all(5.0),
+                        child: GridView.builder(
+                          gridDelegate:
+                              SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            crossAxisSpacing: 8.0,
+                            mainAxisSpacing: 8.0,
+                            childAspectRatio: 0.8,
+                          ),
+                          itemCount: _products.length,
+                          itemBuilder: (context, index) {
+                            return Padding(
+                              padding: const EdgeInsets.all(10.0),
+                              child: GestureDetector(
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => ProductDetails(
+                                          product: _products[index]),
+                                    ),
+                                  );
+                                },
+                                child: ProductCard(
+                                  product: _products[index],
+                                  onTap: () {},
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+        );
       },
     );
   }

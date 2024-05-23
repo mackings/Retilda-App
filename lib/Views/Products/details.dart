@@ -148,10 +148,9 @@ class _ProductDetailsState extends State<ProductDetails> {
         wallet = Wallet;
       });
 
-      // getWalletBalance(wallet);
-
       print("User ID>> $userId");
       print("Product ID >> $productId");
+      print("All User>> $userData");
     }
   }
 
@@ -211,9 +210,7 @@ class _ProductDetailsState extends State<ProductDetails> {
 
   Future<void> makeBuyProductRequest(String token, String userId,
       String productId, String plan, int numberOfInstallments) async {
-
     try {
-      
       Map<String, dynamic> requestBody = {
         "userid": userId,
         "productId": productId,
@@ -234,7 +231,6 @@ class _ProductDetailsState extends State<ProductDetails> {
       );
 
       if (response.statusCode == 200) {
-        
         print('Buy product request successful');
         print('Response: ${response.body}');
 
@@ -257,41 +253,38 @@ class _ProductDetailsState extends State<ProductDetails> {
           },
         );
       } else {
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            Map<String, dynamic> responseData = jsonDecode(response.body);
+            String errorMessage = responseData['message'];
 
-showDialog(
-  context: context,
-  builder: (BuildContext context) {
-    Map<String, dynamic> responseData = jsonDecode(response.body);
-    String errorMessage = responseData['message'];
-
-    return AlertDialog(
-      title: Text('Failed'),
-      content: Text(errorMessage),
-      actions: <Widget>[
-        TextButton(
-          onPressed: () {
-            Navigator.of(context).pop();
+            return AlertDialog(
+              title: Text('Failed'),
+              content: Text(errorMessage),
+              actions: <Widget>[
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: Text('OK'),
+                ),
+              ],
+            );
           },
-          child: Text('OK'),
-        ),
-      ],
-    );
-  },
-);
+        );
 
         print(response.body);
         print(
             'Buy product request failed with status code: ${response.statusCode}');
       }
     } catch (error) {
-
       print('Error making buy product request: $error');
     }
   }
 
   Future<void> purchaseProduct() async {
-
-   setState(() {
+    setState(() {
       loading = true;
     });
 
@@ -313,7 +306,6 @@ showDialog(
     setState(() {
       loading = false;
     });
-
   }
 
   @override
@@ -404,26 +396,26 @@ showDialog(
                       fontSize: 12.sp,
                     ),
                     loading
-        ? CustomText('Making payments...')
-        : GestureDetector(
-            onTap: () {
-              purchaseProduct();
-            },
-            child: Container(
-              height: 6.h,
-              width: 50.w,
-              decoration: BoxDecoration(
-                color: ROrange,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Center(
-                child: CustomText(
-                  "Buy Now",
-                  color: Colors.white,
-                ),
-              ),
-            ),
-          ),
+                        ? CustomText('Making payments...')
+                        : GestureDetector(
+                            onTap: () {
+                              purchaseProduct();
+                            },
+                            child: Container(
+                              height: 6.h,
+                              width: 50.w,
+                              decoration: BoxDecoration(
+                                color: ROrange,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Center(
+                                child: CustomText(
+                                  "Buy Now",
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ),
                   ],
                 ),
               ),

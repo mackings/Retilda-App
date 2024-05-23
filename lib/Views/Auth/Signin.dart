@@ -24,85 +24,79 @@ class _SigninState extends State<Signin> {
   final TextEditingController _passwordController = TextEditingController();
   bool _isLoading = false;
 
+  Future<void> _login() async {
+    setState(() {
+      _isLoading = true;
+    });
 
-Future<void> _login() async {
-  setState(() {
-    _isLoading = true;
-  });
+    try {
+      final Map<String, String> payload = {
+        'email': _emailController.text,
+        "password": _passwordController.text
+      };
 
-  try {
-    final Map<String, String> payload = {
-      'email': _emailController.text,
-      "password": _passwordController.text
-    };
+      final String payloadJson = jsonEncode(payload);
 
-    final String payloadJson = jsonEncode(payload);
+      print('Request Payload: $payloadJson');
 
-    print('Request Payload: $payloadJson');
-
-    final url = Uri.parse('https://retilda.onrender.com/Api/login');
-    final response = await http.post(
-      url,
-      body: payloadJson,
-      headers: <String, String>{
-        'Content-Type': 'application/json',
-      },
-    );
-
-    if (response.statusCode == 200) {
-
-      print(response.body);
-      final responseData = jsonDecode(response.body);
-      final sharedPreferences = await SharedPreferences.getInstance();
-      await sharedPreferences.setString('userData', jsonEncode(responseData));
-      Navigator.push(
-          context, MaterialPageRoute(builder: (context) =>  HomePage()));
-
-    } else {
-      print(response.body);
-      final responseData = jsonDecode(response.body);
-
-      showDialog(
-        context: context,
-        builder: (context) {
-          return CustomAlertDialog(
-            title: 'Error',
-            titleColor: Colors.red,
-            message: responseData['message'],
-            onClosePressed: () {
-              // Handle close button press
-            },
-            onButtonPressed: () {
-            
-            },
-          );
+      final url = Uri.parse('https://retilda.onrender.com/Api/login');
+      final response = await http.post(
+        url,
+        body: payloadJson,
+        headers: <String, String>{
+          'Content-Type': 'application/json',
         },
       );
-    }
-  } catch (e) {
-    print('Error: $e');
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Error'),
-        content: Text('An error occurred'),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-            },
-            child: Text('OK'),
-          ),
-        ],
-      ),
-    );
-  } finally {
-    setState(() {
-      _isLoading = false;
-    });
-  }
-}
 
+      if (response.statusCode == 200) {
+        print(response.body);
+        final responseData = jsonDecode(response.body);
+        final sharedPreferences = await SharedPreferences.getInstance();
+        await sharedPreferences.setString('userData', jsonEncode(responseData));
+        Navigator.push(
+            context, MaterialPageRoute(builder: (context) => HomePage()));
+      } else {
+        print(response.body);
+        final responseData = jsonDecode(response.body);
+
+        showDialog(
+          context: context,
+          builder: (context) {
+            return CustomAlertDialog(
+              title: 'Error',
+              titleColor: Colors.red,
+              message: responseData['message'],
+              onClosePressed: () {
+                // Handle close button press
+              },
+              onButtonPressed: () {},
+            );
+          },
+        );
+      }
+    } catch (e) {
+      print('Error: $e');
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text('Error'),
+          content: Text('An error occurred'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: Text('OK'),
+            ),
+          ],
+        ),
+      );
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -135,6 +129,7 @@ Future<void> _login() async {
                   hintText: 'Email',
                   suffixIcon: Icons.email,
                   onChanged: (value) {},
+                  onSuffixIconTap: () {},
                 ),
                 SizedBox(height: 4.h),
                 CustomTextFormField(
@@ -142,6 +137,7 @@ Future<void> _login() async {
                   hintText: 'Password',
                   suffixIcon: Icons.visibility_off,
                   onChanged: (value) {},
+                  onSuffixIconTap: () {},
                 ),
                 SizedBox(height: 2.h),
                 GestureDetector(
@@ -157,14 +153,12 @@ Future<void> _login() async {
                   ),
                 ),
                 SizedBox(height: MediaQuery.of(context).size.height * 0.05),
-
                 CustomBtn(
                   text: _isLoading ? 'Signing in...' : 'Sign in',
                   onPressed: _isLoading ? null : _login,
                   backgroundColor: RButtoncolor,
                   borderRadius: 20.0,
                 ),
-
                 SizedBox(height: MediaQuery.of(context).size.height * 0.03),
                 Padding(
                   padding: const EdgeInsets.only(left: 10),
@@ -177,22 +171,10 @@ Future<void> _login() async {
                       ),
                       GestureDetector(
                         onTap: () {
-
-                          showDialog(
-                              context: context,
-                              builder: (context) {
-                                return CustomAlertDialog(
-                                  title: 'Success',
-                                  titleColor: Colors.red,
-                                  message: 'Your operation was successful.',
-                                  onClosePressed: () {
-                                    
-                                  },
-                                  onButtonPressed: () {
-                                    
-                                  },
-                                );
-                              });
+                          Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) => Signup()));
                         },
                         child: CustomText(
                           'Sign up',

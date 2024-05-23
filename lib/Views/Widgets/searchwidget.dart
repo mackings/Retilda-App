@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:retilda/Views/Products/Allproducts.dart';
 import 'package:retilda/Views/Widgets/components.dart';
 
 class SearchContainer extends StatelessWidget {
   final TextEditingController controller;
-  final VoidCallback onFilterPressed;
 
   const SearchContainer({
     Key? key,
     required this.controller,
-    required this.onFilterPressed,
   }) : super(key: key);
 
   @override
@@ -33,6 +32,10 @@ class SearchContainer extends StatelessWidget {
                   
                   Expanded(
                     child: TextFormField(
+                      onTap: () {
+                   Navigator.push(context,
+                        MaterialPageRoute(builder: (context) => Allproducts()));
+                      },
                       controller: controller,
                       decoration: InputDecoration(
                         hintText: 'Search for Products',
@@ -48,19 +51,7 @@ class SearchContainer extends StatelessWidget {
             ),
           ),
 
-          SizedBox(width: 10.0),
 
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.transparent,
-              border: Border.all(color: ROrange),
-              borderRadius: BorderRadius.circular(10.0),
-            ),
-            child: IconButton(
-              icon: Icon(Icons.filter_list),
-              onPressed: onFilterPressed,
-            ),
-          ),
         ],
       ),
     );

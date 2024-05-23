@@ -1,4 +1,7 @@
+
+
 class ApiResponse {
+  
   final bool success;
   final String message;
   final List<Product> data;
@@ -13,6 +16,8 @@ class ApiResponse {
     );
   }
 }
+
+
 
 class Product {
   final String id;

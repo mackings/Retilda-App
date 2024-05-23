@@ -98,7 +98,10 @@ class _PurchaseHistoryState extends ConsumerState<PurchaseHistory> {
           ),
           body: _isLoading
               ? Center(
-                  child: CircularProgressIndicator(),
+                  child:                                     Padding(
+                                      padding: const EdgeInsets.only(left: 40,right: 40),
+                                      child: LinearProgressIndicator(),
+                                    ),
                 )
               : _purchases.isEmpty
                   ? Center(

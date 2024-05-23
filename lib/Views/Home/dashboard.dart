@@ -94,6 +94,12 @@ class _DashboardState extends ConsumerState<Dashboard> {
     super.initState();
   }
 
+  @override
+  void dispose() {
+    searchcontroller;
+    super.dispose();
+  }
+
   TextEditingController searchcontroller = TextEditingController();
 
   @override
@@ -107,12 +113,17 @@ class _DashboardState extends ConsumerState<Dashboard> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 SizedBox(height: MediaQuery.of(context).size.height * 0.08),
-                SearchContainer(
-                  controller: searchcontroller,
-                  onFilterPressed: () {},
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(context,
+                        MaterialPageRoute(builder: (context) => Allproducts()));
+                  },
+                  child: SearchContainer(
+                    controller: searchcontroller,
+                  ),
                 ),
                 SizedBox(
-                  height: 30.h,
+                  height: 32.h,
                   child: PageView(
                     children: [
                       CarouselPageView(),
@@ -132,23 +143,29 @@ class _DashboardState extends ConsumerState<Dashboard> {
                     ],
                   ),
                 ),
-
-                SizedBox(height: 2.h,),
-
                 SizedBox(
-                  height: 20.h,
+                  height: 2.h,
+                ),
+                SizedBox(
+                  height: 25.h,
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20,),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                    ),
                     child: SliderWidget(items: [
-                      SliderItem(imagePath: 'assets/t1.jpg', text: 'Home Appliances'),
-                      SliderItem(imagePath: 'assets/wm2.jpg', text: 'Washing Machines'),
-                      SliderItem(imagePath: 'assets/k1.jpg', text: 'Kitchen Utensils'),
+                      SliderItem(
+                          imagePath: 'assets/t1.jpg', text: 'Home Appliances'),
+                      SliderItem(
+                          imagePath: 'assets/wm2.jpg',
+                          text: 'Washing Machines'),
+                      SliderItem(
+                          imagePath: 'assets/k1.jpg', text: 'Kitchen Utensils'),
                     ]),
                   ),
                 ),
-
-                SizedBox(height: 3.h,),
-                
+                SizedBox(
+                  height: 3.h,
+                ),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 30),
                   child: Row(
@@ -160,7 +177,6 @@ class _DashboardState extends ConsumerState<Dashboard> {
                         color: ROrange,
                         fontWeight: FontWeight.w600,
                       ),
-
                       GestureDetector(
                         onTap: () {
                           Navigator.push(
@@ -178,7 +194,6 @@ class _DashboardState extends ConsumerState<Dashboard> {
                     ],
                   ),
                 ),
-
                 Token != null
                     ? FutureBuilder<ApiResponse>(
                         future: fetchData(Token!),
@@ -186,26 +201,29 @@ class _DashboardState extends ConsumerState<Dashboard> {
                           if (snapshot.connectionState ==
                               ConnectionState.waiting) {
                             return Center(
-                              child: Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Column(
-                                  children: [
-                                    SizedBox(height: 10.h,),
-                                    Padding(
-                                      padding: const EdgeInsets.only(left: 40,right: 40),
-                                      child: LinearProgressIndicator(),
-                                    ),
-                                  ],
-                                ),
-                              )
-                            );
+                                child: Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Column(
+                                children: [
+                                  SizedBox(
+                                    height: 10.h,
+                                  ),
+                                  Padding(
+                                    padding: const EdgeInsets.only(
+                                        left: 40, right: 40),
+                                    child: LinearProgressIndicator(),
+                                  ),
+                                ],
+                              ),
+                            ));
                           } else if (snapshot.hasError) {
                             return Center(
                               child: Text('Error loading products'),
                             );
                           } else if (snapshot.hasData) {
                             return Padding(
-                              padding: const EdgeInsets.only(left: 20,right: 20),
+                              padding:
+                                  const EdgeInsets.only(left: 20, right: 20),
                               child: GridView.count(
                                 crossAxisCount: 2,
                                 shrinkWrap: true,
@@ -223,8 +241,6 @@ class _DashboardState extends ConsumerState<Dashboard> {
                                     .toList(),
                               ),
                             );
-
-
                           } else {
                             return Center(
                               child: Text('No products available'),
