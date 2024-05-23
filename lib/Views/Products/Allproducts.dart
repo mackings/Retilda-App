@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -157,209 +158,217 @@ class _AllproductsState extends ConsumerState<Allproducts> {
     }
   }
 
-  void _showCategoriesDrawer(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (BuildContext context, StateSetter setModalState) {
-            bool _sortEnabled = _selectedFilterOption != null;
 
-            return Scaffold(
-              appBar: AppBar(
-                title: CustomText('Sort and Filter'),
+
+
+
+void _showCategoriesDrawer(BuildContext context) {
+  showModalBottomSheet(
+    context: context,
+    backgroundColor: Colors.transparent,
+    isScrollControlled: true,
+    builder: (context) {
+      return StatefulBuilder(
+        builder: (BuildContext context, StateSetter setModalState) {
+          bool _sortEnabled = _selectedFilterOption != null;
+
+          return Scaffold(
+            appBar: AppBar(
+              title: CustomText(
+                'Filter',
+                fontSize: 15.sp,
+                fontWeight: FontWeight.w500,
               ),
-              body: Padding(
-                padding: EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Filter by',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
+            ),
+            body: Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Sort by',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
                     ),
-                    RadioListTile<String>(
-                      title: const CustomText('Category'),
-                      value: 'category',
-                      groupValue: _selectedFilterOption,
-                      onChanged: (value) {
-                        setModalState(() {
-                          _selectedFilterOption = value!;
-                          _sortEnabled = true;
-                        });
-                        setState(() {
-                          _selectedFilterOption = value!;
-                          // Reset selected category when switching filter options
-                          _selectedCategory = null;
-                          // Set _isCategorySelected to false when switching filter options
-                          _isCategorySelected = false;
-                        });
-                      },
-                    ),
-                    SizedBox(height: 10),
-                    CustomText(
-                      'Sort by',
-                    ),
-                    RadioListTile<String>(
-                      title: const CustomText('Lower to Highest Price'),
-                      value: 'lower_to_highest',
-                      groupValue: _selectedSortOption,
-                      onChanged: _sortEnabled
-                          ? (value) {
+                  ),
+                  RadioListTile<String>(
+                    title: const CustomText('Category'),
+                    value: 'category',
+                    groupValue: _selectedFilterOption,
+                    onChanged: (value) {
+                      setModalState(() {
+                        _selectedFilterOption = value!;
+                        _sortEnabled = true;
+                      });
+                      setState(() {
+                        _selectedFilterOption = value!;
+                        _selectedCategory = null;
+                        _isCategorySelected = false;
+                      });
+                    },
+                  ),
+                  SizedBox(height: 10),
+                  CustomText(
+                    'Sort by',
+                  ),
+                  RadioListTile<String>(
+                    title: const CustomText('Lower to Highest Price'),
+                    value: 'lower_to_highest',
+                    groupValue: _selectedSortOption,
+                    onChanged: _sortEnabled
+                        ? (value) {
+                            setModalState(() {
+                              _selectedSortOption = value!;
+                            });
+                            setState(() {
+                              _selectedSortOption = value!;
+                            });
+                          }
+                        : null,
+                  ),
+                  RadioListTile<String>(
+                    title: const Text('Highest to Lower Price'),
+                    value: 'highest_to_lower',
+                    groupValue: _selectedSortOption,
+                    onChanged: _sortEnabled
+                        ? (value) {
+                            setModalState(() {
+                              _selectedSortOption = value!;
+                            });
+                            setState(() {
+                              _selectedSortOption = value!;
+                            });
+                          }
+                        : null,
+                  ),
+                  SizedBox(height: 10),
+                  CustomText(
+                    'Categories',
+                  ),
+                  SizedBox(height: 10),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      child: Wrap(
+                        spacing: 8.0,
+                        runSpacing: 8.0,
+                        children: _categories.map((category) {
+                          return ChoiceChip(
+                            label: CustomText(category),
+                            selected: _selectedCategory == category,
+                            onSelected: (selected) {
                               setModalState(() {
-                                _selectedSortOption = value!;
+                                _selectedCategory =
+                                    selected ? category : null;
+                                _isCategorySelected = selected;
                               });
                               setState(() {
-                                _selectedSortOption = value!;
-                              });
-                            }
-                          : null,
-                    ),
-                    RadioListTile<String>(
-                      title: const Text('Highest to Lower Price'),
-                      value: 'highest_to_lower',
-                      groupValue: _selectedSortOption,
-                      onChanged: _sortEnabled
-                          ? (value) {
-                              setModalState(() {
-                                _selectedSortOption = value!;
-                              });
-                              setState(() {
-                                _selectedSortOption = value!;
-                              });
-                            }
-                          : null,
-                    ),
-                    SizedBox(height: 10),
-                    Text(
-                      'Categories',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    SizedBox(height: 10),
-                    Expanded(
-                      child: SingleChildScrollView(
-                        child: Wrap(
-                          spacing: 8.0,
-                          runSpacing: 8.0,
-                          children: _categories.map((category) {
-                            return ChoiceChip(
-                              label: Text(category),
-                              selected: _selectedCategory == category,
-                              onSelected: (selected) {
-                                setModalState(() {
-                                  _selectedCategory =
-                                      selected ? category : null;
-                                  _isCategorySelected = selected;
-                                });
-                                setState(() {
-                                  _selectedCategory =
-                                      selected ? category : null;
-                                  if (_selectedCategory != null) {
-                                    fetchProductsByCategory(category);
+                                _selectedCategory =
+                                    selected ? category : null;
+                                if (_selectedCategory != null) {
+                                  fetchProductsByCategory(category);
+                                  Timer(Duration(seconds: 2), () {
                                     Navigator.pop(context);
-                                  }
-                                });
-                              },
-                            );
-                          }).toList(),
-                        ),
+                                  });
+                                }
+                              });
+                            },
+                          );
+                        }).toList(),
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            );
-          },
-        );
-      },
-    );
-  }
+            ),
+          );
+        },
+      );
+    },
+  );
+}
+
 
   @override
   Widget build(BuildContext context) {
     return Sizer(
       builder: (context, orientation, deviceType) {
         return Scaffold(
-          extendBodyBehindAppBar: true,
-          backgroundColor: Colors.white,
-          appBar: AppBar(
-            backgroundColor: Colors.white,
-            title: CustomText(
-              "Products",
-              fontSize: 15.sp,
-              fontWeight: FontWeight.w500,
-            ),
-            actions: [
-              IconButton(
-                icon: Icon(Icons.sort),
-                onPressed: () {
-                  _showCategoriesDrawer(context);
-                },
-              ),
-            ],
+  extendBodyBehindAppBar: true,
+  backgroundColor: Colors.white,
+  appBar: AppBar(
+    backgroundColor: Colors.white,
+    title: CustomText(
+      "Products",
+      fontSize: 15.sp,
+      fontWeight: FontWeight.w500,
+    ),
+    actions: [
+      IconButton(
+        icon: Icon(Icons.sort),
+        onPressed: () {
+          _showCategoriesDrawer(context);
+        },
+      ),
+    ],
+  ),
+  body: _isLoading
+      ? Center(
+          child: Padding(
+            padding: const EdgeInsets.only(left: 40, right: 40),
+            child: LinearProgressIndicator(),
           ),
-          body: _isLoading
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.only(left: 40, right: 40),
-                    child: LinearProgressIndicator(),
+        )
+      : Column(
+          children: [
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(5.0),
+                child: GridView.builder(
+                  gridDelegate:
+                      SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 8.0,
+                    mainAxisSpacing: 8.0,
+                    childAspectRatio: 0.8,
                   ),
-                )
-              : Column(
-                  children: [
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.all(5.0),
-                        child: GridView.builder(
-                          gridDelegate:
-                              SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            crossAxisSpacing: 8.0,
-                            mainAxisSpacing: 8.0,
-                            childAspectRatio: 0.8,
-                          ),
-                          itemCount: _isCategorySelected
-                              ? _products.length
-                              : _products.length,
-                          itemBuilder: (context, index) {
-                            return Padding(
-                              padding: const EdgeInsets.all(10.0),
-                              child: GestureDetector(
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => ProductDetails(
-                                        product: _isCategorySelected
-                                            ? _products[index]
-                                            : _products[index],
-                                      ),
-                                    ),
-                                  );
-                                },
-                                child: ProductCard(
-                                  product: _isCategorySelected
-                                      ? _products[index]
-                                      : _products[index],
-                                  onTap: () {},
-                                ),
+                  itemCount: _products.length,
+                  itemBuilder: (context, index) {
+                    List<Product> displayedProducts = List.from(_products);
+
+                    // Apply sorting based on selected sort option
+                    if (_selectedSortOption == 'lower_to_highest') {
+                      displayedProducts.sort((a, b) => a.price.compareTo(b.price));
+                    } else if (_selectedSortOption == 'highest_to_lower') {
+                      displayedProducts.sort((a, b) => b.price.compareTo(a.price));
+                    }
+
+                    return Padding(
+                      padding: const EdgeInsets.all(10.0),
+                      child: GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ProductDetails(
+                                product: displayedProducts[index],
                               ),
-                            );
-                          },
+                            ),
+                          );
+                        },
+                        child: ProductCard(
+                          product: displayedProducts[index],
+                          onTap: () {},
                         ),
                       ),
-                    ),
-                  ],
+                    );
+                  },
                 ),
-        );
+              ),
+            ),
+          ],
+        ),
+);
       },
     );
   }
