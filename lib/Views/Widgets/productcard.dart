@@ -134,7 +134,7 @@ class ProductCard extends StatelessWidget {
                         Flexible(child: CustomText(
   'N${NumberFormat("#,##0").format(product.price)}',
   fontWeight: FontWeight.w600,
-  fontSize: 12.sp,
+  fontSize: 11.sp,
 ),),
                         IconButton(
                           icon: Icon(
