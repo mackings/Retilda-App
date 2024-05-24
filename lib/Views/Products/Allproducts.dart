@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:retilda/Views/Products/details.dart';
@@ -11,6 +10,8 @@ import 'package:retilda/model/products.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'package:sizer/sizer.dart';
+
+
 
 class Allproducts extends ConsumerStatefulWidget {
   const Allproducts({Key? key}) : super(key: key);
@@ -36,6 +37,7 @@ class _AllproductsState extends ConsumerState<Allproducts> {
     _loadUserData();
   }
 
+
   Future<ApiCategoryResponse<List<String>>> fetchCategories(
       String token) async {
     final String url = 'https://retilda.onrender.com/Api/products/allcategory';
@@ -50,11 +52,13 @@ class _AllproductsState extends ConsumerState<Allproducts> {
       );
 
       if (response.statusCode == 200) {
+
         final Map<String, dynamic> responseData = jsonDecode(response.body);
         final ApiCategoryResponse<List<String>> apiResponse =
             ApiCategoryResponse.fromJson(responseData, (data) {
           return List<String>.from(data);
         });
+
         print(apiResponse.data);
         return apiResponse;
       } else {
@@ -157,10 +161,6 @@ class _AllproductsState extends ConsumerState<Allproducts> {
       print('Error: $error');
     }
   }
-
-
-
-
 
 void _showCategoriesDrawer(BuildContext context) {
   showModalBottomSheet(
