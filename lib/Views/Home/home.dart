@@ -7,6 +7,7 @@ import 'package:retilda/Views/Auth/Signup.dart';
 import 'package:retilda/Views/Home/dashboard.dart';
 import 'package:retilda/Views/Products/cartpage.dart';
 import 'package:retilda/Views/Wallet/Purchasehistory.dart';
+import 'package:retilda/Views/Wallet/transactions.dart';
 import 'package:retilda/Views/Widgets/bottomnavbar.dart';
 import 'package:retilda/Views/Widgets/components.dart';
 import 'package:retilda/Views/Widgets/widgets.dart';
@@ -50,11 +51,12 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _initializePages() {
+    
     _pages = [
       Dashboard(),
       CartPage(),
       PurchaseHistory(),
-      Signup(),
+      Transactions()
     ];
   }
 
@@ -82,10 +84,10 @@ class _HomePageState extends State<HomePage> {
             icon: Icon(Icons.history),
             label: 'History',
           ),
-          // BottomNavigationBarItem(
-          //   icon: Icon(Icons.favorite_outline),
-          //   label: 'Favourites',
-          // ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.account_balance),
+            label: 'Transactions',
+          ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person),
             label: 'Account',
