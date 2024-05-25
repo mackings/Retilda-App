@@ -3,8 +3,10 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:retilda/Views/Widgets/components.dart';
 import 'package:retilda/Views/Widgets/widgets.dart';
+import 'package:retilda/model/transactionsmodel.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sizer/sizer.dart';
 import 'package:http/http.dart' as http;
@@ -20,6 +22,7 @@ class _TransactionsState extends ConsumerState<Transactions> {
   String? balance;
   String? _token;
   String? wallet;
+  List<Content> _transactions = [];
 
   Future<void> _loadUserData() async {
     SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
@@ -32,8 +35,30 @@ class _TransactionsState extends ConsumerState<Transactions> {
       setState(() {
         _token = token;
         wallet = Wallet;
-        print("Wallet >>> $wallet");
       });
+
+      fetchTransactions();
+      getWalletBalance(wallet.toString());
+    }
+  }
+
+  Future<void> fetchTransactions() async {
+    final url =
+        Uri.parse('https://retilda.onrender.com/Api/transactions/$wallet');
+
+    final response = await http.get(url, headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $_token',
+    });
+
+    if (response.statusCode == 200) {
+      final apiResponse = ApiResponse.fromJson(jsonDecode(response.body));
+      setState(() {
+        _transactions = apiResponse.data.responseBody.content;
+        print("Transactions $_transactions");
+      });
+    } else {
+      throw Exception('Failed to load transactions');
     }
   }
 
@@ -57,18 +82,13 @@ class _TransactionsState extends ConsumerState<Transactions> {
       );
 
       if (response.statusCode == 200) {
-        print(response.body);
         Map<String, dynamic> responseBody = jsonDecode(response.body);
-
-        print(
-            'Wallet balance: ${responseBody['data']['responseBody']['availableBalance']}');
 
         setState(() {
           balance = responseBody['data']['responseBody']['availableBalance']
               .toString();
         });
       } else {
-        print(response.body);
         print('Failed to fetch wallet balance: ${response.statusCode}');
       }
     } catch (error) {
@@ -79,9 +99,6 @@ class _TransactionsState extends ConsumerState<Transactions> {
   @override
   void initState() {
     _loadUserData();
-    Timer(Duration(seconds: 1), () {
-      getWalletBalance(wallet.toString());
-    });
     super.initState();
   }
 
@@ -107,8 +124,11 @@ class _TransactionsState extends ConsumerState<Transactions> {
               height: 20.h,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(8),
-                  image: DecorationImage(
-                      image: AssetImage("assets/bg.jpg"), fit: BoxFit.cover)),
+                image: DecorationImage(
+                  image: AssetImage("assets/bg.jpg"),
+                  fit: BoxFit.cover,
+                ),
+              ),
               child: Padding(
                 padding: const EdgeInsets.all(10.0),
                 child: Row(
@@ -118,13 +138,13 @@ class _TransactionsState extends ConsumerState<Transactions> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                           CustomText(
+                        CustomText(
                           "Available Balance",
                           color: Colors.white,
                           fontSize: 8.sp,
                         ),
                         CustomText(
-                          'N${balance== null?"****":balance.toString()}',
+                          'N${balance == null ? "****" : balance.toString()}',
                           fontSize: 15.sp,
                           fontWeight: FontWeight.w500,
                           color: Colors.white,
@@ -134,14 +154,32 @@ class _TransactionsState extends ConsumerState<Transactions> {
                     Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Container(
-                          height: 5.h,
-                          width: 30.w,
-                          decoration: BoxDecoration(
-                            color: ROrange,
-                            borderRadius: BorderRadius.circular(8)
+                        GestureDetector(
+                          onTap: () {
+                            fetchTransactions();
+                          },
+                          child: Container(
+                            height: 5.h,
+                            width: 31.w,
+                            decoration: BoxDecoration(
+                                color: Colors.orange,
+                                borderRadius: BorderRadius.circular(8)),
+                            child: Center(
+                              child: Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    CustomText(
+                                      "Add money",
+                                      color: Colors.white,
+                                    ),
+                                    Icon(Icons.add,color: Colors.white,),
+                                  ],
+                                ),
+                              ),
+                            ),
                           ),
-                          child: Center(child: CustomText("Add money",color: Colors.white,)),
                         )
                       ],
                     )
@@ -149,7 +187,51 @@ class _TransactionsState extends ConsumerState<Transactions> {
                 ),
               ),
             ),
-          )
+          ),
+
+          Padding(
+            padding: const EdgeInsets.only(left: 20,top: 30),
+            child: Row(
+              children: [
+                CustomText("Transaction History",
+                fontSize: 15.sp,
+                fontWeight: FontWeight.w500,
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: _transactions.isEmpty
+                ? Center(child: Padding(
+                  padding: const EdgeInsets.only(left: 30,right: 30),
+                  child: LinearProgressIndicator(),
+                ))
+                : Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: ListView.builder(
+                      itemCount: _transactions.length,
+                      itemBuilder: (context, index) {
+                        final transaction = _transactions[index];
+                        final formattedDate = DateFormat('MMMM d, yyyy, h:mma').format(DateTime.parse(transaction.transactionDate));
+                        return Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(width: 0.5,color: Colors.grey)
+                            ),
+                            child: ListTile(
+                              leading: transaction.transactionType=="DEBIT"?Icon(Icons.arrow_circle_down_sharp,color: Colors.red,):Icon(Icons.arrow_circle_up_sharp,color: Colors.green,),
+                              title: CustomText(transaction.transactionType),
+                              subtitle: CustomText(formattedDate),
+                              trailing: CustomText('N${transaction.amount}'),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                ),
+          ),
         ],
       ),
     );
