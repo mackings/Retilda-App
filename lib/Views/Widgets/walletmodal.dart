@@ -55,13 +55,16 @@ class _WalletPaymentModalSheetState extends State<WalletPaymentModalSheet> {
                   )),
             ),
 
-            SizedBox(
-              height: 2.h,
-            ),
+            // SizedBox(
+            //   height: 2.h,
+            // ),
 
-            CustomText('Wallet Balance: ${widget.walletBalance}'),
+            CustomText(' ${widget.walletBalance}'),
             SizedBox(height: 2.h),
-            CustomText("Select payment option"),
+            CustomText("Select payment option",
+            fontSize: 13.sp,
+            fontWeight: FontWeight.w500,),
+
             SizedBox(height: 3.h),
             Container(
               decoration: BoxDecoration(
@@ -78,6 +81,7 @@ class _WalletPaymentModalSheetState extends State<WalletPaymentModalSheet> {
                   widget.onPaymentOptionSelected!(newValue);
                 },
                 underline: SizedBox(),
+                
                 items: widget.paymentOptions.map((option) {
                   return DropdownMenuItem<String>(
                     value: option,
@@ -100,8 +104,8 @@ class _WalletPaymentModalSheetState extends State<WalletPaymentModalSheet> {
                 },
               ),
             ),
+
             SizedBox(height: 3.h),
-            // Use the button widget built from the buttonWidgetBuilder function
             widget.buttonWidgetBuilder(),
           ],
         ),

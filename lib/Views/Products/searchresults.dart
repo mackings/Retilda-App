@@ -123,7 +123,7 @@ class _SearchPageState extends State<SearchPage> {
                 borderRadius: BorderRadius.circular(8)
               ),
               child: Padding(
-                padding: const EdgeInsets.all(8.0),
+                padding: const EdgeInsets.only(left: 10),
                 child: TextFormField(
                   controller: _searchController,
                   decoration: InputDecoration(

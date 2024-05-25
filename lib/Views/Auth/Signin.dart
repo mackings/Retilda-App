@@ -111,7 +111,7 @@ class _SigninState extends State<Signin> {
               children: [
                 SizedBox(height: MediaQuery.of(context).size.height * 0.1),
                 CustomText(
-                  'Retilda',
+                  'Retilda', 
                   fontSize: 25.sp,
                   fontWeight: FontWeight.bold,
                   color: ROrange,
@@ -124,6 +124,7 @@ class _SigninState extends State<Signin> {
                   color: Colors.black,
                 ),
                 SizedBox(height: 4.h),
+                
                 CustomTextFormField(
                   controller: _emailController,
                   hintText: 'Email',

@@ -195,7 +195,8 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
         isDismissible: false,
         builder: (BuildContext context) {
           return WalletPaymentModalSheet(
-            walletBalance: 'N${balance}',
+             walletBalance: '',
+           // walletBalance: 'N${balance}',
             paymentOptions: ['Installment', 'Full Payment'],
             onPaymentOptionSelected: (selectedOption) {
               print('Selected payment option: $selectedOption');

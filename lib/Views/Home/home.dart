@@ -6,6 +6,7 @@ import 'package:retilda/Views/Auth/Signin.dart';
 import 'package:retilda/Views/Auth/Signup.dart';
 import 'package:retilda/Views/Home/dashboard.dart';
 import 'package:retilda/Views/Products/cartpage.dart';
+import 'package:retilda/Views/Profile/profile.dart';
 import 'package:retilda/Views/Wallet/Purchasehistory.dart';
 import 'package:retilda/Views/Wallet/transactions.dart';
 import 'package:retilda/Views/Widgets/bottomnavbar.dart';
@@ -56,8 +57,10 @@ class _HomePageState extends State<HomePage> {
       Dashboard(),
       CartPage(),
       PurchaseHistory(),
-      Transactions()
+      Transactions(),
+      Profile()
     ];
+    
   }
 
   void _onItemTapped(int index) {

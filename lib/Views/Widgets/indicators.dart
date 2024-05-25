@@ -32,9 +32,14 @@ class _CarouselPageViewState extends State<CarouselPageView> {
               children: [
                 Padding(
                   padding: const EdgeInsets.all(10.0),
-                  child: Container(height: 20.h,
+                  child: Container(
+                    height: 20.h,
                   decoration: BoxDecoration(
-                    color: Colors.blue,
+                    image: DecorationImage(image: AssetImage("assets/f4.jpg",
+                    ),
+                    fit: BoxFit.fill
+                    ),
+                   // color: Colors.blue,
                     borderRadius: BorderRadius.circular(15)
                   ),
                   ),
@@ -44,7 +49,10 @@ class _CarouselPageViewState extends State<CarouselPageView> {
                   padding: const EdgeInsets.all(10.0),
                   child: Container(height: 20.h,
                   decoration: BoxDecoration(
-                    color: Colors.grey,
+                   image: DecorationImage(image: AssetImage("assets/f3.jpg",
+                    ),
+                    fit: BoxFit.fill
+                    ),
                     borderRadius: BorderRadius.circular(15)
                   ),
                   ),
@@ -54,7 +62,10 @@ class _CarouselPageViewState extends State<CarouselPageView> {
                   padding: const EdgeInsets.all(10.0),
                   child: Container(height: 20.h,
                   decoration: BoxDecoration(
-                    color: ROrange,
+                   image: DecorationImage(image: AssetImage("assets/f1.jpg",
+                    ),
+                    fit: BoxFit.fill
+                    ),
                     borderRadius: BorderRadius.circular(15)
                   ),
                   ),
