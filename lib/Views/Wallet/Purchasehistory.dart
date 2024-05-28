@@ -128,15 +128,9 @@ class _PurchaseHistoryState extends ConsumerState<PurchaseHistory> {
                                 MaterialPageRoute(
                                     builder: (context) =>
                                         Purchasesummary(purchase: purchase)));
-                            // Navigator.push(
-                            //   context,
-                            //   MaterialPageRoute(
-                            //     builder: (context) =>
-                            //         PurchaseSummary(purchase: purchase),
-                            //   ),
-                            // );
+
                           },
-                          child: PaymentSummaryCard(
+                          child: PaymentSummaryCard( 
                             date: paymentDate,
                             imageUrl: purchase.product.images,
                             title: purchase.product.name,

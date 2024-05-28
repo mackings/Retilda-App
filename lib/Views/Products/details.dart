@@ -339,6 +339,7 @@ class _ProductDetailsState extends State<ProductDetails> {
               SizedBox(
                 height: 2.h,
               ),
+
               SizedBox(
                 height: 30.h,
                 child: PageView(
@@ -365,7 +366,8 @@ class _ProductDetailsState extends State<ProductDetails> {
                   children: [
                     CustomText(
                       widget.product.name,
-                      fontWeight: FontWeight.w400,
+                      fontWeight: FontWeight.w500,
+                      fontSize: 12.sp,
                     ),
                     Row(
                       children: [
@@ -416,7 +418,7 @@ class _ProductDetailsState extends State<ProductDetails> {
                               height: 6.h,
                               width: 50.w,
                               decoration: BoxDecoration(
-                                color: ROrange,
+                                color: RButtoncolor,
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: Center(

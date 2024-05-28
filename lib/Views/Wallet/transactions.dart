@@ -248,16 +248,17 @@ class _TransactionsState extends ConsumerState<Transactions> {
                           color: Colors.white,
                         ),
                         CustomText(
-                          "$TNos",
+                          "${TNos == null?"Standard Account":TNos} ",
                           color: Colors.white,
                           fontSize: 8.sp,
                         ),
 
                           CustomText(
-                          "$Tbank",
+                          "${Tbank == null?"****":Tbank}",
                           color: Colors.white,
                           fontSize: 8.sp,
                         ),
+                        
                       ],
                     ),
                     Column(
@@ -315,6 +316,7 @@ class _TransactionsState extends ConsumerState<Transactions> {
               ],
             ),
           ),
+
           Expanded(
             child: _transactions.isEmpty
                 ? Center(
@@ -339,11 +341,16 @@ class _TransactionsState extends ConsumerState<Transactions> {
                       itemCount: _transactions.length,
                       itemBuilder: (context, index) {
                         final transaction = _transactions[index];
-                        final formattedDate = DateFormat('MMMM d, yyyy, h:mma')
-                            .format(
-                                DateTime.parse(transaction.transactionDate));
+  final transactionDateTime = DateTime.parse(transaction.transactionDate).add(Duration(hours: 1));
+                        final formattedDate = DateFormat('MMMM d, yyyy, h:mma').format(transactionDateTime);
+
+                                final formattedAmount = NumberFormat.currency(
+  locale: 'en_NG', 
+  symbol: 'N',
+  decimalDigits: 0, 
+).format(transaction.amount);
                         return Padding(
-                          padding: const EdgeInsets.all(8.0),
+                          padding: const EdgeInsets.all(15.0),
                           child: Container(
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(8),
@@ -357,8 +364,15 @@ class _TransactionsState extends ConsumerState<Transactions> {
                                   : Icon(Icons.arrow_circle_up_sharp,
                                       color: Colors.green),
                               title: CustomText(transaction.transactionType),
-                              subtitle: CustomText(formattedDate),
-                              trailing: CustomText('N${transaction.amount}'),
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  CustomText(formattedDate),
+                                  CustomText('${transaction.status}',
+                                  fontSize: 8.sp,),
+                                ],
+                              ),
+                              trailing: CustomText('${formattedAmount}'),
                             ),
                           ),
                         );

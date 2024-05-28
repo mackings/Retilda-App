@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -5,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:retilda/Views/Widgets/breakdownwidget.dart';
 import 'package:retilda/Views/Widgets/components.dart';
+import 'package:retilda/Views/Widgets/deliverymodal.dart';
 import 'package:retilda/Views/Widgets/linearpercent.dart';
 import 'package:retilda/Views/Widgets/paymnetbutton.dart';
 import 'package:retilda/Views/Widgets/walletmodal.dart';
@@ -85,9 +87,6 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
     }
   }
 
-
-  
-
   Future<void> _loadUserData() async {
     SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
     String? userDataString = sharedPreferences.getString('userData');
@@ -164,9 +163,10 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
         print(
             'Wallet balance: ${responseBody['data']['responseBody']['availableBalance']}');
 
-            setState(() {
-              balance = responseBody['data']['responseBody']['availableBalance'].toString();
-            });
+        setState(() {
+          balance = responseBody['data']['responseBody']['availableBalance']
+              .toString();
+        });
       } else {
         print(response.body);
         print('Failed to fetch wallet balance: ${response.statusCode}');
@@ -195,8 +195,8 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
         isDismissible: false,
         builder: (BuildContext context) {
           return WalletPaymentModalSheet(
-             walletBalance: '',
-           // walletBalance: 'N${balance}',
+            walletBalance: '',
+            // walletBalance: 'N${balance}',
             paymentOptions: ['Installment', 'Full Payment'],
             onPaymentOptionSelected: (selectedOption) {
               print('Selected payment option: $selectedOption');
@@ -229,12 +229,37 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
 
   @override
   void initState() {
+    Timer(Duration(seconds: 1), () {
+          if (widget.purchase.totalAmountToPay == widget.purchase.totalPaidForPurchase) {
+           showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                builder: (context) => DeliveryModal(),
+              );
+      
+    } else {
+       
+          
+    }
+    });
     _loadUserData();
     super.initState();
   }
 
   @override
   Widget build(BuildContext context) {
+    final formattedAmount = NumberFormat.currency(
+      locale: 'en_NG',
+      symbol: 'N',
+      decimalDigits: 0,
+    ).format(widget.purchase.totalAmountToPay);
+
+    final formattedAmount2 = NumberFormat.currency(
+      locale: 'en_NG',
+      symbol: 'N',
+      decimalDigits: 0,
+    ).format(widget.purchase.totalPaidForPurchase);
+
     return Sizer(
       builder: (context, orientation, deviceType) {
         return Scaffold(
@@ -326,9 +351,9 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
                               child: Row(
                                 children: [
                                   CustomText(
-                                    "Make Payments",
-                                    fontWeight: FontWeight.w500,
-                                    fontSize: 10.sp,
+                                    "Pay Installments",
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 11.sp,
                                   ),
                                   Icon(Icons.payment),
                                   if (_showPaymentOptions) // Show payment options if _showPaymentOptions is true
@@ -366,12 +391,12 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
                         ),
                         PaymentBreakdownWidget(
                           title: 'Total Amount:',
-                          amount: 'N${widget.purchase.totalAmountToPay}',
+                          amount: formattedAmount,
                           index: null,
                         ),
                         PaymentBreakdownWidget(
                           title: 'Total Amount Paid:',
-                          amount: 'N${widget.purchase.totalPaidForPurchase}',
+                          amount: formattedAmount2,
                           index: null,
                         ),
                         PaymentBreakdownWidget(
