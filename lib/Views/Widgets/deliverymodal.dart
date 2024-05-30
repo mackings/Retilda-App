@@ -86,7 +86,7 @@ class _DeliveryModalState extends State<DeliveryModal> {
                   child: TextFormField(
                     maxLines: 2,
                     controller: _addressController,
-                    decoration: InputDecoration(
+                    decoration: InputDecoration( 
                         border: InputBorder.none,
                         hintText: "Enter Delivery Address",
                         hintStyle: GoogleFonts.poppins()),
