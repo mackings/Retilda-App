@@ -117,6 +117,7 @@ class _SigninState extends State<Signin> {
                   color: ROrange,
                 ),
                 SizedBox(height: 4.h),
+                
                 CustomText(
                   'Sign in',
                   fontSize: 15.sp,
@@ -132,7 +133,9 @@ class _SigninState extends State<Signin> {
                   onChanged: (value) {},
                   onSuffixIconTap: () {},
                 ),
+
                 SizedBox(height: 4.h),
+
                 CustomTextFormField(
                   controller: _passwordController,
                   hintText: 'Password',
@@ -140,7 +143,9 @@ class _SigninState extends State<Signin> {
                   onChanged: (value) {},
                   onSuffixIconTap: () {},
                 ),
+
                 SizedBox(height: 2.h),
+
                 GestureDetector(
                   onTap: () {
                     // Forgot password action
@@ -153,23 +158,29 @@ class _SigninState extends State<Signin> {
                     ),
                   ),
                 ),
+
                 SizedBox(height: MediaQuery.of(context).size.height * 0.05),
+                
                 CustomBtn(
                   text: _isLoading ? 'Signing in...' : 'Sign in',
                   onPressed: _isLoading ? null : _login,
                   backgroundColor: RButtoncolor,
                   borderRadius: 20.0,
                 ),
+
                 SizedBox(height: MediaQuery.of(context).size.height * 0.03),
+
                 Padding(
                   padding: const EdgeInsets.only(left: 10),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.start,
                     children: [
+                      
                       CustomText(
                         'New user? ',
                         color: Colors.black,
                       ),
+
                       GestureDetector(
                         onTap: () {
                           Navigator.pushReplacement(

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:retilda/Views/Auth/kyc.dart';
+import 'package:retilda/Views/Merchant/upload.dart';
 import 'package:retilda/Views/Widgets/components.dart';
 import 'package:retilda/Views/Widgets/profiletile.dart';
 import 'package:retilda/Views/Widgets/widgets.dart';
@@ -150,6 +151,18 @@ class _ProfileState extends ConsumerState<Profile> {
                   title: 'Terms and Policy',
                   onTap: () {
                     // Handle navigation or other actions
+                    print('Account Info tapped');
+                  },
+                ),
+
+               ProfileListItem(
+                  icon: Icons.space_dashboard_outlined,
+                  title: 'Merchant',
+                  onTap: () {
+
+                   Navigator.push(context,
+                  MaterialPageRoute(builder: (context) => UploadProducts()));
+                    
                     print('Account Info tapped');
                   },
                 ),
