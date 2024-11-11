@@ -1,19 +1,19 @@
 class PurchaseResponse {
-  final bool success;
-  final String message;
-  final PurchaseData data;
+  final bool? success;
+  final String? message;
+  final PurchaseData? data;
 
   PurchaseResponse({
-    required this.success,
-    required this.message,
-    required this.data,
+    this.success,
+    this.message,
+    this.data,
   });
 
   factory PurchaseResponse.fromJson(Map<String, dynamic> json) {
     return PurchaseResponse(
       success: json['success'],
       message: json['message'],
-      data: PurchaseData.fromJson(json['data']),
+      data: json['data'] != null ? PurchaseData.fromJson(json['data']) : null,
     );
   }
 
@@ -21,111 +21,115 @@ class PurchaseResponse {
     return {
       'success': success,
       'message': message,
-      'data': data.toJson(),
+      'data': data?.toJson(),
     };
   }
 }
 
 class PurchaseData {
-  final List<Purchase> purchasesData;
-  final num totalAmountPaid;
-  final num totalAmountToPay;
+  final List<Purchase>? purchasesData;
 
   PurchaseData({
-    required this.purchasesData,
-    required this.totalAmountPaid,
-    required this.totalAmountToPay,
+    this.purchasesData,
   });
 
   factory PurchaseData.fromJson(Map<String, dynamic> json) {
     return PurchaseData(
-      purchasesData: List<Purchase>.from(json['purchasesData'].map((item) => Purchase.fromJson(item))),
-      totalAmountPaid: json['totalAmountPaid'],
-      totalAmountToPay: json['totalAmountToPay'],
+      purchasesData: json['purchasesData'] != null
+          ? List<Purchase>.from(
+              json['purchasesData'].map((item) => Purchase.fromJson(item)))
+          : null,
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
-      'purchasesData': List<dynamic>.from(purchasesData.map((item) => item.toJson())),
-      'totalAmountPaid': totalAmountPaid,
-      'totalAmountToPay': totalAmountToPay,
+      'purchasesData': purchasesData != null
+          ? List<dynamic>.from(purchasesData!.map((item) => item.toJson()))
+          : null,
     };
   }
 }
 
 class Purchase {
-  final String id;
-  final Product product;
-  final String paymentPlan;
-  final String deliveryStatus;
-  final num totalAmountToPay;
-  final num totalPaidForPurchase;
-  final List<Payment> payments;
+  final String? id;
+  final Product? product;
+  final String? paymentPlan;
+  final String? deliveryStatus;
+  final num? totalAmountToPay;
+  final num? totalAmountPaid;
+  final List<Payment>? payments;
 
   Purchase({
-    required this.id,
-    required this.product,
-    required this.paymentPlan,
-    required this.deliveryStatus,
-    required this.totalAmountToPay,
-    required this.totalPaidForPurchase,
-    required this.payments,
+    this.id,
+    this.product,
+    this.paymentPlan,
+    this.deliveryStatus,
+    this.totalAmountToPay,
+    this.totalAmountPaid,
+    this.payments,
   });
 
   factory Purchase.fromJson(Map<String, dynamic> json) {
     return Purchase(
       id: json['_id'],
-      product: Product.fromJson(json['product']),
+      product: json['product'] != null ? Product.fromJson(json['product']) : null,
       paymentPlan: json['paymentPlan'],
       deliveryStatus: json['deliveryStatus'],
       totalAmountToPay: json['totalAmountToPay'],
-      totalPaidForPurchase: json['totalPaidForPurchase'],
-      payments: List<Payment>.from(json['payments'].map((item) => Payment.fromJson(item))),
+      totalAmountPaid: json['totalAmountPaid'],
+      payments: json['payments'] != null
+          ? List<Payment>.from(
+              json['payments'].map((item) => Payment.fromJson(item)))
+          : null,
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
       '_id': id,
-      'product': product.toJson(),
+      'product': product?.toJson(),
       'paymentPlan': paymentPlan,
       'deliveryStatus': deliveryStatus,
       'totalAmountToPay': totalAmountToPay,
-      'totalPaidForPurchase': totalPaidForPurchase,
-      'payments': List<dynamic>.from(payments.map((item) => item.toJson())),
+      'totalAmountPaid': totalAmountPaid,
+      'payments': payments != null
+          ? List<dynamic>.from(payments!.map((item) => item.toJson()))
+          : null,
     };
   }
 }
 
 class Product {
-  final String id;
-  final String name;
-  final int price;
-  final String description;
-  final String images;
+  final String? id;
+  final String? name;
+  final int? price;
+  final String? description;
+  final List<String>? images;
 
   Product({
-    required this.id,
-    required this.name,
-    required this.price,
-    required this.description,
-    required this.images,
+    this.id,
+    this.name,
+    this.price,
+    this.description,
+    this.images,
   });
 
   factory Product.fromJson(Map<String, dynamic> json) {
     return Product(
-      id: json['_id'],
+      id: json['id'],
       name: json['name'],
       price: json['price'],
       description: json['description'],
-      images: json['images'],
+      images: json['images'] != null
+          ? List<String>.from(json['images'])
+          : null,
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
-      '_id': id,
+      'id': id,
       'name': name,
       'price': price,
       'description': description,
@@ -135,18 +139,18 @@ class Product {
 }
 
 class Payment {
-  final String paymentDate;
-  final String nextPaymentDate;
-  final num amountPaid;
-  final num amountToPay;
-  final String status;
+  final String? paymentDate;
+  final String? nextPaymentDate;
+  final num? amountPaid;
+  final num? amountToPay;
+  final String? status;
 
   Payment({
-    required this.paymentDate,
-    required this.nextPaymentDate,
-    required this.amountPaid,
-    required this.amountToPay,
-    required this.status,
+    this.paymentDate,
+    this.nextPaymentDate,
+    this.amountPaid,
+    this.amountToPay,
+    this.status,
   });
 
   factory Payment.fromJson(Map<String, dynamic> json) {

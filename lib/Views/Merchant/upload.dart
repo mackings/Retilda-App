@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:retilda/Views/Widgets/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sizer/sizer.dart';
 import 'package:http/http.dart' as http;
@@ -107,10 +108,14 @@ class _UploadProductsState extends ConsumerState<UploadProducts> {
     var response = await request.send();
       var responseBody = await response.stream.bytesToString();
       print('Response Body: $responseBody');
-
+ 
     if (response.statusCode == 201) {
       print(response);
       print('Product uploaded successfully');
+
+   ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: CustomText('Product Uploaded Successfully'),
+    ));
     } else {
       print('Failed to upload product. Status code: ${response.statusCode}');
       print(response);
@@ -132,79 +137,111 @@ class _UploadProductsState extends ConsumerState<UploadProducts> {
   Widget build(BuildContext context) {
     return Sizer(builder: (context, deviceType, orientation) {
       return Scaffold(
-        appBar: AppBar(title: Text('Upload Product')),
-        body: Form(
-          key: _formKey,
-          child: SingleChildScrollView(
-            padding: EdgeInsets.all(16.0),
-            child: Column(
-              children: [
-                // Text Form Fields
-                TextFormField(
-                  controller: nameController,
-                  decoration: InputDecoration(labelText: 'Name'),
-                ),
-                TextFormField(
-                  controller: descriptionController,
-                  decoration: InputDecoration(labelText: 'Description'),
-                ),
-                TextFormField(
-                  controller: specificationController,
-                  decoration: InputDecoration(labelText: 'Specification'),
-                ),
-                TextFormField(
-                  controller: brandController,
-                  decoration: InputDecoration(labelText: 'Brand'),
-                ),
-                TextFormField(
-                  controller: priceController,
-                  decoration: InputDecoration(labelText: 'Price'),
-                  keyboardType: TextInputType.number,
-                ),
-                TextFormField(
-                  controller: stockController,
-                  decoration: InputDecoration(labelText: 'Available Stock'),
-                  keyboardType: TextInputType.number,
-                ),
-                TextFormField(
-                  controller: categoriesController,
-                  decoration: InputDecoration(labelText: 'Categories'),
-                ),
-                SizedBox(height: 20),
-
-                // Image Pickers with background images
-                Row(
-                  children: [
-                    Text("Attach Product Images",style: GoogleFonts.poppins(
-                      fontWeight: FontWeight.w500,
-                      fontSize: 13.sp
-                    ),),
-                  ],
-                ),
-
-                SizedBox(height: 20),
-
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    _buildImagePicker(image1, () => pickImage(1), 'Image 1'),
-                    _buildImagePicker(image2, () => pickImage(2), 'Image 2'),
-                    _buildImagePicker(image3, () => pickImage(3), 'Image 3'),
-                  ],
-                ),
-                SizedBox(height: 20),
-
-                // Upload Button with loading state
-                ElevatedButton(
-                  onPressed: isLoading ? null : uploadProduct,
-                  child: isLoading
-                      ? CircularProgressIndicator(color: Colors.white)
-                      : Text('Upload Product'),
-                  style: ElevatedButton.styleFrom(
-                    padding: EdgeInsets.symmetric(vertical: 2.h, horizontal: 5.w),
+        appBar: AppBar(title: Text('Upload Product',style: GoogleFonts.poppins(
+          fontSize: 15.sp,
+          fontWeight: FontWeight.w500
+        ),)),
+        body: SingleChildScrollView(
+          physics: BouncingScrollPhysics(),
+          child: Form(
+            key: _formKey,
+            child: SingleChildScrollView(
+              padding: EdgeInsets.all(16.0),
+              child: Column(
+                children: [
+                  
+                  // Text Form Fields
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: TextFormField(
+                      controller: nameController,
+                      decoration: InputDecoration(labelText: 'Name'),
+                    ),
                   ),
-                ),
-              ],
+
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: TextFormField(
+                      controller: descriptionController,
+                      decoration: InputDecoration(labelText: 'Description'),
+                    ),
+                  ),
+
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: TextFormField(
+                      controller: specificationController,
+                      decoration: InputDecoration(labelText: 'Specification'),
+                    ),
+                  ),
+
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: TextFormField(
+                      controller: brandController,
+                      decoration: InputDecoration(labelText: 'Brand'),
+                    ),
+                  ),
+
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: TextFormField(
+                      controller: priceController,
+                      decoration: InputDecoration(labelText: 'Price'),
+                      keyboardType: TextInputType.number,
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: TextFormField(
+                      controller: stockController,
+                      decoration: InputDecoration(labelText: 'Available Stock'),
+                      keyboardType: TextInputType.number,
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: TextFormField(
+                      controller: categoriesController,
+                      decoration: InputDecoration(labelText: 'Categories'),
+                    ),
+                  ),
+                  SizedBox(height: 20),
+          
+                  // Image Pickers with background images
+                  Row(
+                    children: [
+                      Text("Attach Product Images",style: GoogleFonts.poppins(
+                        fontWeight: FontWeight.w500,
+                        fontSize: 13.sp
+                      ),),
+                    ],
+                  ),
+          
+                  SizedBox(height: 20),
+          
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _buildImagePicker(image1, () => pickImage(1), 'Image 1'),
+                      _buildImagePicker(image2, () => pickImage(2), 'Image 2'),
+                      _buildImagePicker(image3, () => pickImage(3), 'Image 3'),
+                    ],
+                  ),
+                  SizedBox(height: 20),
+          
+                  // Upload Button with loading state
+                  ElevatedButton(
+                    onPressed: isLoading ? null : uploadProduct,
+                    child: isLoading
+                        ? CircularProgressIndicator(color: Colors.white)
+                        : Text('Upload Product'),
+                    style: ElevatedButton.styleFrom(
+                      padding: EdgeInsets.symmetric(vertical: 2.h, horizontal: 5.w),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

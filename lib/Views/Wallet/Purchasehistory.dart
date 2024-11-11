@@ -27,7 +27,7 @@ class _PurchaseHistoryState extends ConsumerState<PurchaseHistory> {
   bool _isLoading = true;
 
   Future<PurchaseResponse> fetchPurchases(String userId, String token) async {
-    final url = 'https://retilda.onrender.com/Api/purchases/$userId';
+    final url = 'https://retilda.onrender.com/Api/getAllPendingPurchases';
     final response = await http.get(
       Uri.parse(url),
       headers: {
@@ -37,6 +37,7 @@ class _PurchaseHistoryState extends ConsumerState<PurchaseHistory> {
     );
 
     if (response.statusCode == 200) {
+      print(response.body);
       return PurchaseResponse.fromJson(jsonDecode(response.body));
     } else {
       throw Exception('Failed to load purchases');
@@ -57,7 +58,7 @@ class _PurchaseHistoryState extends ConsumerState<PurchaseHistory> {
 
       fetchPurchases(userId, token).then((apiResponse) {
         setState(() {
-          _purchases = apiResponse.data.purchasesData;
+          _purchases = apiResponse.data!.purchasesData!;
           _isLoading = false;
         });
       }).catchError((error) {
@@ -79,6 +80,7 @@ class _PurchaseHistoryState extends ConsumerState<PurchaseHistory> {
   void initState() {
     super.initState();
     _loadUserData();
+  
   }
 
   @override
@@ -98,10 +100,10 @@ class _PurchaseHistoryState extends ConsumerState<PurchaseHistory> {
           ),
           body: _isLoading
               ? Center(
-                  child:                                     Padding(
-                                      padding: const EdgeInsets.only(left: 40,right: 40),
-                                      child: LinearProgressIndicator(),
-                                    ),
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 40, right: 40),
+                    child: LinearProgressIndicator(),
+                  ),
                 )
               : _purchases.isEmpty
                   ? Center(
@@ -115,11 +117,11 @@ class _PurchaseHistoryState extends ConsumerState<PurchaseHistory> {
                       itemCount: _purchases.length,
                       itemBuilder: (context, index) {
                         final purchase = _purchases[index];
-                        final DateTime paymentDate =
-                            purchase.payments.isNotEmpty
-                                ? DateTime.parse(
-                                    purchase.payments.first.paymentDate)
-                                : DateTime.now();
+                        final DateTime paymentDate = purchase
+                                .payments!.isNotEmpty
+                            ? DateTime.parse(
+                                purchase.payments!.first.paymentDate.toString())
+                            : DateTime.now();
 
                         return GestureDetector(
                           onTap: () {
@@ -128,15 +130,15 @@ class _PurchaseHistoryState extends ConsumerState<PurchaseHistory> {
                                 MaterialPageRoute(
                                     builder: (context) =>
                                         Purchasesummary(purchase: purchase)));
-
                           },
-                          child: PaymentSummaryCard( 
+                          child: PaymentSummaryCard(
                             date: paymentDate,
-                            imageUrl: purchase.product.images,
-                            title: purchase.product.name,
+                            imageUrl: purchase.product!.images![0],
+                            title: purchase.product!.name.toString(),
                             subtitle: purchase.paymentPlan == "once"
-                                ? "One time payment of N${NumberFormat('#,##0').format(purchase.payments.first.amountPaid)}"
-                                : "N${NumberFormat('#,##0').format(purchase.totalPaidForPurchase)} out of N${NumberFormat('#,##0').format(purchase.totalAmountToPay)}",
+                                ? "One time payment of N${NumberFormat('#,##0').format(purchase.payments!.first.amountPaid)}"
+                                // : "N${NumberFormat('#,##0').format(purchase.totalPaidForPurchase)} out of N${NumberFormat('#,##0').format(purchase.totalAmountToPay)}",
+                                : "N${NumberFormat('#,##0').format(purchase.totalAmountPaid)} out of N${NumberFormat('#,##0').format(purchase.totalAmountToPay)}",
                           ),
                         );
                       },

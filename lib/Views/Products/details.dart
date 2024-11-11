@@ -1,8 +1,10 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
+import 'package:retilda/Views/Products/Connect/views/connect.dart';
 import 'package:retilda/Views/Products/cartpage.dart';
 import 'package:retilda/Views/Widgets/components.dart';
 import 'package:retilda/Views/Widgets/togglebtn.dart';
@@ -27,6 +29,8 @@ class _ProductDetailsState extends State<ProductDetails> {
   int? selectedChipValue;
   String? Insurance;
   bool loading = false;
+  bool? Activated;
+  bool termsAccepted = false;
 
   List<CartItem> cartItems = [];
 
@@ -40,7 +44,7 @@ class _ProductDetailsState extends State<ProductDetails> {
         ));
         Navigator.pop(context);
         Navigator.pop(context);
-      } else {} 
+      } else {}
     });
     super.initState();
     _loadCartItems();
@@ -151,17 +155,20 @@ class _ProductDetailsState extends State<ProductDetails> {
       String Token = userData['data']['token'];
       String UserId = userData['data']['user']['_id'];
       String Wallet = userData['data']['user']['wallet']['accountNumber'];
+      bool userDirectdebit = userData['data']['user']['isDirectDebit'];
 
       setState(() {
         token = Token;
         userId = UserId;
         productId = widget.product.id;
         wallet = Wallet;
+        Activated = userDirectdebit;
       });
 
       print("User ID>> $userId");
       print("Product ID >> $productId");
       print("All User>> $userData");
+      print("User Activation $Activated");
     }
   }
 
@@ -231,9 +238,8 @@ class _ProductDetailsState extends State<ProductDetails> {
 
       String requestBodyJson = jsonEncode(requestBody);
       print("Payload >> $requestBodyJson");
-
       final response = await http.post(
-        Uri.parse('https://retilda.onrender.com/Api/buyproduct'),
+        Uri.parse('https://retilda.onrender.com/Api/buyProductOnInstallment'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -243,6 +249,7 @@ class _ProductDetailsState extends State<ProductDetails> {
 
       if (response.statusCode == 200) {
         print('Buy product request successful');
+
         print('Response: ${response.body}');
 
         showDialog(
@@ -339,7 +346,6 @@ class _ProductDetailsState extends State<ProductDetails> {
               SizedBox(
                 height: 2.h,
               ),
-
               SizedBox(
                 height: 30.h,
                 child: PageView(
@@ -412,7 +418,77 @@ class _ProductDetailsState extends State<ProductDetails> {
                         ? CustomText('Making payments...')
                         : GestureDetector(
                             onTap: () {
-                              purchaseProduct();
+                              if (Activated == false) {
+                                showDialog(
+                                  context: context,
+                                  builder: (context) {
+                                    bool termsAccepted =
+                                        false; // Local state for dialog
+
+                                    return StatefulBuilder(
+                                      builder: (context, setState) {
+                                        return AlertDialog(
+                                          title: Text(
+                                            'Connect',
+                                            style: GoogleFonts.poppins(),
+                                          ),
+                                          content: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Text(
+                                                'To proceed, please consent to connect your bank account to the platform and reacd our privacy policy for more..',
+                                              ),
+                                              Row(
+                                                children: [
+                                                  Checkbox(
+                                                    value: termsAccepted,
+                                                    onChanged: (value) {
+                                                      setState(() {
+                                                        termsAccepted = value!;
+                                                      });
+                                                    },
+                                                  ),
+                                                  Flexible(
+                                                    child: Text(
+                                                        'I accept the terms and conditions'),
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () {
+                                                Navigator.of(context).pop();
+                                              },
+                                              child: Text('Cancel'),
+                                            ),
+                                            TextButton(
+                                              onPressed: termsAccepted
+                                                  ? () {
+                                                      Navigator.of(context)
+                                                          .pop();
+                                                      Navigator.push(
+                                                          context,
+                                                          MaterialPageRoute(
+                                                              builder: (context) =>
+                                                                  ConnectAccount()));
+                                                      print(
+                                                          "Bank account connected");
+                                                      
+                                                    }
+                                                  : null, 
+                                              child: Text('Connect'),
+                                            ),
+                                          ],
+                                        );
+                                      },
+                                    );
+                                  },
+                                );
+                              } else {
+                                purchaseProduct();
+                              }
                             },
                             child: Container(
                               height: 6.h,
@@ -428,7 +504,7 @@ class _ProductDetailsState extends State<ProductDetails> {
                                 ),
                               ),
                             ),
-                          ),
+                          )
                   ],
                 ),
               ),
