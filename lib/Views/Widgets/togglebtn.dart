@@ -63,15 +63,15 @@ class _ToggleButtonsWidgetState extends State<ToggleButtonsWidget> {
                   height: 6.h,
                   width: 40.w,
                   decoration: BoxDecoration(
-                    color: isFirstButtonActive == true ? Colors.orange : Colors.white,
+                    color: isFirstButtonActive == true ? Colors.black : Colors.white,
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.orange, width: 2),
+                    border: Border.all(color: Colors.black, width: 2),
                   ),
                   child: Center(
                     child: Text(
                       widget.firstButtonText,
                       style: TextStyle(
-                        color: isFirstButtonActive == true ? Colors.white : Colors.orange,
+                        color: isFirstButtonActive == true ? Colors.white : Colors.black,
                         fontSize: 12.sp,
                       ),
                     ),
@@ -79,21 +79,22 @@ class _ToggleButtonsWidgetState extends State<ToggleButtonsWidget> {
                 ),
               ),
               SizedBox(width: 4.w),
+
               GestureDetector(
                 onTap: () => _toggleButtons(false),
                 child: Container(
                   height: 6.h,
                   width: 40.w,
                   decoration: BoxDecoration(
-                    color: isFirstButtonActive == false ? Colors.orange : Colors.white,
+                    color: isFirstButtonActive == false ? Colors.black : Colors.white,
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.orange, width: 2),
+                    border: Border.all(color: Colors.black, width: 2),
                   ),
                   child: Center(
                     child: Text(
                       widget.secondButtonText,
                       style: TextStyle(
-                        color: isFirstButtonActive == false ? Colors.white : Colors.orange,
+                        color: isFirstButtonActive == false ? Colors.white : Colors.black,
                         fontSize: 12.sp,
                       ),
                     ),
@@ -119,8 +120,8 @@ class _ToggleButtonsWidgetState extends State<ToggleButtonsWidget> {
                     widget.onChipSelected(chipValue, isFirstButtonActive!);
                   },
                   child: Chip(
-                    label: Text(chipValue.toString()),
-                    backgroundColor: chipValue == selectedChipValue ? Colors.orange : Colors.white,
+                    label: Text(chipValue.toString(),style: GoogleFonts.poppins(color: Colors.white),),
+                    backgroundColor: chipValue == selectedChipValue ? Colors.black : Colors.grey,
                   ),
                 );
               }).toList(),
@@ -132,66 +133,7 @@ class _ToggleButtonsWidgetState extends State<ToggleButtonsWidget> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      selectedAction = "Insurance";
-                    });
-                    widget.onActionSelected("Insurance", selectedChipValue!, isFirstButtonActive!);
-                  },
-                  child: Container(
-                    height: 6.h,
-                    width: 40.w,
-                    decoration: BoxDecoration(
-                      color: selectedAction == "Insurance" ? Colors.orange : Colors.white,
-                      borderRadius: BorderRadius.circular(10),
-                      border: selectedAction == "Insurance"
-                          ? Border.all(color: Colors.orange, width: 0)
-                          : Border.all(color: Colors.orange, width: 2),
-                    ),
-                    child: Center(
-                      child: Text(
-                        "Add Insurance",
-                        style: GoogleFonts.poppins(
-                          textStyle:TextStyle(
-                          color: selectedAction == "Insurance" ? Colors.white : Colors.orange,
-                          fontSize: 12.sp,
-                        ),
-                      )
-                      ),
-                    ),
-                  ),
-                ),
-                GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      selectedAction = "Buy Direct without Insurance";
-                    });
-                    widget.onActionSelected("Buy Direct without Insurance", selectedChipValue!, isFirstButtonActive!);
-                  },
-                  child: Container(
-                    height: 6.h,
-                    width: 40.w,
-                    decoration: BoxDecoration(
-                      color: selectedAction == "Buy Direct without Insurance" ? Colors.orange : Colors.white,
-                      borderRadius: BorderRadius.circular(10),
-                      border: selectedAction == "Buy Direct without Insurance"
-                          ? Border.all(color: Colors.orange, width: 0)
-                          : Border.all(color: Colors.orange, width: 2),
-                    ),
-                    child: Center(
-                     child: Text(
-                        "Buy Direct",
-                        style: GoogleFonts.poppins(
-                          textStyle: TextStyle(
-                            color: selectedAction == "Buy Direct without Insurance" ? Colors.white : Colors.orange,
-                            fontSize: 12.sp,
-                          )
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
+
               ],
             ),
           ),

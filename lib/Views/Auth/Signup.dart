@@ -58,10 +58,10 @@ class _SignupState extends State<Signup> {
       _isLoading = true;
     });
 
-    final url = 'https://retilda.onrender.com/Api/register';
+    final url = 'https://retilda.onrender.com/Api/signUp';
 
     final payload = {
-      "fullname": _fullname.text.trim(),
+      "fullName": _fullname.text.trim(),
       "email": _email.text.trim(),
       "phone": _phone.text.trim(),
       "password": _password.text.trim(),
@@ -69,6 +69,7 @@ class _SignupState extends State<Signup> {
       "accounttype": "user",
       "wallet": {"status": "Not available"}
     };
+
 
     try {
       print(payload);
@@ -85,7 +86,7 @@ class _SignupState extends State<Signup> {
 
       final responseData = jsonDecode(response.body);
 
-      if (response.statusCode == 200) {
+      if (response.statusCode == 201) {
         print(response.body);
         _showAlert('Success', responseData['message'] ?? 'Signup successful');
            Navigator.push(

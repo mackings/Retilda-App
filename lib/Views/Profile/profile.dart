@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:retilda/Views/Auth/kyc.dart';
 import 'package:retilda/Views/Merchant/upload.dart';
+import 'package:retilda/Views/Products/terms.dart';
 import 'package:retilda/Views/Widgets/components.dart';
 import 'package:retilda/Views/Widgets/profiletile.dart';
 import 'package:retilda/Views/Widgets/widgets.dart';
@@ -29,7 +30,7 @@ class _ProfileState extends ConsumerState<Profile> {
     if (userDataString != null) {
       Map<String, dynamic> userData = jsonDecode(userDataString);
       String token = userData['data']['token'];
-      String username = userData['data']['user']['fullname'];
+      String username = userData['data']['user']['fullName'];
       String accttype = userData['data']['user']['accountType'];
       int credit = userData['data']['user']['creditScore'];
       setState(() {
@@ -127,18 +128,19 @@ class _ProfileState extends ConsumerState<Profile> {
               ),
             ),
           ),
+          
           Padding(
             padding: const EdgeInsets.only(left: 20, right: 20, top: 50),
             child: Column(
               children: [
-                ProfileListItem(
-                  icon: Icons.check_circle,
-                  title: 'KYC',
-                  onTap: () {
-                    Navigator.push(context,
-                        MaterialPageRoute(builder: (context) => KYC()));
-                  },
-                ),
+                // ProfileListItem(
+                //   icon: Icons.check_circle,
+                //   title: 'KYC',
+                //   onTap: () {
+                //     Navigator.push(context,
+                //         MaterialPageRoute(builder: (context) => KYC()));
+                //   },
+                // ),
                 ProfileListItem(
                   icon: Icons.credit_card,
                   title: 'Debit Cards',
@@ -150,10 +152,11 @@ class _ProfileState extends ConsumerState<Profile> {
                   icon: Icons.policy_rounded,
                   title: 'Terms and Policy',
                   onTap: () {
-                    // Handle navigation or other actions
-                    print('Account Info tapped');
+                      Navigator.push(context,
+                        MaterialPageRoute(builder: (context) => TermsAndPolicyPage() ));
+
                   },
-                ),
+                ), 
 
                ProfileListItem(
                   icon: Icons.space_dashboard_outlined,

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:retilda/Views/Widgets/breakdownwidget.dart';
+import 'package:retilda/Views/Widgets/components.dart';
 import 'package:retilda/Views/Widgets/deliverymodal.dart';
 import 'package:retilda/Views/Widgets/linearpercent.dart';
 import 'package:retilda/Views/Widgets/widgets.dart';
@@ -60,6 +61,7 @@ Future<void> makeInstallmentPaymentRequest(
 
       // Ensure the context is still valid
       if (context.mounted) {
+        
         showDialog(
           context: context,
           builder: (BuildContext context) {
@@ -282,6 +284,7 @@ Future<void> makeInstallmentPaymentRequest(
                         const EdgeInsets.only(left: 30, right: 30, top: 20),
                     child: Column(
                       children: [
+
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
@@ -301,19 +304,31 @@ Future<void> makeInstallmentPaymentRequest(
                                 // Show the payment method selection dialog
                                 _showPaymentMethodDialog();
                               },
-                              child: Row(
-                                children: [
-                                  CustomText(
-                                    "Pay Installments",
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 11.sp,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(10),
+                                  color: RButtoncolor,
+                                ),
+                                child: Padding(
+                                  padding: const EdgeInsets.only(left: 20,right: 20,top: 10,bottom: 10),
+                                  child: Row(
+                                    children: [
+
+                                      CustomText(
+                                        "Pay Installments",
+                                        fontWeight: FontWeight.w500,
+                                        fontSize: 11.sp,
+                                        color: Colors.white,
+                                      ),
+                                    ],
                                   ),
-                                  Icon(Icons.payment),
-                                ],
+                                ),
                               ),
                             )
                           ],
                         ),
+
+
                         Padding(
                           padding: const EdgeInsets.all(8.0),
                           child: Divider(

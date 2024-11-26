@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:retilda/Views/Products/Connect/views/connect.dart';
 import 'package:retilda/Views/Products/cartpage.dart';
+import 'package:retilda/Views/Products/terms.dart';
 import 'package:retilda/Views/Widgets/components.dart';
 import 'package:retilda/Views/Widgets/togglebtn.dart';
 import 'package:retilda/Views/Widgets/widgets.dart';
@@ -25,8 +26,10 @@ class ProductDetails extends StatefulWidget {
 }
 
 class _ProductDetailsState extends State<ProductDetails> {
+
   bool isFirstButtonActive = true;
   int? selectedChipValue;
+
   String? Insurance;
   bool loading = false;
   bool? Activated;
@@ -181,42 +184,36 @@ class _ProductDetailsState extends State<ProductDetails> {
   String? balance;
   String? plan;
 
-  void handleActionSelected(
-      String action, int chipValue, bool isFirstButtonActive) {
-    if (isFirstButtonActive) {
-      setState(() {
-        plan = 'weekly';
-        instCount = chipValue;
-        print(chipValue.toString());
-        print(plan);
-      });
+
+
+void handleActionSelected(
+    String action, int chipValue, bool isFirstButtonActive) {
+  setState(() {
+    if (isFirstButtonActive == true) {
+      plan = 'weekly';
     } else if (isFirstButtonActive == false) {
-      setState(() {
-        plan = 'monthly';
-        instCount = chipValue;
-        print(chipValue.toString());
-        print(plan);
-      });
-    } else {
-      setState(() {
-        plan = 'once';
-        instCount = chipValue;
-        print(chipValue.toString());
-        print(plan);
-      });
+      plan = 'monthly';
     }
-    print(
-        'Action: $action, Chip: $chipValue, Plan: ${isFirstButtonActive ? "Weekly" : "Monthly"}');
+    instCount = chipValue;
+  });
 
-    print('Data Tapped >>> $action, Installments: $chipValue, Plan: $plan');
-  }
+  print('Action: $action, Chip: $chipValue, Plan: $plan');
+  print('Data Tapped >>> $action, Installments: $chipValue, Plan: $plan');
+}
 
-  void handleToggle(bool isFirstButtonActive) {
-    setState(() {
-      plan = isFirstButtonActive ? 'monthly' : 'weekly';
-      selectedChipValue = null;
-    });
-  }
+
+
+
+void handleToggle(bool isFirstButtonActive) {
+  setState(() {
+    this.isFirstButtonActive = isFirstButtonActive; // Make sure this updates correctly
+    plan = isFirstButtonActive ? 'weekly' : 'monthly';
+    selectedChipValue = null; // Reset selected chip value on toggle
+  });
+  print('Toggle Updated: ${isFirstButtonActive ? "Weekly" : "Monthly"}');
+}
+
+
 
   void handleChipSelected(int chipValue, bool isFirstButtonActive) {
     setState(() {
@@ -225,6 +222,9 @@ class _ProductDetailsState extends State<ProductDetails> {
     print(
         'Selected Chip: $chipValue, Is First Button Active: $isFirstButtonActive');
   }
+
+
+
 
   Future<void> makeBuyProductRequest(String token, String userId,
       String productId, String plan, int numberOfInstallments) async {
@@ -329,6 +329,7 @@ class _ProductDetailsState extends State<ProductDetails> {
   @override
   Widget build(BuildContext context) {
     return Sizer(builder: (context, orientation, deviceType) {
+
       return Scaffold(
         backgroundColor: Colors.white,
         appBar: AppBar(
@@ -419,73 +420,90 @@ class _ProductDetailsState extends State<ProductDetails> {
                         : GestureDetector(
                             onTap: () {
                               if (Activated == false) {
-                                showDialog(
-                                  context: context,
-                                  builder: (context) {
-                                    bool termsAccepted =
-                                        false; // Local state for dialog
 
-                                    return StatefulBuilder(
-                                      builder: (context, setState) {
-                                        return AlertDialog(
-                                          title: Text(
-                                            'Connect',
-                                            style: GoogleFonts.poppins(),
-                                          ),
-                                          content: Column(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Text(
-                                                'To proceed, please consent to connect your bank account to the platform and reacd our privacy policy for more..',
-                                              ),
-                                              Row(
-                                                children: [
-                                                  Checkbox(
-                                                    value: termsAccepted,
-                                                    onChanged: (value) {
-                                                      setState(() {
-                                                        termsAccepted = value!;
-                                                      });
-                                                    },
-                                                  ),
-                                                  Flexible(
-                                                    child: Text(
-                                                        'I accept the terms and conditions'),
-                                                  ),
-                                                ],
-                                              ),
-                                            ],
-                                          ),
-                                          actions: [
-                                            TextButton(
-                                              onPressed: () {
-                                                Navigator.of(context).pop();
-                                              },
-                                              child: Text('Cancel'),
-                                            ),
-                                            TextButton(
-                                              onPressed: termsAccepted
-                                                  ? () {
-                                                      Navigator.of(context)
-                                                          .pop();
-                                                      Navigator.push(
-                                                          context,
-                                                          MaterialPageRoute(
-                                                              builder: (context) =>
-                                                                  ConnectAccount()));
-                                                      print(
-                                                          "Bank account connected");
-                                                      
-                                                    }
-                                                  : null, 
-                                              child: Text('Connect'),
-                                            ),
-                                          ],
-                                        );
-                                      },
-                                    );
-                                  },
-                                );
+showDialog(
+  context: context,
+  builder: (context) {
+    bool termsAccepted = false; // Local state for dialog
+
+    return StatefulBuilder(
+      builder: (context, setState) {
+        return AlertDialog(
+          title: Text(
+            'Connect',
+            style: GoogleFonts.poppins(fontWeight: FontWeight.w500),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+
+              Text(
+                'To proceed, please consent to connect your bank account to the platform and read our privacy policy for more details.',
+              ),
+              Row(
+                children: [
+                  Checkbox(
+                    value: termsAccepted,
+                    onChanged: (value) {
+                      setState(() {
+                        termsAccepted = value!;
+                      });
+                    },
+                  ),
+                  Flexible(
+                    child: Row(
+                      children: [
+                        Text('I accept the'),
+                        TextButton(
+                          onPressed: () {
+
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => TermsAndPolicyPage(),
+                              ),
+                            );
+                            
+                          },
+                          child: Text(
+                            'Terms and Policy',
+                            style: TextStyle(color: Colors.blue),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: termsAccepted
+                  ? () {
+                      Navigator.of(context).pop();
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => ConnectAccount()),
+                      );
+                      print("Bank account connected");
+                    }
+                  : null, // Disable button if terms are not accepted
+              child: Text('Connect'),
+            ),
+          ],
+        );
+      },
+    );
+  },
+);
+
                               } else {
                                 purchaseProduct();
                               }
@@ -523,6 +541,7 @@ class _ProductDetailsState extends State<ProductDetails> {
               SizedBox(
                 height: 2.h,
               ),
+              
               ToggleButtonsWidget(
                 firstButtonText: 'Weekly',
                 secondButtonText: 'Monthly',
@@ -531,23 +550,28 @@ class _ProductDetailsState extends State<ProductDetails> {
                 onActionSelected: handleActionSelected,
               ),
               if (selectedChipValue != null)
+
                 Padding(
                   padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 1.h),
                   child: Row(
                     children: [
                       Icon(
                         Icons.error,
-                        color: ROrange,
+                        color: Colors.grey,
                       ),
                       SizedBox(width: 2.w),
-                      Flexible(
-                        child: CustomText(
-                          'You Selected: The ${isFirstButtonActive ? "Weekly" : "Monthly"} Plan and ${selectedChipValue != null ? selectedChipValue.toString() : "No days selected"} ${isFirstButtonActive ? "Weeks" : "Months"} installments with ${Insurance == null ? "No Insurance" : Insurance}.',
-                        ),
-                      ),
+
+Flexible(
+  child: CustomText(
+    'You Selected: The ${isFirstButtonActive ? "Weekly" : "Monthly"} Plan and ${selectedChipValue != null ? selectedChipValue.toString() : "No days selected"} ${isFirstButtonActive ? "Weeks" : "Months"} installments.',
+  ),
+),
+
+
                     ],
                   ),
                 ),
+
               Padding(
                 padding: const EdgeInsets.only(left: 25, top: 20),
                 child: Row(
@@ -556,7 +580,7 @@ class _ProductDetailsState extends State<ProductDetails> {
                       "Product Description :",
                       fontSize: 12.sp,
                       fontWeight: FontWeight.w600,
-                      color: ROrange,
+                      color:Colors.grey,
                     ),
                   ],
                 ),
@@ -581,7 +605,7 @@ class _ProductDetailsState extends State<ProductDetails> {
                       "Product Specifications :",
                       fontSize: 12.sp,
                       fontWeight: FontWeight.w600,
-                      color: ROrange,
+                      color: Colors.grey,
                     ),
                   ],
                 ),
@@ -599,6 +623,7 @@ class _ProductDetailsState extends State<ProductDetails> {
           ),
         ),
       );
+
     });
   }
 }

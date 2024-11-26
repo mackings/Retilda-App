@@ -22,27 +22,35 @@ class _TransactionsState extends ConsumerState<Transactions> {
   String? _token;
   int? WalletBalance;
   String? AccountNumber;
+  String? AccountName;
   List<Content> _transactions = [];
 
   bool _isLoading = true;
 
-  Future<void> _loadUserData() async {
-    SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
-    String? userDataString = sharedPreferences.getString('userData');
-    if (userDataString != null) {
-      Map<String, dynamic> userData = jsonDecode(userDataString);
-      String token = userData['data']['token'];
-      String account = userData['data']['user']['wallet']['accountNumber'];
-      int balance = userData['data']['user']['balance'];
+Future<void> _loadUserData() async {
+  SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
+  String? userDataString = sharedPreferences.getString('userData');
+  
+  if (userDataString != null) {
+    Map<String, dynamic> userData = jsonDecode(userDataString);
+    print("Parsed User Data: $userData");  // Log entire parsed data for confirmation
 
-      setState(() {
-        _token = token;
-        AccountNumber = account;
-        WalletBalance = balance;
-      });
-      await fetchTransactions();
-    }
+    // Extract data based on the JSON structure
+    String? token = userData['data']?['token'];
+    String? account = userData['data']?['user']?['wallet']?['accountNumber'];
+    int? balance = userData['data']?['user']?['balance'];
+    String? name = userData['data']?['user']?['wallet']?['accountName'];
+
+    setState(() {
+      _token = token;
+      AccountNumber = account;
+      AccountName = name;
+      WalletBalance = balance;
+    });
+    await fetchTransactions();
   }
+}
+
 
   Future<void> fetchTransactions() async {
     final url =
@@ -124,7 +132,7 @@ class _TransactionsState extends ConsumerState<Transactions> {
                           height: 10,
                         ),
                         CustomText(
-                          "${AccountNumber}",
+                          "$AccountNumber",
                           color: Colors.white,
                           fontSize: 8.sp,
                         ),
@@ -143,7 +151,7 @@ class _TransactionsState extends ConsumerState<Transactions> {
                             // fetchTransactions();
                           },
                           child: Container(
-                            height: 6.h,
+                            height: 5.h,
                             width: 30.w,
                             decoration: BoxDecoration(
                                 color: Colors.orange,
