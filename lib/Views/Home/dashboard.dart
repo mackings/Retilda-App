@@ -1,15 +1,11 @@
 import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:retilda/Views/Auth/Signin.dart';
-import 'package:retilda/Views/Auth/Signup.dart';
 import 'package:retilda/Views/Products/Allproducts.dart';
-import 'package:retilda/Views/Widgets/bottomnavbar.dart';
+import 'package:retilda/Views/Products/details.dart';
 import 'package:retilda/Views/Widgets/carousel.dart';
 import 'package:retilda/Views/Widgets/components.dart';
 import 'package:retilda/Views/Widgets/indicators.dart';
-import 'package:retilda/Views/Widgets/loader.dart';
 import 'package:retilda/Views/Widgets/productcard.dart';
 import 'package:retilda/Views/Widgets/searchwidget.dart';
 import 'package:retilda/Views/Widgets/widgets.dart';
@@ -17,7 +13,6 @@ import 'package:retilda/model/products.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sizer/sizer.dart';
 import 'package:http/http.dart' as http;
-import 'dart:convert';
 
 class Dashboard extends ConsumerStatefulWidget {
   const Dashboard({Key? key}) : super(key: key);
@@ -135,7 +130,7 @@ class _DashboardState extends ConsumerState<Dashboard> {
                   child: Row(
                     children: [
                       CustomText(
-                        "Categories",
+                        "Top Categories",
                         fontSize: 12.sp,
                         color: ROrange,
                         fontWeight: FontWeight.w600,
@@ -146,21 +141,29 @@ class _DashboardState extends ConsumerState<Dashboard> {
                 SizedBox(
                   height: 2.h,
                 ),
-                SizedBox(
-                  height: 25.h,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(context,
+                        MaterialPageRoute(builder: (context) => Allproducts()));
+                  },
+                  child: SizedBox(
+                    height: 25.h,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                      ),
+                      child: SliderWidget(items: [
+                        SliderItem(
+                            imagePath: 'assets/t1.jpg',
+                            text: 'Home Appliances'),
+                        SliderItem(
+                            imagePath: 'assets/wm2.jpg',
+                            text: 'Washing Machines'),
+                        SliderItem(
+                            imagePath: 'assets/k1.jpg',
+                            text: 'Kitchen Utensils'),
+                      ]),
                     ),
-                    child: SliderWidget(items: [
-                      SliderItem(
-                          imagePath: 'assets/t1.jpg', text: 'Home Appliances'),
-                      SliderItem(
-                          imagePath: 'assets/wm2.jpg',
-                          text: 'Washing Machines'),
-                      SliderItem(
-                          imagePath: 'assets/k1.jpg', text: 'Kitchen Utensils'),
-                    ]),
                   ),
                 ),
                 SizedBox(
@@ -194,8 +197,6 @@ class _DashboardState extends ConsumerState<Dashboard> {
                     ],
                   ),
                 ),
-
-                
                 Token != null
                     ? FutureBuilder<ApiResponse>(
                         future: fetchData(Token!),
@@ -220,28 +221,49 @@ class _DashboardState extends ConsumerState<Dashboard> {
                             ));
                           } else if (snapshot.hasError) {
                             return Center(
-                              child: Text('Error loading products'),
+                              child: Text('No Products Found'),
                             );
                           } else if (snapshot.hasData) {
-
                             return Padding(
                               padding:
                                   const EdgeInsets.only(left: 20, right: 20),
-                              child: GridView.count(
-                                crossAxisCount: 2,
-                                shrinkWrap: true,
-                                mainAxisSpacing: 10,
-                                crossAxisSpacing: 10,
-                                padding: EdgeInsets.symmetric(horizontal: 3),
-                                children: snapshot.data!.data
-                                    .take(4)
-                                    .map(
-                                      (product) => ProductCard2(
-                                        product: product,
-                                        onTap: () {},
-                                      ),
-                                    )
-                                    .toList(),
+                              child: SizedBox(
+                                height: 60
+                                    .h, // Set an appropriate height for the grid
+                                child: GridView.count(
+                                  crossAxisCount: 2,
+                                  shrinkWrap:
+                                      true, // Ensure the grid does not take infinite height
+                                  physics:
+                                      NeverScrollableScrollPhysics(), // Disable scrolling inside the GridView
+                                  mainAxisSpacing: 10,
+                                  crossAxisSpacing: 10,
+                                  padding: EdgeInsets.symmetric(horizontal: 3),
+                                  children: snapshot.data!.data
+                                      .take(4)
+                                      .map(
+                                        (product) => GestureDetector(
+                                          onTap: () {
+                                            print("heyy");
+                                              Navigator.push(
+                                                context,
+                                                MaterialPageRoute(
+                                                  builder: (context) =>
+                                                      ProductDetails(
+                                                          product: product),
+                                                ),
+                                              );
+                                          },
+                                          child: ProductCard2(
+                                            product: product,
+                                            onTap: () {
+
+                                            },
+                                          ),
+                                        ),
+                                      )
+                                      .toList(),
+                                ),
                               ),
                             );
                           } else {

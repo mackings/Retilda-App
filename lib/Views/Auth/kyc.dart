@@ -22,7 +22,7 @@ class KYC extends ConsumerStatefulWidget {
 class _KYCState extends ConsumerState<KYC> {
   TextEditingController _bvnController = TextEditingController();
   TextEditingController _dobController = TextEditingController();
-  String? _token;
+  String? token;
   String? _fullname;
   String? _email;
   bool loading = false;
@@ -32,41 +32,38 @@ class _KYCState extends ConsumerState<KYC> {
     String? userDataString = sharedPreferences.getString('userData');
     if (userDataString != null) {
       Map<String, dynamic> userData = jsonDecode(userDataString);
-      String token = userData['data']['token'];
-      String fullname = userData['data']['user']['fullname'];
-      String email = userData['data']['user']['email'];
+      String Token = userData['data']['token'];
+      String UserId = userData['data']['user']['_id'];
+      String Wallet = userData['data']['user']['wallet']['accountNumber'];
+      bool userDirectdebit = userData['data']['user']['isDirectDebit'];
 
       setState(() {
-        _token = token;
-        _fullname = fullname;
-        _email = email;
+        token = Token;
       });
-      print("User Data >>> $userData");
+      print(token);
     }
   }
 
-  final String apiUrl = 'https://retilda.onrender.com/Api/createwallet';
+  final String kycApiUrl = 'https://retilda.onrender.com/Api/kyc';
 
-  Future<void> createWallet() async {
-    final url = Uri.parse(apiUrl);
+  Future<void> updateKyc() async {
+    final url = Uri.parse(kycApiUrl);
 
     final Map<String, String> headers = {
       'Content-Type': 'application/json',
-      'Authorization': 'Bearer $_token',
+      'Authorization': 'Bearer $token',
     };
 
     final Map<String, dynamic> payload = {
-      "walletName": _fullname,
-      "customerName": _fullname,
-      "bvn": _bvnController.text,
       "bvnDateOfBirth": _dobController.text,
-      "customerEmail": _email
+      "bvn": _bvnController.text,
     };
 
     try {
       setState(() {
         loading = true;
       });
+
       final response = await http.post(
         url,
         headers: headers,
@@ -79,7 +76,7 @@ class _KYCState extends ConsumerState<KYC> {
 
       if (response.statusCode == 200) {
         final responseBody = jsonDecode(response.body);
-        print('Wallet created successfully: $responseBody');
+        print('KYC updated successfully: $responseBody');
 
         showDialog(
           context: context,
@@ -87,46 +84,45 @@ class _KYCState extends ConsumerState<KYC> {
             return CustomAlertDialog(
               title: 'Success',
               titleColor: Colors.blue,
-              message: "You are now a Premium user.",
+              message: responseBody['message'] ?? "KYC updated successfully.",
               onClosePressed: () {
                 Navigator.pop(context);
               },
               onButtonPressed: () {
                 Navigator.pushReplacement(
-                    context, MaterialPageRoute(builder: (context) => Signin()));
+                  context,
+                  MaterialPageRoute(builder: (context) => Signin()),
+                );
               },
             );
           },
         );
       } else {
         final responseBody = jsonDecode(response.body);
-
-        if (responseBody['message'] ==
-            "bvnDetails.bvn could not be validated") {
-          showDialog(
-            context: context,
-            builder: (context) {
-              return CustomAlertDialog(
-                title: 'Error',
-                titleColor: Colors.red,
-                message: "BVN is Invalid",
-                onClosePressed: () {
-                  Navigator.of(context).pop();
-                },
-                onButtonPressed: () {},
-              );
-            },
-          );
-        }
-
-        print('Failed to create wallet: ${response.statusCode}');
+        print('Failed to update KYC: ${response.statusCode}');
         print('Response body: ${response.body}');
+        print(token);
+
+        showDialog(
+          context: context,
+          builder: (context) {
+            return CustomAlertDialog(
+              title: 'Error',
+              titleColor: Colors.red,
+              message: responseBody['message'] ?? "Failed to update KYC.",
+              onClosePressed: () {
+                Navigator.of(context).pop();
+              },
+              onButtonPressed: () {},
+            );
+          },
+        );
       }
     } catch (error) {
       setState(() {
         loading = false;
       });
-      print('Error creating wallet: $error');
+      print('Error updating KYC: $error');
     }
   }
 
@@ -169,8 +165,8 @@ class _KYCState extends ConsumerState<KYC> {
             CustomTextFormField(
               controller: _bvnController,
               hintText: 'BVN',
-              suffixIcon: Icons.manage_accounts_sharp,
-              onSuffixIconTap: () {},
+             // suffixIcon: Icons.manage_accounts_sharp,
+             // onSuffixIconTap: () {},
             ),
             SizedBox(height: 2.h),
             MyTextFormField(
@@ -185,9 +181,7 @@ class _KYCState extends ConsumerState<KYC> {
             CustomBtn(
               backgroundColor: RButtoncolor,
               text: loading ? "Validating BVN..." : "Validate BVN",
-              onPressed: loading
-                  ? null
-                  : createWallet, // Disable the button if loading
+              onPressed: loading ? null : updateKyc,
             ),
           ],
         ),

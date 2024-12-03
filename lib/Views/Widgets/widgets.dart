@@ -32,9 +32,7 @@ class CustomText extends StatelessWidget {
 
 class CustomTextFormField extends StatelessWidget {
   final String hintText;
-  final IconData? suffixIcon;
   final TextEditingController? controller;
-  final bool obscureText;
   final TextInputType keyboardType;
   final TextInputAction textInputAction;
   final FocusNode? focusNode;
@@ -42,47 +40,73 @@ class CustomTextFormField extends StatelessWidget {
   final Function()? onEditingComplete;
   final Function(String)? onFieldSubmitted;
   final String? Function(String?)? validator;
+  final IconData? suffixIcon;
+  final VoidCallback? onSuffixIconTap;
+  final bool isPasswordField;
 
   CustomTextFormField({
     required this.hintText,
-    this.suffixIcon,
     this.controller,
-    this.obscureText = false,
     this.keyboardType = TextInputType.text,
     this.textInputAction = TextInputAction.done,
     this.focusNode,
     this.onChanged,
     this.onEditingComplete,
     this.onFieldSubmitted,
-    this.validator, required void Function() onSuffixIconTap,
+    this.validator,
+    this.suffixIcon,
+    this.onSuffixIconTap,
+    this.isPasswordField = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: MediaQuery.of(context).size.width * 0.9, // Set the width here
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey),
-        borderRadius: BorderRadius.circular(10.0),
-      ),
-      child: TextFormField(
-        controller: controller,
-        obscureText: obscureText,
-        keyboardType: keyboardType,
-        textInputAction: textInputAction,
-        focusNode: focusNode,
-        onChanged: onChanged,
-        onEditingComplete: onEditingComplete,
-        onFieldSubmitted: onFieldSubmitted,
-        validator: validator,
-        style: GoogleFonts.poppins(), // Apply Poppins font here
-        decoration: InputDecoration(
-          hintText: hintText,
-          suffixIcon: suffixIcon != null ? Icon(suffixIcon) : null,
-          contentPadding: EdgeInsets.symmetric(vertical: 13.0, horizontal: 20.0),
-          border: InputBorder.none,
-        ),
-      ),
+    ValueNotifier<bool> obscureText = ValueNotifier<bool>(isPasswordField);
+
+    return ValueListenableBuilder<bool>(
+      valueListenable: obscureText,
+      builder: (context, isObscured, child) {
+        return Container(
+          width: MediaQuery.of(context).size.width * 0.9,
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.grey),
+            borderRadius: BorderRadius.circular(10.0),
+          ),
+          child: TextFormField(
+            controller: controller,
+            obscureText: isPasswordField ? isObscured : false,
+            keyboardType: keyboardType,
+            textInputAction: textInputAction,
+            focusNode: focusNode,
+            onChanged: onChanged,
+            onEditingComplete: onEditingComplete,
+            onFieldSubmitted: onFieldSubmitted,
+            validator: validator,
+            style: GoogleFonts.poppins(),
+            decoration: InputDecoration(
+              hintText: hintText,
+              suffixIcon: isPasswordField
+                  ? GestureDetector(
+                      onTap: () {
+                        obscureText.value = !isObscured;
+                      },
+                      child: Icon(
+                        isObscured ? Icons.visibility_off : Icons.visibility,
+                      ),
+                    )
+                  : (suffixIcon != null
+                      ? GestureDetector(
+                          onTap: onSuffixIconTap,
+                          child: Icon(suffixIcon),
+                        )
+                      : null),
+              contentPadding:
+                  const EdgeInsets.symmetric(vertical: 13.0, horizontal: 20.0),
+              border: InputBorder.none,
+            ),
+          ),
+        );
+      },
     );
   }
 }

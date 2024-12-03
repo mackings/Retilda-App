@@ -23,6 +23,7 @@ class _ProfileState extends ConsumerState<Profile> {
   String? Username;
   String? Acctype;
   int? Credit;
+  String? role;
 
   Future<void> _loadUserData() async {
     SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
@@ -33,15 +34,19 @@ class _ProfileState extends ConsumerState<Profile> {
       String username = userData['data']['user']['fullName'];
       String accttype = userData['data']['user']['accountType'];
       int credit = userData['data']['user']['creditScore'];
+      String myrole = userData['data']['user']['roles'];
+
       setState(() {
         Token = token;
         Username = username;
         Credit = credit;
         Acctype = accttype;
+        role = myrole;
       });
 
       print("User >>> $userData");
       print("UserName >>> $Username");
+      print("User Role $role");
     }
   }
 
@@ -66,16 +71,16 @@ class _ProfileState extends ConsumerState<Profile> {
         mainAxisAlignment: MainAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.only(left: 20, right:20),
+            padding: const EdgeInsets.only(left: 20, right: 20),
             child: Container(
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(10),
                   border: Border.all(width: 0.5, color: Colors.grey)),
               child: ListTile(
-                leading: CircleAvatar(
-                  radius: 50,
-                  child: Icon(Icons.person),
-                ),
+                // leading: CircleAvatar(
+                //   radius: 50,
+                //   child: Icon(Icons.person),
+                // ),
                 title: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -90,7 +95,7 @@ class _ProfileState extends ConsumerState<Profile> {
                     Row(
                       children: [
                         CustomText(
-                          '${Acctype == "premium" ? "Premium" : "Standard"} account',
+                          '${Acctype == "premium" ? "Premium" : "Standard"} Account',
                           fontSize: 11.sp,
                           fontWeight: FontWeight.w500,
                         ),
@@ -102,7 +107,7 @@ class _ProfileState extends ConsumerState<Profile> {
                                 Icons.check_circle,
                                 color: ROrange,
                               )
-                            : Icon(Icons.check),
+                            : Icon(Icons.check_circle),
                       ],
                     ),
                     SizedBox(
@@ -116,7 +121,7 @@ class _ProfileState extends ConsumerState<Profile> {
                           fontWeight: FontWeight.w500,
                         ),
                         CustomText(
-                          ' ${Credit.toString()==null?"KYC Not Completed":Credit.toString()}',
+                          ' ${Credit.toString() == null ? "KYC Not Completed" : Credit.toString()}',
                           fontSize: 12.sp,
                           fontWeight: FontWeight.w500,
                           color: ROrange,
@@ -128,47 +133,48 @@ class _ProfileState extends ConsumerState<Profile> {
               ),
             ),
           ),
-          
           Padding(
             padding: const EdgeInsets.only(left: 20, right: 20, top: 50),
             child: Column(
               children: [
-                // ProfileListItem(
-                //   icon: Icons.check_circle,
-                //   title: 'KYC',
-                //   onTap: () {
-                //     Navigator.push(context,
-                //         MaterialPageRoute(builder: (context) => KYC()));
-                //   },
-                // ),
                 ProfileListItem(
-                  icon: Icons.credit_card,
-                  title: 'Debit Cards',
+                  icon: Icons.check_circle,
+                  title: 'KYC',
                   onTap: () {
-                    print('Account Info tapped');
+                    Navigator.push(context,
+                        MaterialPageRoute(builder: (context) => KYC()));
                   },
                 ),
+                // ProfileListItem(
+                //   icon: Icons.credit_card,
+                //   title: 'Debit Cards',
+                //   onTap: () {
+                //     print('Account Info tapped');
+                //   },
+                // ),
                 ProfileListItem(
                   icon: Icons.policy_rounded,
                   title: 'Terms and Policy',
                   onTap: () {
-                      Navigator.push(context,
-                        MaterialPageRoute(builder: (context) => TermsAndPolicyPage() ));
-
-                  },
-                ), 
-
-               ProfileListItem(
-                  icon: Icons.space_dashboard_outlined,
-                  title: 'Merchant',
-                  onTap: () {
-
-                   Navigator.push(context,
-                  MaterialPageRoute(builder: (context) => UploadProducts()));
-                    
-                    print('Account Info tapped');
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => TermsAndPolicyPage()));
                   },
                 ),
+
+if (role != 'user') 
+  ProfileListItem(
+    icon: Icons.space_dashboard_outlined,
+    title: 'Merchant',
+    onTap: () {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => UploadProducts()),
+      );
+      print('Merchant tapped');
+    },
+  ),
               ],
             ),
           ),

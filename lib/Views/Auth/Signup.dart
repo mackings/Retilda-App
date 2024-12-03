@@ -88,9 +88,8 @@ class _SignupState extends State<Signup> {
 
       if (response.statusCode == 201) {
         print(response.body);
-        _showAlert('Success', responseData['message'] ?? 'Signup successful');
-           Navigator.push(
-                context, MaterialPageRoute(builder: (context) => Signin()));
+        _showAlert2('Success', responseData['message'] ?? 'Signup successful');
+
       } else {
         print(response.body);
         _showAlert('Error', responseData['message'] ?? 'Signup failed');
@@ -105,6 +104,7 @@ class _SignupState extends State<Signup> {
 
   void _showAlert(String title, String message) {
     showDialog(
+      barrierDismissible: false,
       context: context,
       builder: (context) {
         return CustomAlertDialog(
@@ -117,6 +117,30 @@ class _SignupState extends State<Signup> {
 
           onButtonPressed: () {
              Navigator.pop(context);
+
+          },
+        );
+      },
+    );
+  }
+
+
+    void _showAlert2(String title, String message) {
+    showDialog(
+      barrierDismissible: false,
+      context: context,
+      builder: (context) {
+        return CustomAlertDialog(
+          title: title,
+          titleColor: Colors.blue,
+          message: message,
+          onClosePressed: () {
+            Navigator.pop(context);
+          },
+
+          onButtonPressed: () {
+        Navigator.push(
+              context, MaterialPageRoute(builder: (context) => Signin()));
 
           },
         );
@@ -148,51 +172,58 @@ class _SignupState extends State<Signup> {
                         color: ROrange,
                       ),
                       SizedBox(height: 4.h),
+
                       CustomText(
                         'Sign up',
                         fontSize: 15.sp,
                         fontWeight: FontWeight.bold,
                         color: Colors.black,
                       ),
+
                       SizedBox(height: 4.h),
+
                       CustomTextFormField(
                         controller: _fullname,
-                        onSuffixIconTap: () {},
+                        isPasswordField: false,
+                        suffixIcon: Icons.person_2,
                         hintText: 'Full Name',
                         onChanged: (value) {},
                       ),
+
                       SizedBox(height: 4.h),
+
                       CustomTextFormField(
                         controller: _email,
                         hintText: 'Email',
+                        isPasswordField: false,
                         suffixIcon: Icons.email,
                         validator: _validateEmail,
                         onChanged: (value) {},
-                        onSuffixIconTap: () {},
                       ),
+
                       SizedBox(height: 4.h),
+
                       CustomTextFormField(
                         controller: _phone,
                         hintText: 'Phone Number',
+                        isPasswordField: false,
                         suffixIcon: Icons.phone,
                         validator: _validatePhoneNumber,
                         onChanged: (value) {},
-                        onSuffixIconTap: () {},
                       ),
+
                       SizedBox(height: 4.h),
+
                       CustomTextFormField(
                         controller: _password,
                         hintText: 'Password',
-                        suffixIcon: _isPasswordVisible
-                            ? Icons.visibility
-                            : Icons.visibility_off,
-                        obscureText: !_isPasswordVisible,
-                        onSuffixIconTap: _togglePasswordVisibility,
+                        isPasswordField: true,
                         onChanged: (value) {},
                       ),
+
                       SizedBox(height: 4.h),
                       CustomBtn(
-                        text: _isLoading ? "Signing you up.." : "Sign up",
+                        text: _isLoading ? "Creating your account.." : "Sign up",
                         onPressed: () {
                           if (_formKey.currentState?.validate() ?? false) {
                             _signup();

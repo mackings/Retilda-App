@@ -12,6 +12,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'package:sizer/sizer.dart';
 
+
+
+
 class Allproducts extends ConsumerStatefulWidget {
   const Allproducts({Key? key}) : super(key: key);
 
@@ -20,6 +23,7 @@ class Allproducts extends ConsumerStatefulWidget {
 }
 
 class _AllproductsState extends ConsumerState<Allproducts> {
+  
   late List<Product> _products = [];
   late List<String> _categories = [];
   late String _token;
@@ -408,12 +412,14 @@ class _AllproductsState extends ConsumerState<Allproducts> {
                     MaterialPageRoute(builder: (context) => SearchPage()));
                 },
               ),
+
               IconButton(
                 icon: Icon(Icons.sort),
                 onPressed: () {
                   _showCategoriesDrawer(context);
                 },
               ),
+
             ],
           ),
           body: _isLoading

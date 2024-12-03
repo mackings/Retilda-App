@@ -26,7 +26,6 @@ class ProductDetails extends StatefulWidget {
 }
 
 class _ProductDetailsState extends State<ProductDetails> {
-
   bool isFirstButtonActive = true;
   int? selectedChipValue;
 
@@ -184,35 +183,30 @@ class _ProductDetailsState extends State<ProductDetails> {
   String? balance;
   String? plan;
 
+  void handleActionSelected(
+      String action, int chipValue, bool isFirstButtonActive) {
+    setState(() {
+      if (isFirstButtonActive == true) {
+        plan = 'weekly';
+      } else if (isFirstButtonActive == false) {
+        plan = 'monthly';
+      }
+      instCount = chipValue;
+    });
 
+    print('Action: $action, Chip: $chipValue, Plan: $plan');
+    print('Data Tapped >>> $action, Installments: $chipValue, Plan: $plan');
+  }
 
-void handleActionSelected(
-    String action, int chipValue, bool isFirstButtonActive) {
-  setState(() {
-    if (isFirstButtonActive == true) {
-      plan = 'weekly';
-    } else if (isFirstButtonActive == false) {
-      plan = 'monthly';
-    }
-    instCount = chipValue;
-  });
-
-  print('Action: $action, Chip: $chipValue, Plan: $plan');
-  print('Data Tapped >>> $action, Installments: $chipValue, Plan: $plan');
-}
-
-
-
-
-void handleToggle(bool isFirstButtonActive) {
-  setState(() {
-    this.isFirstButtonActive = isFirstButtonActive; // Make sure this updates correctly
-    plan = isFirstButtonActive ? 'weekly' : 'monthly';
-    selectedChipValue = null; // Reset selected chip value on toggle
-  });
-  print('Toggle Updated: ${isFirstButtonActive ? "Weekly" : "Monthly"}');
-}
-
+  void handleToggle(bool isFirstButtonActive) {
+    setState(() {
+      this.isFirstButtonActive =
+          isFirstButtonActive; // Make sure this updates correctly
+      plan = isFirstButtonActive ? 'weekly' : 'monthly';
+      selectedChipValue = null; // Reset selected chip value on toggle
+    });
+    print('Toggle Updated: ${isFirstButtonActive ? "Weekly" : "Monthly"}');
+  }
 
 
   void handleChipSelected(int chipValue, bool isFirstButtonActive) {
@@ -222,9 +216,6 @@ void handleToggle(bool isFirstButtonActive) {
     print(
         'Selected Chip: $chipValue, Is First Button Active: $isFirstButtonActive');
   }
-
-
-
 
   Future<void> makeBuyProductRequest(String token, String userId,
       String productId, String plan, int numberOfInstallments) async {
@@ -311,14 +302,19 @@ void handleToggle(bool isFirstButtonActive) {
         userId != null &&
         productId != null &&
         plan != null &&
-        instCount != null) {
+        selectedChipValue != null) {
       await makeBuyProductRequest(
-          token!, userId!, productId!, plan!, instCount!);
+          token!, userId!, productId!, plan!, selectedChipValue!);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: CustomText('Please complete purchase requirements'),
       ));
-      print('Please complete purchase requirements');
+
+      print(token);
+      print(userId);
+      print(productId);
+      print(plan);
+      print(instCount);
     }
 
     setState(() {
@@ -329,7 +325,6 @@ void handleToggle(bool isFirstButtonActive) {
   @override
   Widget build(BuildContext context) {
     return Sizer(builder: (context, orientation, deviceType) {
-
       return Scaffold(
         backgroundColor: Colors.white,
         appBar: AppBar(
@@ -420,90 +415,95 @@ void handleToggle(bool isFirstButtonActive) {
                         : GestureDetector(
                             onTap: () {
                               if (Activated == false) {
+                                showDialog(
+                                  context: context,
+                                  builder: (context) {
+                                    bool termsAccepted =
+                                        false; // Local state for dialog
 
-showDialog(
-  context: context,
-  builder: (context) {
-    bool termsAccepted = false; // Local state for dialog
-
-    return StatefulBuilder(
-      builder: (context, setState) {
-        return AlertDialog(
-          title: Text(
-            'Connect',
-            style: GoogleFonts.poppins(fontWeight: FontWeight.w500),
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-
-              Text(
-                'To proceed, please consent to connect your bank account to the platform and read our privacy policy for more details.',
-              ),
-              Row(
-                children: [
-                  Checkbox(
-                    value: termsAccepted,
-                    onChanged: (value) {
-                      setState(() {
-                        termsAccepted = value!;
-                      });
-                    },
-                  ),
-                  Flexible(
-                    child: Row(
-                      children: [
-                        Text('I accept the'),
-                        TextButton(
-                          onPressed: () {
-
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => TermsAndPolicyPage(),
-                              ),
-                            );
-                            
-                          },
-                          child: Text(
-                            'Terms and Policy',
-                            style: TextStyle(color: Colors.blue),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: termsAccepted
-                  ? () {
-                      Navigator.of(context).pop();
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => ConnectAccount()),
-                      );
-                      print("Bank account connected");
-                    }
-                  : null, // Disable button if terms are not accepted
-              child: Text('Connect'),
-            ),
-          ],
-        );
-      },
-    );
-  },
-);
-
+                                    return StatefulBuilder(
+                                      builder: (context, setState) {
+                                        return AlertDialog(
+                                          title: Text(
+                                            'Connect',
+                                            style: GoogleFonts.poppins(
+                                                fontWeight: FontWeight.w500),
+                                          ),
+                                          content: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Text(
+                                                'To proceed, please consent to connect your bank account to the platform and read our privacy policy for more details.',
+                                              ),
+                                              Row(
+                                                children: [
+                                                  Checkbox(
+                                                    value: termsAccepted,
+                                                    onChanged: (value) {
+                                                      setState(() {
+                                                        termsAccepted = value!;
+                                                      });
+                                                    },
+                                                  ),
+                                                  Flexible(
+                                                    child: Row(
+                                                      children: [
+                                                        Text('I accept the'),
+                                                        TextButton(
+                                                          onPressed: () {
+                                                            Navigator.push(
+                                                              context,
+                                                              MaterialPageRoute(
+                                                                builder:
+                                                                    (context) =>
+                                                                        TermsAndPolicyPage(),
+                                                              ),
+                                                            );
+                                                          },
+                                                          child: Text(
+                                                            'Terms',
+                                                            style: TextStyle(
+                                                                color: Colors
+                                                                    .blue),
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () {
+                                                Navigator.of(context).pop();
+                                              },
+                                              child: Text('Cancel'),
+                                            ),
+                                            TextButton(
+                                              onPressed: termsAccepted
+                                                  ? () {
+                                                      Navigator.of(context)
+                                                          .pop();
+                                                      Navigator.push(
+                                                        context,
+                                                        MaterialPageRoute(
+                                                            builder: (context) =>
+                                                                ConnectAccount()),
+                                                      );
+                                                      print(
+                                                          "Bank account connected");
+                                                    }
+                                                  : null, // Disable button if terms are not accepted
+                                              child: Text('Connect'),
+                                            ),
+                                          ],
+                                        );
+                                      },
+                                    );
+                                  },
+                                );
                               } else {
                                 purchaseProduct();
                               }
@@ -541,7 +541,6 @@ showDialog(
               SizedBox(
                 height: 2.h,
               ),
-              
               ToggleButtonsWidget(
                 firstButtonText: 'Weekly',
                 secondButtonText: 'Monthly',
@@ -550,7 +549,6 @@ showDialog(
                 onActionSelected: handleActionSelected,
               ),
               if (selectedChipValue != null)
-
                 Padding(
                   padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 1.h),
                   child: Row(
@@ -560,18 +558,14 @@ showDialog(
                         color: Colors.grey,
                       ),
                       SizedBox(width: 2.w),
-
-Flexible(
-  child: CustomText(
-    'You Selected: The ${isFirstButtonActive ? "Weekly" : "Monthly"} Plan and ${selectedChipValue != null ? selectedChipValue.toString() : "No days selected"} ${isFirstButtonActive ? "Weeks" : "Months"} installments.',
-  ),
-),
-
-
+                      Flexible(
+                        child: CustomText(
+                          'You Selected: The ${isFirstButtonActive ? "Weekly" : "Monthly"} Plan and ${selectedChipValue != null ? selectedChipValue.toString() : "No days selected"} ${isFirstButtonActive ? "Weeks" : "Months"} installments.',
+                        ),
+                      ),
                     ],
                   ),
                 ),
-
               Padding(
                 padding: const EdgeInsets.only(left: 25, top: 20),
                 child: Row(
@@ -580,7 +574,7 @@ Flexible(
                       "Product Description :",
                       fontSize: 12.sp,
                       fontWeight: FontWeight.w600,
-                      color:Colors.grey,
+                      color: Colors.grey,
                     ),
                   ],
                 ),
@@ -623,7 +617,6 @@ Flexible(
           ),
         ),
       );
-
     });
   }
 }

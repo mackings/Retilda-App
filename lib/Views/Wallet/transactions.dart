@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:retilda/Views/Wallet/Model/transactions.dart';
@@ -8,8 +9,6 @@ import 'package:retilda/Views/Widgets/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sizer/sizer.dart';
 import 'package:http/http.dart' as http;
-
-
 
 class Transactions extends ConsumerStatefulWidget {
   const Transactions({super.key});
@@ -24,33 +23,35 @@ class _TransactionsState extends ConsumerState<Transactions> {
   String? AccountNumber;
   String? AccountName;
   List<Content> _transactions = [];
+  dynamic _userBalance;
 
   bool _isLoading = true;
 
-Future<void> _loadUserData() async {
-  SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
-  String? userDataString = sharedPreferences.getString('userData');
-  
-  if (userDataString != null) {
-    Map<String, dynamic> userData = jsonDecode(userDataString);
-    print("Parsed User Data: $userData");  // Log entire parsed data for confirmation
+  Future<void> _loadUserData() async {
+    SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
+    String? userDataString = sharedPreferences.getString('userData');
 
-    // Extract data based on the JSON structure
-    String? token = userData['data']?['token'];
-    String? account = userData['data']?['user']?['wallet']?['accountNumber'];
-    int? balance = userData['data']?['user']?['balance'];
-    String? name = userData['data']?['user']?['wallet']?['accountName'];
+    if (userDataString != null) {
+      Map<String, dynamic> userData = jsonDecode(userDataString);
+      print(
+          "Parsed User Data: $userData"); // Log entire parsed data for confirmation
 
-    setState(() {
-      _token = token;
-      AccountNumber = account;
-      AccountName = name;
-      WalletBalance = balance;
-    });
-    await fetchTransactions();
+      String? token = userData['data']?['token'];
+      String? account = userData['data']?['user']?['wallet']?['accountNumber'];
+      int? balance = userData['data']?['user']?['balance'];
+      String? name = userData['data']?['user']?['wallet']?['accountName'];
+
+      setState(() {
+        _token = token;
+        AccountNumber = account;
+        AccountName = name;
+        WalletBalance = balance;
+      });
+
+      await fetchTransactions();
+      await fetchUserBalance();
+    }
   }
-}
-
 
   Future<void> fetchTransactions() async {
     final url =
@@ -76,6 +77,150 @@ Future<void> _loadUserData() async {
     }
   }
 
+  Future<void> fetchUserBalance() async {
+    final url = Uri.parse('https://retilda.onrender.com/Api/userBalance');
+
+    try {
+      final response = await http.get(url, headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $_token',
+      });
+ 
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+
+        if (responseData['success'] == true) {
+          final double userBalance = responseData['data'].toDouble();
+
+          setState(() {
+            _userBalance = userBalance;
+            _isLoading = false;
+          });
+          print(_userBalance);
+        } else {
+          throw Exception(responseData['message']);
+        }
+      } else {
+        print(response.body);
+        throw Exception('Failed to load user balance');
+      }
+    } catch (error) {
+      print('Error fetching user balance: $error');
+    }
+  }
+
+  String formatBalance(double? balance) {
+    if (balance == null) return "****";
+    return balance.toStringAsFixed(1).replaceAllMapped(
+          RegExp(r'\B(?=(\d{3})+(?!\d))'),
+          (match) => ",",
+        );
+  }
+
+  void showBankDetailsModal(
+      BuildContext context, String bankName, String accountNumber) {
+    showModalBottomSheet(
+      context: context,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (BuildContext context) {
+        return Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header Row
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Spacer(),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.pop(context);
+                    },
+                    child: CircleAvatar(
+                      backgroundColor: Colors.grey.shade200,
+                      child: Icon(Icons.close, color: Colors.black),
+                    ),
+                  ),
+                ],
+              ),
+
+              SizedBox(height: 10),
+
+              // Descriptive Text
+              Text(
+                'Make a bank transfer to the bank account below to top up your wallet.',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w400),
+              ),
+              SizedBox(height: 30),
+              Divider(color: Colors.grey.shade300),
+
+              // Bank Name Row
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Bank Name:',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                  ),
+                  Text(
+                    bankName,
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w400),
+                  ),
+                ],
+              ),
+              SizedBox(height: 10),
+              Divider(color: Colors.grey.shade300),
+
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Account Number:',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        accountNumber,
+                        style: TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.w400),
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.copy, size: 16),
+                        onPressed: () {
+                          Clipboard.setData(ClipboardData(text: accountNumber));
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Account Number Copied')),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              SizedBox(height: 10),
+              Divider(color: Colors.grey.shade300), // Bottom Divider
+
+              SizedBox(height: 10),
+              Align(
+                alignment: Alignment.center,
+                child: Text(
+                  'Thank you for choosing Retilda!',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w400),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   void initState() {
     _loadUserData();
@@ -92,12 +237,17 @@ Future<void> _loadUserData() async {
           fontSize: 15.sp,
           fontWeight: FontWeight.w500,
         ),
+        actions: [
+          GestureDetector(
+              onTap: () {
+                fetchUserBalance();
+              },
+              child: Icon(Icons.refresh_rounded))
+        ],
       ),
       body: Column(
         children: [
-
-
-                    Padding(
+          Padding(
             padding: const EdgeInsets.only(left: 30, right: 30),
             child: Container(
               height: 20.h,
@@ -123,7 +273,7 @@ Future<void> _loadUserData() async {
                           fontSize: 8.sp,
                         ),
                         CustomText(
-                          'N${WalletBalance == null ? "****" : WalletBalance.toString()}',
+                          'N${formatBalance(_userBalance)}',
                           fontSize: 15.sp,
                           fontWeight: FontWeight.w500,
                           color: Colors.white,
@@ -134,7 +284,7 @@ Future<void> _loadUserData() async {
                         CustomText(
                           "$AccountNumber",
                           color: Colors.white,
-                          fontSize: 8.sp,
+                          fontSize: 10.sp,
                         ),
                         CustomText(
                           "Wema Bank",
@@ -148,7 +298,8 @@ Future<void> _loadUserData() async {
                       children: [
                         GestureDetector(
                           onTap: () {
-                            // fetchTransactions();
+                            showBankDetailsModal(
+                                context, "Wema Bank", "$AccountNumber");
                           },
                           child: Container(
                             height: 5.h,
@@ -186,7 +337,6 @@ Future<void> _loadUserData() async {
               ),
             ),
           ),
-
           Padding(
             padding: const EdgeInsets.only(left: 20, top: 30),
             child: Row(
@@ -199,161 +349,88 @@ Future<void> _loadUserData() async {
               ],
             ),
           ),
-
-Expanded(
-  child: _transactions.isEmpty
-      ? Center(
-          child: Padding(
-            padding: const EdgeInsets.only(left: 30, right: 30),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.info_outline, size: 50, color: Colors.black),
-                SizedBox(height: 16),
-                CustomText(
-                  'No transactions available',
-                ),
-              ],
-            ),
-          ),
-        )
-      : Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: ListView.builder(
-            itemCount: _transactions.length,
-            itemBuilder: (context, index) {
-              // Reverse the index to display the latest first
-              final transaction = _transactions[_transactions.length - 1 - index];
-              final transactionDateTime = DateTime.parse(transaction.transactionDate)
-                  .add(Duration(hours: 1));
-              final formattedDate = DateFormat('MMMM d, yyyy, h:mma')
-                  .format(transactionDateTime);
-
-              final formattedAmount = NumberFormat.currency(
-                locale: 'en_NG',
-                symbol: 'N',
-                decimalDigits: 0,
-              ).format(transaction.amount);
-
-              // Determine the title based on transaction type
-              final titleText = transaction.transactionType == "purchase"
-                  ? (transaction.status == "settlement" ? "Product Settlement" : "Product Purchase")
-                  : transaction.senderName;
-
-              return Padding(
-                padding: const EdgeInsets.all(15.0),
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(width: 0.5, color: Colors.grey),
-                  ),
-                  child: ListTile(
-                    leading: transaction.transactionType == "purchase"
-                        ? Icon(Icons.arrow_circle_down_sharp, color: Colors.red)
-                        : Icon(Icons.arrow_circle_up_sharp, color: Colors.green),
-                    title: CustomText(titleText), // Conditionally set title
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        CustomText(formattedDate),
-                        CustomText(
-                          transaction.description, // Description
-                          fontSize: 8.sp,
-                        ),
-                      ],
+          Expanded(
+            child: _transactions.isEmpty
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.only(left: 30, right: 30),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.info_outline,
+                              size: 50, color: Colors.black),
+                          SizedBox(height: 16),
+                          CustomText(
+                            'No transactions available',
+                          ),
+                        ],
+                      ),
                     ),
-                    trailing: CustomText(formattedAmount), // Amount
+                  )
+                : Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: ListView.builder(
+                      itemCount: _transactions.length,
+                      itemBuilder: (context, index) {
+                        // Reverse the index to display the latest first
+                        final transaction =
+                            _transactions[_transactions.length - 1 - index];
+                        final transactionDateTime =
+                            DateTime.parse(transaction.transactionDate)
+                                .add(Duration(hours: 1));
+                        final formattedDate = DateFormat('MMMM d, yyyy, h:mma')
+                            .format(transactionDateTime);
+
+                        final formattedAmount = NumberFormat.currency(
+                          locale: 'en_NG',
+                          symbol: 'N',
+                          decimalDigits: 0,
+                        ).format(transaction.amount);
+
+                        // Determine the title based on transaction type
+                        final titleText =
+                            transaction.transactionType == "purchase"
+                                ? (transaction.status == "settlement"
+                                    ? "Product Settlement"
+                                    : "Product Purchase")
+                                : transaction.senderName;
+
+                        return Padding(
+                          padding: const EdgeInsets.all(15.0),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(8),
+                              border:
+                                  Border.all(width: 0.5, color: Colors.grey),
+                            ),
+                            child: ListTile(
+                              leading: transaction.transactionType == "purchase"
+                                  ? Icon(Icons.arrow_circle_down_sharp,
+                                      color: Colors.red)
+                                  : Icon(Icons.arrow_circle_up_sharp,
+                                      color: Colors.green),
+                              title: CustomText(
+                                  titleText), // Conditionally set title
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  CustomText(formattedDate),
+                                  CustomText(
+                                    transaction.description, // Description
+                                    fontSize: 8.sp,
+                                  ),
+                                ],
+                              ),
+                              trailing: CustomText(formattedAmount), // Amount
+                            ),
+                          ),
+                        );
+                      },
+                    ),
                   ),
-                ),
-              );
-            },
           ),
-        ),
-),
-
-
         ],
       ),
     );
   }
 }
-
-
-
-
-
-
-
-
-
-  // Future<void> _fetchData() async {
-  //   try {
-  //     await getWalletBalance(Wallet.toString());
-  //     ApiResponse transactionsResponse = await fetchTransactions();
-  //     setState(() {
-  //       _transactions = transactionsResponse.data.responseBody.content;
-  //     });
-  //   } catch (e) {
-  //     print("Failed to load transactions: $e");
-  //   } finally {
-  //     setState(() {
-  //       _isLoading = false; // Set loading state to false after data is fetched
-  //     });
-  //   }
-  // }
-
-  // Future<ApiResponse> fetchTransactions() async {
-  //   final url =
-  //       Uri.parse('https://retilda.onrender.com/Api/transactions/$Wallet');
-
-  //   final response = await http.get(url, headers: {
-  //     'Content-Type': 'application/json',
-  //     'Authorization': 'Bearer $_token',
-  //   });
-
-  //   if (response.statusCode == 200) {
-  //     print(response.body);
-  //     return ApiResponse.fromJson(jsonDecode(response.body));
-  //   } else {
-  //     throw Exception('Failed to load transactions');
-  //   }
-  // }
-
-  // Future<void> getWalletBalance(String walletAccountNumber) async {
-  //   final Uri url = Uri.parse('https://retilda.onrender.com/Api/balance');
-
-  //   Map<String, String> requestBody = {
-  //     'walletAccountNumber': Wallet.toString(),
-  //   };
-
-  //   String requestBodyJson = jsonEncode(requestBody);
-
-  //   try {
-  //     http.Response response = await http.post(
-  //       url,
-  //       headers: {
-  //         'Content-Type': 'application/json',
-  //         'Authorization': 'Bearer $_token',
-  //       },
-  //       body: requestBodyJson,
-  //     );
-
-  //     if (response.statusCode == 200) {
-  //       print(response.body);
-  //       Map<String, dynamic> responseBody = jsonDecode(response.body);
-
-  //       print(
-  //           'Wallet balance: ${responseBody['data']['responseBody']['availableBalance']}');
-
-  //       setState(() {
-  //         balance = responseBody['data']['responseBody']['availableBalance']
-  //             .toString();
-  //       });
-  //     } else {
-  //       print(response.body);
-  //       print('Failed to fetch wallet balance: ${response.statusCode}');
-  //     }
-  //   } catch (error) {
-  //     print('Error fetching wallet balance: $error');
-  //   }
-  // }

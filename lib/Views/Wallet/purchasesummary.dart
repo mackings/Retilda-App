@@ -1,6 +1,7 @@
+
+
 import 'dart:async';
 import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -13,8 +14,12 @@ import 'package:retilda/model/purchases.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sizer/sizer.dart';
 import 'package:http/http.dart' as http;
+import 'package:webview_flutter/webview_flutter.dart';
 
+
+ 
 class Purchasesummary extends ConsumerStatefulWidget {
+
   final Purchase purchase;
   const Purchasesummary({super.key, required this.purchase});
 
@@ -33,85 +38,143 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
   String? balance;
   bool? loading;
 
+  Future<void> makeInstallmentPaymentRequest(
+      BuildContext context, String productId, String token) async {
+    Map<String, String> requestBody = {
+      "productId": productId,
+    };
+
+    String requestBodyJson = jsonEncode(requestBody);
+
+    try {
+      print("Payload >> $requestBodyJson");
+      http.Response response = await http.post(
+        Uri.parse(
+            'https://retilda.onrender.com/Api/installmentRepaymentUsingWallet'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token', // Use the provided token
+        },
+        body: requestBodyJson,
+      );
+
+      if (response.statusCode == 200) {
+        print('Installment payment request successful');
+        print('Response: ${response.body}');
+
+        // Ensure the context is still valid
+        if (context.mounted) {
+          showDialog(
+            context: context,
+            builder: (BuildContext context) {
+              return AlertDialog(
+                title: Text('Success'),
+                content: Text('Payment successful!'),
+                actions: <Widget>[
+                  TextButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      Navigator.of(context).pop();
+                    },
+                    child: Text('OK'),
+                  ),
+                ],
+              );
+            },
+          );
+        }
+      } else {
+        if (context.mounted) {
+          showDialog(
+            context: context,
+            builder: (BuildContext context) {
+              return AlertDialog(
+                title: Text('Error'),
+                content: Text('Payment Error, kindly retry'),
+                actions: <Widget>[
+                  TextButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                    child: Text('OK'),
+                  ),
+                ],
+              );
+            },
+          );
+        }
+        print(response.body);
+        print(
+            'Installment payment request failed with status code: ${response.statusCode}');
+      }
+    } catch (error) {
+      print('Error making installment payment request: $error');
+    }
+  }
 
 
-Future<void> makeInstallmentPaymentRequest(
-    BuildContext context, String productId, String token) async {
-  Map<String, String> requestBody = {
-    "productId": productId,
+Future<void> installmentRepaymentUsingCard(
+    BuildContext context, String productId) async {
+  const String url =
+      'https://retilda.onrender.com/Api/installmentRepaymentUsingCard';
+
+  final Map<String, String> requestBody = {
+    'productId': productId,
   };
 
-  String requestBodyJson = jsonEncode(requestBody);
-
   try {
-    print("Payload >> $requestBodyJson");
-    http.Response response = await http.post(
-      Uri.parse(
-          'https://retilda.onrender.com/Api/installmentRepaymentUsingWallet'),
+    // Make the POST request
+    final response = await http.post(
+      Uri.parse(url),
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token', // Use the provided token
+        'Authorization': 'Bearer $Token',
       },
-      body: requestBodyJson,
+      body: jsonEncode(requestBody),
     );
 
     if (response.statusCode == 200) {
-      print('Installment payment request successful');
-      print('Response: ${response.body}');
+      final responseData = jsonDecode(response.body);
 
-      // Ensure the context is still valid
-      if (context.mounted) {
-        
+      if (responseData['success'] == true &&
+          responseData['data'] != null &&
+          responseData['data']['paymentUrl'] != null) {
+        final String paymentUrl = responseData['data']['paymentUrl'];
+        print('Payment URL: $paymentUrl');
+
+        // Show the WebView in an overlay
         showDialog(
           context: context,
+          barrierDismissible: false,
           builder: (BuildContext context) {
-            return AlertDialog(
-              title: Text('Success'),
-              content: Text('Payment successful!'),
-              actions: <Widget>[
-                TextButton(
+            return Scaffold(
+              appBar: AppBar(
+                title: const Text('Card Payment'),
+                leading: IconButton(
+                  icon: const Icon(Icons.close),
                   onPressed: () {
-                    Navigator.of(context).pop();
-                    Navigator.of(context).pop();
+                    Navigator.of(context).pop(); // Close the overlay
                   },
-                  child: Text('OK'),
                 ),
-              ],
+              ),
+              body: WebView(
+                initialUrl: paymentUrl,
+                javascriptMode: JavascriptMode.unrestricted,
+              ),
             );
           },
         );
+      } else {
+        print('Invalid response data: ${response.body}');
       }
     } else {
-      if (context.mounted) {
-         
-        showDialog(
-          context: context,
-          builder: (BuildContext context) {
-            return AlertDialog(
-              title: Text('Error'),
-              content: Text('Payment Error, kindly retry'),
-              actions: <Widget>[
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                  child: Text('OK'),
-                ),
-              ],
-            );
-          },
-        );
-      }
-      print(response.body);
-      print(
-          'Installment payment request failed with status code: ${response.statusCode}');
+      print('Error: ${response.statusCode}');
+      print('Response Body: ${response.body}');
     }
   } catch (error) {
-    print('Error making installment payment request: $error');
+    print('Exception occurred: $error');
   }
 }
-
-
 
 
   Future<void> _loadUserData() async {
@@ -171,13 +234,12 @@ Future<void> makeInstallmentPaymentRequest(
   }
 
   void _handlePaymentOptionSelected(String option) {
-  
     if (option == 'wallet') {
       makeInstallmentPaymentRequest(context, productId!, Token!);
-    } else {}
+    } else {
+      //installmentRepaymentUsingCard(productId!);
+    }
   }
-
-
 
   void _showPaymentMethodDialog() {
     showDialog(
@@ -194,19 +256,26 @@ Future<void> makeInstallmentPaymentRequest(
             children: [
               // Wallet payment option
               ListTile(
-                title: Text('Wallet'),
+                title: Text('Pay from Wallet'),
                 onTap: () {
                   Navigator.pop(context);
                   _handlePaymentOptionSelected('wallet');
                 },
               ),
-              ListTile(
-                title: Text('Card payment'),
-                onTap: () {
-                  Navigator.pop(context);
-                },
-              ),
+ListTile(
+  title: Text('Pay with Card'),
+  onTap: () {
+    if (productId != null) {
+      installmentRepaymentUsingCard(context, productId!); 
+    } else {
+      print("Error: productId is null");
+    }
+  },
+)
+
             ],
+
+            
           ),
         );
       },
@@ -279,12 +348,12 @@ Future<void> makeInstallmentPaymentRequest(
                       ),
                     ),
                   ),
+
                   Padding(
                     padding:
                         const EdgeInsets.only(left: 30, right: 30, top: 20),
                     child: Column(
                       children: [
-
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
@@ -301,7 +370,6 @@ Future<void> makeInstallmentPaymentRequest(
                                   print(productId);
                                 });
 
-                                // Show the payment method selection dialog
                                 _showPaymentMethodDialog();
                               },
                               child: Container(
@@ -310,10 +378,10 @@ Future<void> makeInstallmentPaymentRequest(
                                   color: RButtoncolor,
                                 ),
                                 child: Padding(
-                                  padding: const EdgeInsets.only(left: 20,right: 20,top: 10,bottom: 10),
+                                  padding: const EdgeInsets.only(
+                                      left: 20, right: 20, top: 10, bottom: 10),
                                   child: Row(
                                     children: [
-
                                       CustomText(
                                         "Pay Installments",
                                         fontWeight: FontWeight.w500,
@@ -327,8 +395,6 @@ Future<void> makeInstallmentPaymentRequest(
                             )
                           ],
                         ),
-
-
                         Padding(
                           padding: const EdgeInsets.all(8.0),
                           child: Divider(
@@ -393,6 +459,7 @@ Future<void> makeInstallmentPaymentRequest(
                       ],
                     ),
                   )
+
                 ],
               ),
             ),

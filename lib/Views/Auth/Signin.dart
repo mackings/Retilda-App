@@ -23,6 +23,7 @@ class _SigninState extends State<Signin> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _isLoading = false;
+  bool _isObscured = true;
 
   Future<void> _login() async {
     setState(() {
@@ -67,9 +68,9 @@ class _SigninState extends State<Signin> {
               titleColor: Colors.red,
               message: responseData['message'],
               onClosePressed: () {
-                // Handle close button press
+                Navigator.pop(context);
               },
-              onButtonPressed: () {},
+              onButtonPressed: () {Navigator.pop(context);},
             );
           },
         );
@@ -111,13 +112,12 @@ class _SigninState extends State<Signin> {
               children: [
                 SizedBox(height: MediaQuery.of(context).size.height * 0.1),
                 CustomText(
-                  'Retilda', 
+                  'Retilda',
                   fontSize: 25.sp,
                   fontWeight: FontWeight.bold,
                   color: ROrange,
                 ),
                 SizedBox(height: 4.h),
-                
                 CustomText(
                   'Sign in',
                   fontSize: 15.sp,
@@ -125,27 +125,27 @@ class _SigninState extends State<Signin> {
                   color: Colors.black,
                 ),
                 SizedBox(height: 4.h),
-                
                 CustomTextFormField(
                   controller: _emailController,
                   hintText: 'Email',
+                  isPasswordField: false,
                   suffixIcon: Icons.email,
                   onChanged: (value) {},
-                  onSuffixIconTap: () {},
                 ),
-
                 SizedBox(height: 4.h),
-
                 CustomTextFormField(
                   controller: _passwordController,
                   hintText: 'Password',
-                  suffixIcon: Icons.visibility_off,
+                  isPasswordField: true,
                   onChanged: (value) {},
-                  onSuffixIconTap: () {},
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter your password';
+                    }
+                    return null;
+                  },
                 ),
-
                 SizedBox(height: 2.h),
-
                 GestureDetector(
                   onTap: () {
                     // Forgot password action
@@ -158,29 +158,33 @@ class _SigninState extends State<Signin> {
                     ),
                   ),
                 ),
-
                 SizedBox(height: MediaQuery.of(context).size.height * 0.05),
-                
-                CustomBtn(
-                  text: _isLoading ? 'Signing in...' : 'Sign in',
-                  onPressed: _isLoading ? null : _login,
-                  backgroundColor: RButtoncolor,
-                  borderRadius: 20.0,
-                ),
+_isLoading
+    ? CircleAvatar(
+        radius: 25, // Adjust the radius as needed
+        backgroundColor: Colors.grey.shade200, // Optional background color
+        child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(Colors.blue), // Match with theme
+          strokeWidth: 3.0,
+        ),
+      )
+    : CustomBtn(
+        text: 'Sign in',
+        onPressed: _login,
+        backgroundColor: RButtoncolor,
+        borderRadius: 20.0,
+      ),
 
                 SizedBox(height: MediaQuery.of(context).size.height * 0.03),
-
                 Padding(
                   padding: const EdgeInsets.only(left: 10),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.start,
                     children: [
-                      
                       CustomText(
                         'New user? ',
                         color: Colors.black,
                       ),
-
                       GestureDetector(
                         onTap: () {
                           Navigator.pushReplacement(
