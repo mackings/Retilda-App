@@ -16,6 +16,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'package:sizer/sizer.dart';
 
+
+
+
+
 class ProductDetails extends StatefulWidget {
   final Product product;
 
@@ -26,6 +30,7 @@ class ProductDetails extends StatefulWidget {
 }
 
 class _ProductDetailsState extends State<ProductDetails> {
+  
   bool isFirstButtonActive = true;
   int? selectedChipValue;
 

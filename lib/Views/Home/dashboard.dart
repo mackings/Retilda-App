@@ -14,6 +14,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sizer/sizer.dart';
 import 'package:http/http.dart' as http;
 
+
+
+
+
 class Dashboard extends ConsumerStatefulWidget {
   const Dashboard({Key? key}) : super(key: key);
 
@@ -141,31 +145,91 @@ class _DashboardState extends ConsumerState<Dashboard> {
                 SizedBox(
                   height: 2.h,
                 ),
-                GestureDetector(
-                  onTap: () {
-                    Navigator.push(context,
-                        MaterialPageRoute(builder: (context) => Allproducts()));
-                  },
-                  child: SizedBox(
-                    height: 25.h,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
+
+
+GestureDetector(
+  onTap: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => Allproducts()),
+    );
+  },
+  child: SizedBox(
+    height: 25.h,
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: FutureBuilder<ApiResponse>(
+        future: fetchData(Token!), // Fetch data using the Token
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Center(child: CircularProgressIndicator());
+          } else if (snapshot.hasError) {
+            return Center(child: Text("Error loading products"));
+          } else if (snapshot.hasData) {
+            final List<Product> products = snapshot.data!.data;
+
+            // Create a map of categories and their associated products
+            Map<String, Product> categoryProductMap = {};
+
+            for (var product in products) {
+              // For each category in the product, store the first product found
+              for (var category in product.categories) {
+                if (!categoryProductMap.containsKey(category)) {
+                  categoryProductMap[category] = product;
+                }
+              }
+            }
+
+            // Convert map to list for displaying
+            final categoriesWithProduct = categoryProductMap.entries.toList();
+
+            return ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: categoriesWithProduct.length,
+              itemBuilder: (context, index) {
+                var categoryEntry = categoriesWithProduct[index];
+                var category = categoryEntry.key;
+                var product = categoryEntry.value;
+
+                return Padding(
+                  padding: const EdgeInsets.only(right: 10),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      // Product Image
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: Image.network(
+                          product.images.isNotEmpty ? product.images[0] : 'default_image_url',
+                          height: 120,
+                          width: 120,
+                          fit: BoxFit.cover,
+                        ),
                       ),
-                      child: SliderWidget(items: [
-                        SliderItem(
-                            imagePath: 'assets/t1.jpg',
-                            text: 'Home Appliances'),
-                        SliderItem(
-                            imagePath: 'assets/wm2.jpg',
-                            text: 'Washing Machines'),
-                        SliderItem(
-                            imagePath: 'assets/k1.jpg',
-                            text: 'Kitchen Utensils'),
-                      ]),
-                    ),
+                      SizedBox(height: 10),
+                      // Category Name
+                      CustomText(
+                        category,
+                        fontSize: 12.sp,
+                        fontWeight: FontWeight.w600,
+                        color: ROrange,
+                      ),
+                    ],
                   ),
-                ),
+                );
+              },
+            );
+          } else {
+            return Center(child: Text("No products found"));
+          }
+        },
+      ),
+    ),
+  ),
+),
+
+
+
                 SizedBox(
                   height: 3.h,
                 ),
@@ -224,6 +288,8 @@ class _DashboardState extends ConsumerState<Dashboard> {
                               child: Text('No Products Found'),
                             );
                           } else if (snapshot.hasData) {
+                            print(snapshot.data);
+
                             return Padding(
                               padding:
                                   const EdgeInsets.only(left: 20, right: 20),
@@ -245,20 +311,18 @@ class _DashboardState extends ConsumerState<Dashboard> {
                                         (product) => GestureDetector(
                                           onTap: () {
                                             print("heyy");
-                                              Navigator.push(
-                                                context,
-                                                MaterialPageRoute(
-                                                  builder: (context) =>
-                                                      ProductDetails(
-                                                          product: product),
-                                                ),
-                                              );
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (context) =>
+                                                    ProductDetails(
+                                                        product: product),
+                                              ),
+                                            );
                                           },
                                           child: ProductCard2(
                                             product: product,
-                                            onTap: () {
-
-                                            },
+                                            onTap: () {},
                                           ),
                                         ),
                                       )

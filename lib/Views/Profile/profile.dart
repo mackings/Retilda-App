@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:retilda/Views/Auth/kyc.dart';
 import 'package:retilda/Views/Merchant/upload.dart';
+import 'package:retilda/Views/Products/Update/ProducUpdate.dart';
 import 'package:retilda/Views/Products/terms.dart';
+import 'package:retilda/Views/Profile/support.dart';
 import 'package:retilda/Views/Widgets/components.dart';
 import 'package:retilda/Views/Widgets/profiletile.dart';
 import 'package:retilda/Views/Widgets/widgets.dart';
@@ -163,6 +165,17 @@ class _ProfileState extends ConsumerState<Profile> {
                   },
                 ),
 
+             ProfileListItem(
+                  icon: Icons.support_agent,
+                  title: 'Support',
+                  onTap: () {
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => Support()));
+                  },
+                ),
+
 if (role != 'user') 
   ProfileListItem(
     icon: Icons.space_dashboard_outlined,
@@ -171,6 +184,19 @@ if (role != 'user')
       Navigator.push(
         context,
         MaterialPageRoute(builder: (context) => UploadProducts()),
+      );
+      print('Merchant tapped');
+    },
+  ),
+
+if (role != 'user') 
+  ProfileListItem(
+    icon: Icons.system_update_alt,
+    title: 'Update Product',
+    onTap: () {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => Producupdate()),
       );
       print('Merchant tapped');
     },

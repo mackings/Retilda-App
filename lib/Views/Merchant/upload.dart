@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
-import 'package:retilda/Views/Widgets/widgets.dart';
 import 'package:retilda/model/categorymodel.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sizer/sizer.dart';
@@ -161,8 +160,8 @@ class _UploadProductsState extends ConsumerState<UploadProducts> {
   }
 
   Future<void> uploadProduct() async {
-
-    String unformattedPrice = priceController.text.replaceAll(RegExp(r'[^\d]'), '');
+    String unformattedPrice =
+        priceController.text.replaceAll(RegExp(r'[^\d]'), '');
 
     setState(() {
       isLoading = true;
@@ -177,9 +176,8 @@ class _UploadProductsState extends ConsumerState<UploadProducts> {
     request.fields['description'] = descriptionController.text;
     request.fields['specification'] = specificationController.text;
     request.fields['brand'] = brandController.text;
-    //request.fields['price'] = priceController.text;
-    request.fields['price'] = unformattedPrice; 
-    request.fields['availableStock'] = stockController.text;
+    request.fields['price'] = unformattedPrice;
+    request.fields['availableStock'] = "1000";
     request.fields['categories'] = selectedCategory ?? '';
 
     if (image1 != null) {
@@ -271,21 +269,15 @@ class _UploadProductsState extends ConsumerState<UploadProducts> {
                     ),
                   ),
 
-Padding(
-  padding: const EdgeInsets.all(8.0),
-  child: TextFormField(
-    controller: priceController,
-    decoration: InputDecoration(labelText: 'Price'),
-    keyboardType: TextInputType.number,
-    inputFormatters: [PriceInputFormatter()], // Add the formatter here
-  ),
-),
                   Padding(
                     padding: const EdgeInsets.all(8.0),
                     child: TextFormField(
-                      controller: stockController,
-                      decoration: InputDecoration(labelText: 'Available Stock'),
+                      controller: priceController,
+                      decoration: InputDecoration(labelText: 'Price'),
                       keyboardType: TextInputType.number,
+                      inputFormatters: [
+                        PriceInputFormatter()
+                      ], // Add the formatter here
                     ),
                   ),
 
@@ -399,8 +391,6 @@ Widget _buildImagePicker(File? image, VoidCallback onTap, String label) {
   );
 }
 
-
-
 class PriceInputFormatter extends TextInputFormatter {
   final NumberFormat _formatter = NumberFormat.decimalPattern();
 
@@ -414,7 +404,8 @@ class PriceInputFormatter extends TextInputFormatter {
     }
 
     // Remove all non-digit characters from the input
-    final intSelection = int.tryParse(newValue.text.replaceAll(RegExp(r'[^0-9]'), ''));
+    final intSelection =
+        int.tryParse(newValue.text.replaceAll(RegExp(r'[^0-9]'), ''));
     if (intSelection == null) return oldValue;
 
     // Format the input value
