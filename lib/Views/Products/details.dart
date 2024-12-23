@@ -9,16 +9,14 @@ import 'package:retilda/Views/Products/cartpage.dart';
 import 'package:retilda/Views/Products/terms.dart';
 import 'package:retilda/Views/Widgets/components.dart';
 import 'package:retilda/Views/Widgets/togglebtn.dart';
+import 'package:retilda/Views/Widgets/webview.dart';
 import 'package:retilda/Views/Widgets/widgets.dart';
 import 'package:retilda/model/cartmodel.dart';
 import 'package:retilda/model/products.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'package:sizer/sizer.dart';
-
-
-
-
+import 'package:url_launcher/url_launcher.dart';
 
 class ProductDetails extends StatefulWidget {
   final Product product;
@@ -30,7 +28,6 @@ class ProductDetails extends StatefulWidget {
 }
 
 class _ProductDetailsState extends State<ProductDetails> {
-  
   bool isFirstButtonActive = true;
   int? selectedChipValue;
 
@@ -55,6 +52,69 @@ class _ProductDetailsState extends State<ProductDetails> {
     });
     super.initState();
     _loadCartItems();
+  }
+
+Future<void> initializePayment(BuildContext context) async {
+  const String apiUrl =
+      "https://retilda-fintech.vercel.app/Api/buyproductonsales/onetimepaymentusingcard";
+
+  try {
+    // Make the API call
+    final response = await http.post(
+      Uri.parse(apiUrl),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: json.encode({"productId": productId}),
+    );
+
+    if (response.statusCode == 200) {
+      // Parse the response
+      final responseData = json.decode(response.body);
+
+      if (responseData['success'] == true) {
+        final String paymentUrl = responseData['data']['authorizationUrl'];
+
+        // Navigate to the WebViewScreen
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => WebViewScreen(url: paymentUrl),
+          ),
+        );
+      } else {
+        // Handle API error response
+        _showErrorDialog(context, responseData['message']);
+      }
+    } else {
+      // Handle HTTP error
+      _showErrorDialog(
+          context, "Failed to initialize payment. Please try again.");
+      print(response.body);
+    }
+  } catch (e) {
+    print(e);
+    // Handle exceptions
+    _showErrorDialog(context, "An error occurred: $e");
+  }
+}
+
+
+  void _showErrorDialog(BuildContext context, String message) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text("Error"),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text("Okay"),
+          ),
+        ],
+      ),
+    );
   }
 
   void addToCart() async {
@@ -116,7 +176,7 @@ class _ProductDetailsState extends State<ProductDetails> {
   }
 
   Future<void> getWalletBalance(String walletAccountNumber) async {
-    final Uri url = Uri.parse('https://retilda.onrender.com/Api/balance');
+    final Uri url = Uri.parse('https://retilda-fintech.vercel.app/Api/balance');
 
     Map<String, String> requestBody = {
       'walletAccountNumber': wallet,
@@ -213,7 +273,6 @@ class _ProductDetailsState extends State<ProductDetails> {
     print('Toggle Updated: ${isFirstButtonActive ? "Weekly" : "Monthly"}');
   }
 
-
   void handleChipSelected(int chipValue, bool isFirstButtonActive) {
     setState(() {
       selectedChipValue = chipValue;
@@ -235,7 +294,8 @@ class _ProductDetailsState extends State<ProductDetails> {
       String requestBodyJson = jsonEncode(requestBody);
       print("Payload >> $requestBodyJson");
       final response = await http.post(
-        Uri.parse('https://retilda.onrender.com/Api/buyProductOnInstallment'),
+        Uri.parse(
+            'https://retilda-fintech.vercel.app/Api/buyProductOnInstallment'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -406,6 +466,46 @@ class _ProductDetailsState extends State<ProductDetails> {
                 ),
               ),
               Padding(
+                padding: const EdgeInsets.only(left: 25, top: 20),
+                child: Row(
+                  children: [
+                    CustomText(
+                      "Select desired Payment frequency",
+                      fontSize: 12.sp,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(
+                height: 2.h,
+              ),
+              ToggleButtonsWidget(
+                firstButtonText: 'Weekly',
+                secondButtonText: 'Monthly',
+                onToggle: handleToggle,
+                onChipSelected: handleChipSelected,
+                onActionSelected: handleActionSelected,
+              ),
+              if (selectedChipValue != null)
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 1.h),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.error,
+                        color: Colors.grey,
+                      ),
+                      SizedBox(width: 2.w),
+                      Flexible(
+                        child: CustomText(
+                          'You Selected: The ${isFirstButtonActive ? "Weekly" : "Monthly"} Plan and ${selectedChipValue != null ? selectedChipValue.toString() : "No days selected"} ${isFirstButtonActive ? "Weeks" : "Months"} installments.',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              Padding(
                 padding: const EdgeInsets.only(left: 25, right: 25, top: 15),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -522,7 +622,7 @@ class _ProductDetailsState extends State<ProductDetails> {
                               ),
                               child: Center(
                                 child: CustomText(
-                                  "Buy Now",
+                                  "Pay Installments",
                                   color: Colors.white,
                                 ),
                               ),
@@ -531,46 +631,30 @@ class _ProductDetailsState extends State<ProductDetails> {
                   ],
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.only(left: 25, top: 20),
-                child: Row(
-                  children: [
-                    CustomText(
-                      "Select desired Payment frequency",
-                      fontSize: 12.sp,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ],
-                ),
-              ),
               SizedBox(
                 height: 2.h,
               ),
-              ToggleButtonsWidget(
-                firstButtonText: 'Weekly',
-                secondButtonText: 'Monthly',
-                onToggle: handleToggle,
-                onChipSelected: handleChipSelected,
-                onActionSelected: handleActionSelected,
+              Text("OR "),
+              SizedBox(
+                height: 2.h,
               ),
-              if (selectedChipValue != null)
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 1.h),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.error,
-                        color: Colors.grey,
-                      ),
-                      SizedBox(width: 2.w),
-                      Flexible(
-                        child: CustomText(
-                          'You Selected: The ${isFirstButtonActive ? "Weekly" : "Monthly"} Plan and ${selectedChipValue != null ? selectedChipValue.toString() : "No days selected"} ${isFirstButtonActive ? "Weeks" : "Months"} installments.',
-                        ),
-                      ),
-                    ],
+              GestureDetector(
+                onTap: () => initializePayment(context),
+                child: Container(
+                  height: 6.h,
+                  width: MediaQuery.of(context).size.width - 10.w,
+                  decoration: BoxDecoration(
+                    color: Colors.orange,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Center(
+                    child: Text(
+                      "One Time Payment",
+                      style: TextStyle(color: Colors.white, fontSize: 18),
+                    ),
                   ),
                 ),
+              ),
               Padding(
                 padding: const EdgeInsets.only(left: 25, top: 20),
                 child: Row(

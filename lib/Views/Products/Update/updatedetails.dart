@@ -85,7 +85,7 @@ class _UpdateDetailsState extends State<UpdateDetails> {
 
     String rawPrice = _priceController.text.replaceAll(",", "");
     String url =
-        "https://retilda.onrender.com/Api/updateProductByPrice/${widget.product.id}";
+        "https://retilda-fintech.vercel.app/Api/updateProductByPrice/${widget.product.id}";
 
     Map<String, dynamic> body = {
       "price": rawPrice,

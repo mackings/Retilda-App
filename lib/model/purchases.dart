@@ -1,3 +1,5 @@
+
+
 class PurchaseResponse {
   final bool? success;
   final String? message;
@@ -8,6 +10,7 @@ class PurchaseResponse {
     this.message,
     this.data,
   });
+
 
   factory PurchaseResponse.fromJson(Map<String, dynamic> json) {
     return PurchaseResponse(

@@ -40,7 +40,7 @@ class _SigninState extends State<Signin> {
 
       print('Request Payload: $payloadJson');
 
-      final url = Uri.parse('https://retilda.onrender.com/Api/login');
+      final url = Uri.parse('https://retilda-fintech.vercel.app/Api/login');
       final response = await http.post(
         url,
         body: payloadJson,
@@ -81,7 +81,7 @@ class _SigninState extends State<Signin> {
         context: context,
         builder: (context) => AlertDialog(
           title: Text('Error'),
-          content: Text('An error occurred'),
+          content: Text(e.toString()),
           actions: [
             TextButton(
               onPressed: () {

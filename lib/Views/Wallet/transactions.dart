@@ -10,6 +10,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sizer/sizer.dart';
 import 'package:http/http.dart' as http;
 
+
+
 class Transactions extends ConsumerStatefulWidget {
   const Transactions({super.key});
 
@@ -48,14 +50,15 @@ class _TransactionsState extends ConsumerState<Transactions> {
         WalletBalance = balance;
       });
 
+
       await fetchTransactions();
-      await fetchUserBalance();
+      await fetchUserBalance(); 
     }
   }
 
   Future<void> fetchTransactions() async {
     final url =
-        Uri.parse('https://retilda.onrender.com/Api/viewTransactionHistory');
+        Uri.parse('https://retilda-fintech.vercel.app/Api/viewTransactionHistory');
 
     final response = await http.get(url, headers: {
       'Content-Type': 'application/json',
@@ -78,7 +81,7 @@ class _TransactionsState extends ConsumerState<Transactions> {
   }
 
   Future<void> fetchUserBalance() async {
-    final url = Uri.parse('https://retilda.onrender.com/Api/userBalance');
+    final url = Uri.parse('https://retilda-fintech.vercel.app/Api/userBalance');
 
     try {
       final response = await http.get(url, headers: {

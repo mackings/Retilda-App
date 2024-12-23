@@ -150,7 +150,7 @@ class _ConnectAccountState extends State<ConnectAccount> {
       _isLoading = true;
     });
 
-    final url = Uri.parse('https://retilda.onrender.com/Api/direct-debit');
+    final url = Uri.parse('https://retilda-fintech.vercel.app/Api/direct-debit');
     final response = await http.post(
       url,
       headers: {

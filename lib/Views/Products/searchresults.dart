@@ -43,7 +43,7 @@ class _SearchPageState extends State<SearchPage> {
 
     try {
       final response = await http.get(
-        Uri.parse('https://retilda.onrender.com/api/products/search?q=$query'),
+        Uri.parse('https://retilda-fintech.vercel.app/api/products/search?q=$query'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',

@@ -27,7 +27,7 @@ class _PurchaseHistoryState extends ConsumerState<PurchaseHistory> {
   bool _isLoading = true;
 
   Future<PurchaseResponse> fetchPurchases(String userId, String token) async {
-    final url = 'https://retilda.onrender.com/Api/getAllPendingPurchases';
+    final url = 'https://retilda-fintech.vercel.app/Api/getAllPendingPurchases';
     final response = await http.get(
       Uri.parse(url),
       headers: {
@@ -40,6 +40,7 @@ class _PurchaseHistoryState extends ConsumerState<PurchaseHistory> {
       print(response.body);
       return PurchaseResponse.fromJson(jsonDecode(response.body));
     } else {
+      print(response.body);
       throw Exception('Failed to load purchases');
     }
   }

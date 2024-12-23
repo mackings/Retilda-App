@@ -50,7 +50,7 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
       print("Payload >> $requestBodyJson");
       http.Response response = await http.post(
         Uri.parse(
-            'https://retilda.onrender.com/Api/installmentRepaymentUsingWallet'),
+            'https://retilda-fintech.vercel.app/Api/installmentRepaymentUsingWallet'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token', // Use the provided token
@@ -116,7 +116,7 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
 Future<void> installmentRepaymentUsingCard(
     BuildContext context, String productId) async {
   const String url =
-      'https://retilda.onrender.com/Api/installmentRepaymentUsingCard';
+      'https://retilda-fintech.vercel.app/Api/installmentRepaymentUsingCard';
 
   final Map<String, String> requestBody = {
     'productId': productId,
@@ -354,47 +354,55 @@ ListTile(
                         const EdgeInsets.only(left: 30, right: 30, top: 20),
                     child: Column(
                       children: [
+
+
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
+
                             CustomText(
                               widget.purchase.product!.name.toString(),
                               fontWeight: FontWeight.w700,
-                              fontSize: 13.sp,
+                              fontSize: 12.sp,
                             ),
-                            GestureDetector(
-                              onTap: () {
-                                setState(() {
-                                  PurchaseId = widget.purchase.id;
-                                  productId = widget.purchase.product!.id;
-                                  print(productId);
-                                });
 
-                                _showPaymentMethodDialog();
-                              },
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(10),
-                                  color: RButtoncolor,
-                                ),
-                                child: Padding(
-                                  padding: const EdgeInsets.only(
-                                      left: 20, right: 20, top: 10, bottom: 10),
-                                  child: Row(
-                                    children: [
-                                      CustomText(
-                                        "Pay Installments",
-                                        fontWeight: FontWeight.w500,
-                                        fontSize: 11.sp,
-                                        color: Colors.white,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            )
+if (widget.purchase.totalAmountToPay!.toInt() != widget.purchase.totalAmountPaid!.toInt())
+  GestureDetector(
+    onTap: () {
+      setState(() {
+        PurchaseId = widget.purchase.id;
+        productId = widget.purchase.product!.id;
+        print(productId);
+      });
+
+      _showPaymentMethodDialog();
+    },
+    child: Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(10),
+        color: RButtoncolor,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.only(
+            left: 20, right: 20, top: 10, bottom: 10),
+        child: Row(
+          children: [
+            CustomText(
+              "Pay Installments",
+              fontWeight: FontWeight.w500,
+              fontSize: 11.sp,
+              color: Colors.white,
+            ),
+          ],
+        ),
+      ),
+    ),
+  ),
+
                           ],
                         ),
+
+
                         Padding(
                           padding: const EdgeInsets.all(8.0),
                           child: Divider(
