@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:retilda/Views/Auth/Signin.dart';
 import 'package:retilda/Views/Widgets/components.dart';
@@ -16,6 +17,47 @@ class Signup extends StatefulWidget {
 }
 
 class _SignupState extends State<Signup> {
+
+late FirebaseMessaging _messaging;
+String _notificationText = "No new notifications";
+
+
+  void _initializeFirebaseMessaging() async {
+    _messaging = FirebaseMessaging.instance;
+
+    // Request permission for iOS
+    NotificationSettings settings = await _messaging.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
+
+    if (settings.authorizationStatus == AuthorizationStatus.authorized) {
+      print('User granted permission');
+    } else {
+      print('User declined or has not granted permission');
+    }
+
+    // Get the FCM token
+    String? token = await _messaging.getToken();
+    print("FCM Token: $token");
+
+    // Listen for foreground messages
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      print("Received a foreground message: ${message.notification?.title}");
+      setState(() {
+        _notificationText = message.notification?.body ?? "No notification body";
+      });
+    });
+
+    // Handle when the app is opened from a notification
+    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+      print("Notification clicked: ${message.notification?.title}");
+    });
+  }
+
+
+
   final _formKey = GlobalKey<FormState>();
 
   bool _isPasswordVisible = false;
@@ -25,6 +67,7 @@ class _SignupState extends State<Signup> {
   final TextEditingController _phone = TextEditingController();
   final TextEditingController _password = TextEditingController();
   final TextEditingController _fullname = TextEditingController();
+  final TextEditingController _referralcode = TextEditingController();
 
   void _togglePasswordVisibility() {
     setState(() {
@@ -67,7 +110,8 @@ class _SignupState extends State<Signup> {
       "password": _password.text.trim(),
       "isVerified": false,
       "accounttype": "user",
-      "wallet": {"status": "Not available"}
+      "wallet": {"status": "Not available"},
+      "referralCode": _referralcode.text.trim()
     };
 
 
@@ -149,6 +193,12 @@ class _SignupState extends State<Signup> {
   }
 
   @override
+  void initState() {
+    _initializeFirebaseMessaging();
+    super.initState();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Sizer(
       builder: (context, orientation, deviceType) {
@@ -218,6 +268,17 @@ class _SignupState extends State<Signup> {
                         controller: _password,
                         hintText: 'Password',
                         isPasswordField: true,
+                        onChanged: (value) {},
+                      ),
+
+                      SizedBox(height: 4.h),
+                      
+                        CustomTextFormField(
+                        controller: _referralcode,
+                        hintText: 'Refferal Code (Optional)',
+                        isPasswordField: false,
+                        suffixIcon: Icons.accessibility,
+                       // validator: _validatePhoneNumber,
                         onChanged: (value) {},
                       ),
 

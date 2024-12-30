@@ -123,6 +123,69 @@ class _UpdateDetailsState extends State<UpdateDetails> {
     }
   }
 
+  Future<void> _deleteProduct() async {
+  setState(() {
+    loading = true;
+  });
+
+  String url = "https://retilda-fintech.vercel.app/Api/products/delete/${widget.product.id}";
+
+  try {
+    var response = await http.delete(
+      Uri.parse(url),
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token",
+      },
+    );
+
+    if (response.statusCode == 200) {
+      Navigator.pop(context); // Close the current screen
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text("Product deleted successfully!"),
+      ));
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text("Failed to delete product: ${response.body}"),
+      ));
+    }
+  } catch (error) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text("Error: $error"),
+    ));
+  } finally {
+    setState(() {
+      loading = false;
+    });
+  }
+}
+
+
+
+
+Future<bool> _showConfirmationDialog(BuildContext context) async {
+  return await showDialog<bool>(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text("Confirm Deletion"),
+            content: Text("Are you sure you want to delete this product?"),
+            actions: [
+              TextButton(
+                child: Text("Cancel"),
+                onPressed: () => Navigator.of(context).pop(false),
+              ),
+              TextButton(
+                child: Text("Delete"),
+                onPressed: () => Navigator.of(context).pop(true),
+              ),
+            ],
+          );
+        },
+      ) ??
+      false;
+}
+
 
     void _showUpdatePriceModal(BuildContext context) {
     showModalBottomSheet(
@@ -208,6 +271,17 @@ class _UpdateDetailsState extends State<UpdateDetails> {
           fontSize: 15.sp,
           fontWeight: FontWeight.w500,
         ),
+        actions: [
+
+         Padding(
+           padding: const EdgeInsets.all(8.0),
+           child: CustomText(
+                   "N${NumberFormat('#,##0').format(widget.product.price)}",
+                   fontWeight: FontWeight.w700,
+                   fontSize: 12.sp,
+                 ),
+         ),
+        ],
       ),
       body: SingleChildScrollView(
         child: Center(
@@ -252,40 +326,81 @@ class _UpdateDetailsState extends State<UpdateDetails> {
                 color: Colors.grey,
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.only(left: 25, right: 25, top: 15),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  CustomText(
-                    "N${NumberFormat('#,##0').format(widget.product.price)}",
-                    fontWeight: FontWeight.w700,
-                    fontSize: 12.sp,
-                  ),
-                  loading
-                      ? CircularProgressIndicator()
-                      : GestureDetector(
-                          onTap: () {
-                            _showUpdatePriceModal(context);
-                          },
-                          child: Container(
-                            height: 6.h,
-                            width: 50.w,
-                            decoration: BoxDecoration(
-                              color: RButtoncolor,
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Center(
-                              child: CustomText(
-                                "Update Product",
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
+
+
+
+Padding(
+  padding: const EdgeInsets.only(left: 25, right: 25, top: 15),
+  child: Row(
+    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    children: [
+
+
+      Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          loading
+              ? CircularProgressIndicator()
+              : GestureDetector(
+                  onTap: () {
+                    _showUpdatePriceModal(context);
+                  },
+                  child: Container(
+                    height: 6.h,
+                    width: 40.w,
+                    decoration: BoxDecoration(
+                      color: RButtoncolor,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Center(
+                        child: CustomText(
+                          "Update Price",
+                          color: Colors.white,
                         ),
-                ],
-              ),
-            ),
+                      ),
+                    ),
+                  ),
+                ),
+                
+          SizedBox(width: 20), // Add space between buttons
+
+          loading
+              ? CircularProgressIndicator()
+              : GestureDetector(
+                  onTap: () async {
+                    bool confirm = await _showConfirmationDialog(context);
+                    if (confirm) {
+                      _deleteProduct();
+                    }
+                  },
+                  child: Container(
+                    height: 6.h,
+                    width: 40.w,
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Center(
+                        child: CustomText(
+                          "Delete Product",
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+        ],
+      ),
+    ],
+  ),
+),
+
+
+
             SizedBox(
               height: 2.h,
             ),

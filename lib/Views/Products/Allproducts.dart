@@ -14,7 +14,6 @@ import 'package:sizer/sizer.dart';
 
 
 
-
 class Allproducts extends ConsumerStatefulWidget {
   const Allproducts({Key? key}) : super(key: key);
 
@@ -39,6 +38,7 @@ class _AllproductsState extends ConsumerState<Allproducts> {
     super.initState();
     _loadUserData();
   }
+
 
   Future<ApiCategoryResponse<List<String>>> fetchCategories(
       String token) async {
@@ -71,6 +71,9 @@ class _AllproductsState extends ConsumerState<Allproducts> {
     }
   }
 
+
+
+
   Future<ApiResponse> fetchData(String token) async {
     final String url = 'https://retilda-fintech.vercel.app/Api/products';
 
@@ -95,6 +98,8 @@ class _AllproductsState extends ConsumerState<Allproducts> {
       throw error;
     }
   }
+
+
 
   Future<void> _loadUserData() async {
     SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
@@ -134,6 +139,7 @@ class _AllproductsState extends ConsumerState<Allproducts> {
     }
   }
 
+
   Future<void> fetchProductsByCategory(String category) async {
     final String url =
         'https://retilda-fintech.vercel.app/Api/products/category/$category';
@@ -162,6 +168,8 @@ class _AllproductsState extends ConsumerState<Allproducts> {
       print('Error: $error');
     }
   }
+
+
 
   void _showCategoriesDrawer(BuildContext context) {
     showModalBottomSheet(
@@ -209,7 +217,9 @@ class _AllproductsState extends ConsumerState<Allproducts> {
                         });
                       },
                     ),
+
                     SizedBox(height: 10),
+                    
                     CustomText(
                       'Sort by',
                     ),
@@ -288,6 +298,8 @@ class _AllproductsState extends ConsumerState<Allproducts> {
       },
     );
   }
+
+
 
   void _showErrorDialog(BuildContext context, String message) {
     showDialog(

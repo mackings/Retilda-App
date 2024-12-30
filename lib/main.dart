@@ -1,16 +1,28 @@
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:retilda/Views/Auth/Signup.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:retilda/firebase_options.dart';
+
+
+
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  // Handle background notifications
+  print("Handling a background message: ${message.messageId}");
+}
 
 void main() async {
-  //12  await dotenv.load(fileName: ".env");
+  await  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp( options: DefaultFirebaseOptions.currentPlatform,);
+
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
   runApp(const MyApp());
+
 }
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -23,8 +35,6 @@ class MyApp extends StatelessWidget {
     );
   }
 }
-
-
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key, required this.title});

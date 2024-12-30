@@ -362,45 +362,14 @@ ListTile(
 
                             CustomText(
                               widget.purchase.product!.name.toString(),
-                              fontWeight: FontWeight.w700,
-                              fontSize: 12.sp,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 11.sp,
                             ),
-
-if (widget.purchase.totalAmountToPay!.toInt() != widget.purchase.totalAmountPaid!.toInt())
-  GestureDetector(
-    onTap: () {
-      setState(() {
-        PurchaseId = widget.purchase.id;
-        productId = widget.purchase.product!.id;
-        print(productId);
-      });
-
-      _showPaymentMethodDialog();
-    },
-    child: Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(10),
-        color: RButtoncolor,
-      ),
-      child: Padding(
-        padding: const EdgeInsets.only(
-            left: 20, right: 20, top: 10, bottom: 10),
-        child: Row(
-          children: [
-            CustomText(
-              "Pay Installments",
-              fontWeight: FontWeight.w500,
-              fontSize: 11.sp,
-              color: Colors.white,
-            ),
-          ],
-        ),
-      ),
-    ),
-  ),
 
                           ],
                         ),
+
+                        
 
 
                         Padding(
@@ -409,6 +378,47 @@ if (widget.purchase.totalAmountToPay!.toInt() != widget.purchase.totalAmountPaid
                             color: Colors.grey,
                           ),
                         ),
+
+                        if (widget.purchase.totalAmountToPay!.toInt() != widget.purchase.totalAmountPaid!.toInt())
+  Row(
+    children: [
+      GestureDetector(
+        onTap: () {
+          setState(() {
+            PurchaseId = widget.purchase.id;
+            productId = widget.purchase.product!.id;
+            print(productId);
+          });
+      
+          _showPaymentMethodDialog();
+        },
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(10),
+            color: RButtoncolor,
+          ),
+          child: Padding(
+            padding: const EdgeInsets.only(
+                left: 20, right: 20, top: 10, bottom: 10),
+            child: CustomText(
+              "Pay Installments",
+              fontWeight: FontWeight.w500,
+              fontSize: 11.sp,
+              color: Colors.white,
+            ),
+          ),
+        ),
+      ),
+    ],
+  ),
+
+                          Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Divider(
+                            color: Colors.grey,
+                          ),
+                        ),
+
                         LinearCompletionIndicator(
                           totalAmountToPay:
                               widget.purchase.totalAmountToPay!.toInt(),
