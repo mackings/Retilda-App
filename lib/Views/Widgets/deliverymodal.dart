@@ -1,11 +1,18 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:retilda/Views/Widgets/components.dart';
-import 'package:retilda/Views/Widgets/widgets.dart';
 import 'package:sizer/sizer.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 class DeliveryModal extends StatefulWidget {
+  final String purchaseId;
+
+  DeliveryModal({required this.purchaseId});
+
   @override
   _DeliveryModalState createState() => _DeliveryModalState();
 }
@@ -13,6 +20,8 @@ class DeliveryModal extends StatefulWidget {
 class _DeliveryModalState extends State<DeliveryModal> {
   final _addressController = TextEditingController();
   final _dateController = TextEditingController();
+  final _phoneNumberController = TextEditingController();
+
   final List<String> _timeSlots = [
     '08:00 AM - 10:00 AM',
     '10:00 AM - 12:00 PM',
@@ -21,7 +30,28 @@ class _DeliveryModalState extends State<DeliveryModal> {
     '04:00 PM - 06:00 PM',
     '06:00 PM - 08:00 PM'
   ];
+  final List<String> _categories = ['local', 'regional', 'interstate'];
   String? _selectedTimeSlot;
+  String? _selectedCategory;
+  bool isLoading = false;
+  String? token;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
+    String? userDataString = sharedPreferences.getString('userData');
+    if (userDataString != null) {
+      Map<String, dynamic> userData = jsonDecode(userDataString);
+      setState(() {
+        token = userData['data']['token'];
+      });
+    }
+  }
 
   Future<void> _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
@@ -37,132 +67,197 @@ class _DeliveryModalState extends State<DeliveryModal> {
     }
   }
 
+  Future<void> _requestDelivery() async {
+    if (token == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Unable to fetch user token.')),
+      );
+      return;
+    }
+
+    if (_addressController.text.isEmpty ||
+        _phoneNumberController.text.isEmpty ||
+        _dateController.text.isEmpty ||
+        _selectedTimeSlot == null ||
+        _selectedCategory == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Please fill all the fields.')),
+      );
+      return;
+    }
+
+    setState(() {
+      isLoading = true;
+    });
+
+    final url =
+        'https://retilda-fintech.vercel.app/Api/requestForGoodsDelivery/${widget.purchaseId}';
+
+    final body = {
+      "deliveryAddress": _addressController.text,
+      "phoneNumber": _phoneNumberController.text,
+      "deliveryTime": _selectedTimeSlot,
+      "deliveryDate": _dateController.text,
+      "category": _selectedCategory,
+      "distance": _selectedCategory,
+    };
+
+    try {
+      final response = await http.post(
+        Uri.parse(url),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(body),
+      );
+
+      print(body);
+
+      if (response.statusCode == 200) {
+        print(response.body);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Delivery requested successfully.')),
+        );
+        Navigator.pop(context); // Close the dialog
+      } else {
+        final error = jsonDecode(response.body)['message'] ?? 'Request failed.';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed: $error')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('An error occurred: $e')),
+      );
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: MediaQuery.of(context).viewInsets,
+    return SingleChildScrollView(
+      physics: BouncingScrollPhysics(),
       child: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Container(
-          padding: EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-
-              Align(
-                alignment: Alignment.topRight,
-                child: GestureDetector(
-                    onTap: () {
-                      Navigator.pop(context);
-                    },
-                    child: Icon(Icons.close)),
-              ),
-
-              SizedBox(
-                height: 15,
-              ),
-              Row(
-                children: [
-                  CustomText(
-                    "Your Item Delivery",
-                    fontSize: 12.sp,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  SizedBox(
-                    width: 5,
-                  ),
-                  Icon(Icons.location_history)
-                ],
-              ),
-              SizedBox(
-                height: 25,
-              ),
-              Container(
-                decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(width: 0.5, color: Colors.black)),
-                child: Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: TextFormField(
-                    maxLines: 2,
-                    controller: _addressController,
-                    decoration: InputDecoration( 
-                        border: InputBorder.none,
-                        hintText: "Enter Delivery Address",
-                        hintStyle: GoogleFonts.poppins()),
+        padding: MediaQuery.of(context).viewInsets,
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Container(
+            padding: EdgeInsets.all(16.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Align(
+                  alignment: Alignment.topRight,
+                  child: GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: Icon(Icons.close),
                   ),
                 ),
-              ),
-              SizedBox(height: 16.0),
-              GestureDetector(
-                onTap: () => _selectDate(context),
-                child: AbsorbPointer(
-                  child: Container(
-                    decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(width: 0.5, color: Colors.black)),
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: TextFormField(
-                        controller: _dateController,
-                        decoration: InputDecoration(
-                            border: InputBorder.none,
-                            hintText: "Select  Delivery Date ",
-                            suffixIcon: Icon(
-                              Icons.calendar_today,
-                            ),
-                            hintStyle: GoogleFonts.poppins()),
+                SizedBox(height: 15),
+                Row(
+                  children: [
+                    Text(
+                      "Your Item Delivery",
+                      style: GoogleFonts.poppins(
+                          fontSize: 12.sp, fontWeight: FontWeight.w600),
+                    ),
+                    SizedBox(width: 5),
+                    Icon(Icons.location_history),
+                  ],
+                ),
+                SizedBox(height: 25),
+                TextFormField(
+                  controller: _addressController,
+                  maxLines: 2,
+                  decoration: InputDecoration(
+                    border: OutlineInputBorder(),
+                    labelText: "Enter Delivery Address",
+                  ),
+                ),
+                SizedBox(height: 16.0),
+                TextFormField(
+                  controller: _phoneNumberController,
+                  keyboardType: TextInputType.phone,
+                  decoration: InputDecoration(
+                    border: OutlineInputBorder(),
+                    labelText: "Enter Phone Number",
+                  ),
+                ),
+                SizedBox(height: 16.0),
+                GestureDetector(
+                  onTap: () => _selectDate(context),
+                  child: AbsorbPointer(
+                    child: TextFormField(
+                      controller: _dateController,
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(),
+                        labelText: "Select Delivery Date",
+                        suffixIcon: Icon(Icons.calendar_today),
                       ),
                     ),
                   ),
                 ),
-              ),
-              SizedBox(height: 16.0),
+                SizedBox(height: 16.0),
+                DropdownButtonFormField<String>(
+                  decoration: InputDecoration(
+                    border: OutlineInputBorder(),
+                    labelText: "Select Time Slot",
+                  ),
+                  value: _selectedTimeSlot,
+                  items: _timeSlots.map((slot) {
+                    return DropdownMenuItem(
+                      value: slot,
+                      child: Text(slot),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedTimeSlot = value;
+                    });
+                  },
+                ),
+                SizedBox(height: 16.0),
+                DropdownButtonFormField<String>(
+                  decoration: InputDecoration(
+                    border: OutlineInputBorder(),
+                    labelText: "Select Category",
+                  ),
+                  value: _selectedCategory,
+                  items: _categories.map((category) {
+                    return DropdownMenuItem(
+                      value: category,
+                      child: Text(category),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedCategory = value;
+                    });
+                  },
+                ),
+                SizedBox(height: 20),
 
-              Container(
-                decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(width: 0.5, color: Colors.black)),
-                child: Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: DropdownButtonFormField<String>(
-                    decoration: InputDecoration(
-                        hintText: "Select Time slots",
-                        hintStyle: GoogleFonts.poppins(),
-                        border: InputBorder.none),
-                    value: _selectedTimeSlot,
-                    items: _timeSlots.map((String slot) {
-                      return DropdownMenuItem<String>(
-                        value: slot,
-                        child: CustomText(slot),
-                      );
-                    }).toList(),
-                    onChanged: (newValue) {
-                      setState(() {
-                        _selectedTimeSlot = newValue;
-                      });
-                    },
+                GestureDetector(
+                  onTap: isLoading ? null : _requestDelivery,
+                  child: Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.symmetric(vertical: 15.0),
+                    decoration: BoxDecoration(
+                      color: ROrange,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: isLoading
+                        ? Center(child: CircularProgressIndicator(color: Colors.white))
+                        : Center(child: Text("Request Delivery", style: TextStyle(color: Colors.white))),
                   ),
                 ),
-              ),
-              SizedBox(height: 29.0),
-
-              CustomBtn(
-                text: "Request delivery",
-                backgroundColor: RButtoncolor,
-                ),
-
-              // ElevatedButton(
-              //   onPressed: () {
-              //     // Handle form submission
-              //     print('Delivery Address: ${_addressController.text}');
-              //     print('Delivery Date: ${_dateController.text}');
-              //     print('Delivery Time Slot: $_selectedTimeSlot');
-              //     Navigator.pop(context);
-              //   },
-              //   child: Text('Submit'),
-              // ),
-            ],
+                
+              ],
+            ),
           ),
         ),
       ),
@@ -173,6 +268,7 @@ class _DeliveryModalState extends State<DeliveryModal> {
   void dispose() {
     _addressController.dispose();
     _dateController.dispose();
+    _phoneNumberController.dispose();
     super.dispose();
   }
 }

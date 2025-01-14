@@ -1,20 +1,14 @@
 import 'dart:convert';
-
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:retilda/Views/Auth/Signin.dart';
-import 'package:retilda/Views/Auth/Signup.dart';
 import 'package:retilda/Views/Home/dashboard.dart';
 import 'package:retilda/Views/Products/cartpage.dart';
 import 'package:retilda/Views/Profile/profile.dart';
 import 'package:retilda/Views/Wallet/Purchasehistory.dart';
 import 'package:retilda/Views/Wallet/transactions.dart';
-import 'package:retilda/Views/Widgets/bottomnavbar.dart';
 import 'package:retilda/Views/Widgets/components.dart';
-import 'package:retilda/Views/Widgets/widgets.dart';
 import 'package:retilda/model/cartmodel.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:sizer/sizer.dart';
+
 
 
 

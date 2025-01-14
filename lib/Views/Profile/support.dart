@@ -4,6 +4,10 @@ import 'package:retilda/Views/Widgets/widgets.dart';
 import 'package:sizer/sizer.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+
+import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
+
 class Support extends StatefulWidget {
   const Support({super.key});
 
@@ -14,35 +18,51 @@ class Support extends StatefulWidget {
 class _SupportState extends State<Support> {
 
   // Function to open the email client
-  _launchEmail() async {
-    final Uri emailLaunchUri = Uri(
-      scheme: 'mailto',
-      path: 'support@retildapropertyenterprise.com',
+Future<void> _launchEmail() async {
+  final Uri emailLaunchUri = Uri(
+    scheme: 'mailto',
+    path: 'support@retildapropertyenterprise.com',
+    query: Uri.encodeQueryComponent('Hello, I need help with...')
+  );
+  if (await canLaunchUrl(emailLaunchUri)) {
+    await launchUrl(emailLaunchUri);
+  } else {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Could not launch email client'))
     );
-    if (await canLaunchUrl(emailLaunchUri)) {
-      await launchUrl(emailLaunchUri);
-    } else {
-      throw 'Could not launch email client';
-    }
   }
+}
+
 
   // Function to launch WhatsApp
-  _launchWhatsApp() async {
-    final Uri whatsappLaunchUri = Uri.parse("https://wa.me/2348061931283");
-    if (await canLaunchUrl(whatsappLaunchUri)) {
-      await launchUrl(whatsappLaunchUri);
+ Future<void> _launchWhatsApp() async {
+  final Uri whatsappLaunchUri = Uri.parse("https://wa.me/2348061931283");
+  if (await canLaunchUrl(whatsappLaunchUri)) {
+    await launchUrl(whatsappLaunchUri);
+  } else {
+    // If the above doesn't work, try using the direct WhatsApp scheme
+    final String whatsappScheme = "whatsapp://send?phone=2348061931283";
+    final Uri whatsappUri = Uri.parse(whatsappScheme);
+    if (await canLaunchUrl(whatsappUri)) {
+      await launchUrl(whatsappUri);
     } else {
-      throw 'Could not launch WhatsApp';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not launch WhatsApp'))
+      );
     }
   }
+}
+
 
   // Function to make a call
-  _launchCall() async {
+  Future<void> _launchCall() async {
     final Uri callLaunchUri = Uri.parse("tel:+2348061931283");
     if (await canLaunchUrl(callLaunchUri)) {
       await launchUrl(callLaunchUri);
     } else {
-      throw 'Could not launch call';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not make the call'))
+      );
     }
   }
 
@@ -51,10 +71,9 @@ class _SupportState extends State<Support> {
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        title: CustomText(
+        title: Text(
           'Support',
-          fontSize: 15.sp,
-          fontWeight: FontWeight.w500,
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
         ),
       ),
       body: Padding(
@@ -63,40 +82,34 @@ class _SupportState extends State<Support> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Support Email Button
-            ElevatedButton(
-              onPressed: _launchEmail,
-              child: Row(
-                children: const [
-                  Icon(Icons.email),
-                  SizedBox(width: 8),
-                  Text("Email Support"),
-                ],
+            Card(
+              elevation: 4,
+              child: ListTile(
+                leading: Icon(Icons.email),
+                title: Text("Email Support"),
+                onTap: _launchEmail,
               ),
             ),
             SizedBox(height: 16),
 
             // WhatsApp Button
-            ElevatedButton(
-              onPressed: _launchWhatsApp,
-              child: Row(
-                children: const [
-                  Icon(Icons.chat),
-                  SizedBox(width: 8),
-                  Text("Chat on WhatsApp"),
-                ],
+            Card(
+              elevation: 4,
+              child: ListTile(
+                leading: Icon(Icons.chat),
+                title: Text("Chat on WhatsApp"),
+                onTap: _launchWhatsApp,
               ),
             ),
             SizedBox(height: 16),
 
-            // App In Call Button
-            ElevatedButton(
-              onPressed: _launchCall,
-              child: Row(
-                children: const [
-                  Icon(Icons.call),
-                  SizedBox(width: 8),
-                  Text("Call Support"),
-                ],
+            // Call Support Button
+            Card(
+              elevation: 4,
+              child: ListTile(
+                leading: Icon(Icons.call),
+                title: Text("Call Support"),
+                onTap: _launchCall,
               ),
             ),
           ],

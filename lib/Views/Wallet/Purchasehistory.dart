@@ -81,7 +81,6 @@ class _PurchaseHistoryState extends ConsumerState<PurchaseHistory> {
   void initState() {
     super.initState();
     _loadUserData();
-  
   }
 
   @override
@@ -126,6 +125,7 @@ class _PurchaseHistoryState extends ConsumerState<PurchaseHistory> {
 
                         return GestureDetector(
                           onTap: () {
+                            print(purchase.id);
                             Navigator.push(
                                 context,
                                 MaterialPageRoute(
@@ -138,7 +138,6 @@ class _PurchaseHistoryState extends ConsumerState<PurchaseHistory> {
                             title: purchase.product!.name.toString(),
                             subtitle: purchase.paymentPlan == "once"
                                 ? "One time payment of N${NumberFormat('#,##0').format(purchase.payments!.first.amountPaid)}"
-                                // : "N${NumberFormat('#,##0').format(purchase.totalPaidForPurchase)} out of N${NumberFormat('#,##0').format(purchase.totalAmountToPay)}",
                                 : "N${NumberFormat('#,##0').format(purchase.totalAmountPaid)} out of N${NumberFormat('#,##0').format(purchase.totalAmountToPay)}",
                           ),
                         );

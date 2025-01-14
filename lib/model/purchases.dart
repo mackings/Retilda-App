@@ -75,7 +75,7 @@ class Purchase {
 
   factory Purchase.fromJson(Map<String, dynamic> json) {
     return Purchase(
-      id: json['_id'],
+      id: json['id'],
       product: json['product'] != null ? Product.fromJson(json['product']) : null,
       paymentPlan: json['paymentPlan'],
       deliveryStatus: json['deliveryStatus'],

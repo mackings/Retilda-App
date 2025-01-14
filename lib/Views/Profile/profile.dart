@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:retilda/Views/Auth/kyc.dart';
+import 'package:retilda/Views/Delivery/views/deliveryhome.dart';
 import 'package:retilda/Views/Merchant/upload.dart';
 import 'package:retilda/Views/Products/Update/ProducUpdate.dart';
 import 'package:retilda/Views/Products/terms.dart';
@@ -99,7 +100,7 @@ Padding(
         children: [
           // Username Display
           CustomText(
-            Username ?? "User", // Fallback for null Username
+            Username ?? "Admin", // Fallback for null Username
             fontSize: 13.sp,
             fontWeight: FontWeight.w500,
           ),
@@ -294,6 +295,20 @@ Padding(
                       Navigator.push(
                         context,
                         MaterialPageRoute(builder: (context) => Producupdate()),
+                      );
+                      print('Merchant tapped');
+                    },
+                  ),
+
+
+               if (role != 'user')
+                  ProfileListItem(
+                    icon: Icons.bike_scooter,
+                    title: 'Delivery Center',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => DeliveryDashboard()),
                       );
                       print('Merchant tapped');
                     },

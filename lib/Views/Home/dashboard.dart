@@ -226,7 +226,7 @@ class _DashboardState extends ConsumerState<Dashboard> {
                                             ),
                                           ),
                                         ),
-                                        
+
                                         SizedBox(height: 10),
                                         CustomText(
                                           category,
@@ -279,6 +279,8 @@ class _DashboardState extends ConsumerState<Dashboard> {
                     ],
                   ),
                 ),
+
+                
                 Token != null
                     ? FutureBuilder<ApiResponse>(
                         future: fetchData(Token!),
@@ -324,7 +326,7 @@ class _DashboardState extends ConsumerState<Dashboard> {
                                   crossAxisSpacing: 10,
                                   padding: EdgeInsets.symmetric(horizontal: 3),
                                   children: snapshot.data!.data
-                                      .take(4)
+                                      .take(10)
                                       .map(
                                         (product) => GestureDetector(
                                           onTap: () {

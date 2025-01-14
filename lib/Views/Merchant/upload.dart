@@ -11,7 +11,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sizer/sizer.dart';
 import 'package:http/http.dart' as http;
 
+
+
+
 class UploadProducts extends ConsumerStatefulWidget {
+
   const UploadProducts({super.key});
 
   @override
@@ -57,6 +61,11 @@ class _UploadProductsState extends ConsumerState<UploadProducts> {
   TextEditingController priceController = TextEditingController();
   TextEditingController stockController = TextEditingController();
   TextEditingController categoriesController = TextEditingController();
+  TextEditingController heightController = TextEditingController();
+  TextEditingController weightController = TextEditingController();
+  TextEditingController widthController = TextEditingController();
+  TextEditingController lengthController = TextEditingController();
+
 
   Future<ApiCategoryResponse<List<String>>> fetchCategories(
       String token) async {
@@ -109,6 +118,8 @@ class _UploadProductsState extends ConsumerState<UploadProducts> {
     }
   }
 
+
+
   Future<void> addNewCategory() async {
     final TextEditingController newCategoryController = TextEditingController();
     await showDialog(
@@ -129,6 +140,9 @@ class _UploadProductsState extends ConsumerState<UploadProducts> {
               onPressed: () {
                 final newCategory = newCategoryController.text.trim();
                 if (newCategory.isNotEmpty) {
+
+
+
                   setState(() {
                     categories.add(newCategory);
                     selectedCategory = newCategory;
@@ -144,6 +158,10 @@ class _UploadProductsState extends ConsumerState<UploadProducts> {
     );
   }
 
+
+
+
+
   Future pickImage(int imageNumber) async {
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
     setState(() {
@@ -158,6 +176,8 @@ class _UploadProductsState extends ConsumerState<UploadProducts> {
       }
     });
   }
+
+
 
   Future<void> uploadProduct() async {
     String unformattedPrice =
@@ -179,19 +199,28 @@ class _UploadProductsState extends ConsumerState<UploadProducts> {
     request.fields['price'] = unformattedPrice;
     request.fields['availableStock'] = "1000";
     request.fields['categories'] = selectedCategory ?? '';
+    request.fields['height'] = heightController.text;
+    request.fields['weight'] = weightController.text;
+    request.fields['width'] = widthController.text;
+    request.fields['length'] = lengthController.text;
+
 
     if (image1 != null) {
       request.files
           .add(await http.MultipartFile.fromPath('image1', image1!.path));
     }
+
     if (image2 != null) {
       request.files
           .add(await http.MultipartFile.fromPath('image2', image2!.path));
     }
+
+
     if (image3 != null) {
       request.files
           .add(await http.MultipartFile.fromPath('image3', image3!.path));
     }
+
 
     var response = await request.send();
     var responseBody = await response.stream.bytesToString();
@@ -280,6 +309,40 @@ class _UploadProductsState extends ConsumerState<UploadProducts> {
                       ], // Add the formatter here
                     ),
                   ),
+
+                  Padding(
+  padding: const EdgeInsets.all(8.0),
+  child: TextFormField(
+    controller: heightController,
+    decoration: InputDecoration(labelText: 'Height'),
+    keyboardType: TextInputType.number,
+  ),
+),
+Padding(
+  padding: const EdgeInsets.all(8.0),
+  child: TextFormField(
+    controller: weightController,
+    decoration: InputDecoration(labelText: 'Weight'),
+    keyboardType: TextInputType.number,
+  ),
+),
+Padding(
+  padding: const EdgeInsets.all(8.0),
+  child: TextFormField(
+    controller: widthController,
+    decoration: InputDecoration(labelText: 'Width'),
+    keyboardType: TextInputType.number,
+  ),
+),
+Padding(
+  padding: const EdgeInsets.all(8.0),
+  child: TextFormField(
+    controller: lengthController,
+    decoration: InputDecoration(labelText: 'Length'),
+    keyboardType: TextInputType.number,
+  ),
+),
+
 
                   Padding(
                     padding: const EdgeInsets.all(8.0),

@@ -44,7 +44,7 @@ class _ProductDetailsState extends State<ProductDetails> {
     Timer(Duration(seconds: 20), () {
       if (wallet == null) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: CustomText('Complete KYC to Continue.'),
+          content: CustomText('Please complete KYC on profile page'),
         ));
         Navigator.pop(context);
         Navigator.pop(context);
@@ -327,6 +327,9 @@ Future<void> initializePayment(BuildContext context) async {
           },
         );
       } else {
+
+
+
         showDialog(
           context: context,
           builder: (BuildContext context) {
@@ -340,6 +343,9 @@ Future<void> initializePayment(BuildContext context) async {
                 TextButton(
                   onPressed: () {
                     Navigator.of(context).pop();
+           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: CustomText('Please complete  your KYC on your profile page'),
+      ));
                   },
                   child: Text('OK'),
                 ),

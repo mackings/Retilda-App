@@ -1,5 +1,3 @@
-
-
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
@@ -16,10 +14,7 @@ import 'package:sizer/sizer.dart';
 import 'package:http/http.dart' as http;
 import 'package:webview_flutter/webview_flutter.dart';
 
-
- 
 class Purchasesummary extends ConsumerStatefulWidget {
-
   final Purchase purchase;
   const Purchasesummary({super.key, required this.purchase});
 
@@ -112,70 +107,68 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
     }
   }
 
+  Future<void> installmentRepaymentUsingCard(
+      BuildContext context, String productId) async {
+    const String url =
+        'https://retilda-fintech.vercel.app/Api/installmentRepaymentUsingCard';
 
-Future<void> installmentRepaymentUsingCard(
-    BuildContext context, String productId) async {
-  const String url =
-      'https://retilda-fintech.vercel.app/Api/installmentRepaymentUsingCard';
+    final Map<String, String> requestBody = {
+      'productId': productId,
+    };
 
-  final Map<String, String> requestBody = {
-    'productId': productId,
-  };
+    try {
+      // Make the POST request
+      final response = await http.post(
+        Uri.parse(url),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $Token',
+        },
+        body: jsonEncode(requestBody),
+      );
 
-  try {
-    // Make the POST request
-    final response = await http.post(
-      Uri.parse(url),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $Token',
-      },
-      body: jsonEncode(requestBody),
-    );
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
 
-    if (response.statusCode == 200) {
-      final responseData = jsonDecode(response.body);
+        if (responseData['success'] == true &&
+            responseData['data'] != null &&
+            responseData['data']['paymentUrl'] != null) {
+          final String paymentUrl = responseData['data']['paymentUrl'];
+          print('Payment URL: $paymentUrl');
 
-      if (responseData['success'] == true &&
-          responseData['data'] != null &&
-          responseData['data']['paymentUrl'] != null) {
-        final String paymentUrl = responseData['data']['paymentUrl'];
-        print('Payment URL: $paymentUrl');
-
-        // Show the WebView in an overlay
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (BuildContext context) {
-            return Scaffold(
-              appBar: AppBar(
-                title: const Text('Card Payment'),
-                leading: IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () {
-                    Navigator.of(context).pop(); // Close the overlay
-                  },
+          // Show the WebView in an overlay
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (BuildContext context) {
+              return Scaffold(
+                appBar: AppBar(
+                  title: const Text('Card Payment'),
+                  leading: IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () {
+                      Navigator.of(context).pop(); // Close the overlay
+                    },
+                  ),
                 ),
-              ),
-              body: WebView(
-                initialUrl: paymentUrl,
-                javascriptMode: JavascriptMode.unrestricted,
-              ),
-            );
-          },
-        );
+                body: WebView(
+                  initialUrl: paymentUrl,
+                  javascriptMode: JavascriptMode.unrestricted,
+                ),
+              );
+            },
+          );
+        } else {
+          print('Invalid response data: ${response.body}');
+        }
       } else {
-        print('Invalid response data: ${response.body}');
+        print('Error: ${response.statusCode}');
+        print('Response Body: ${response.body}');
       }
-    } else {
-      print('Error: ${response.statusCode}');
-      print('Response Body: ${response.body}');
+    } catch (error) {
+      print('Exception occurred: $error');
     }
-  } catch (error) {
-    print('Exception occurred: $error');
   }
-}
-
 
   Future<void> _loadUserData() async {
     SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
@@ -194,12 +187,9 @@ Future<void> installmentRepaymentUsingCard(
         Wallet = wallet;
       });
 
-      print("User >>> $userData");
-      print("User Token >> $Token");
-      print("User ID>> $UserId");
       print("Product ID >> $productId");
       print("Purchase ID >> $PurchaseId");
-      print("Account Number >> $wallet ");
+      print("Purchase ${widget.purchase.id}");
     }
   }
 
@@ -262,20 +252,17 @@ Future<void> installmentRepaymentUsingCard(
                   _handlePaymentOptionSelected('wallet');
                 },
               ),
-ListTile(
-  title: Text('Pay with Card'),
-  onTap: () {
-    if (productId != null) {
-      installmentRepaymentUsingCard(context, productId!); 
-    } else {
-      print("Error: productId is null");
-    }
-  },
-)
-
+              ListTile(
+                title: Text('Pay with Card'),
+                onTap: () {
+                  if (productId != null) {
+                    installmentRepaymentUsingCard(context, productId!);
+                  } else {
+                    print("Error: productId is null");
+                  }
+                },
+              )
             ],
-
-            
           ),
         );
       },
@@ -285,14 +272,18 @@ ListTile(
   @override
   void initState() {
     Timer(Duration(seconds: 1), () {
-      if (widget.purchase.totalAmountToPay == widget.purchase.totalAmountPaid) {
+      if (widget.purchase.totalAmountPaid! >=
+          widget.purchase.totalAmountToPay! * 0.6) {
         showModalBottomSheet(
           context: context,
           isScrollControlled: true,
-          builder: (context) => DeliveryModal(),
+          builder: (context) => DeliveryModal(
+            purchaseId: '${widget.purchase.id}',
+          ),
         );
-      } else {}
+      }
     });
+
     _loadUserData();
     super.initState();
   }
@@ -348,77 +339,69 @@ ListTile(
                       ),
                     ),
                   ),
-
                   Padding(
                     padding:
                         const EdgeInsets.only(left: 30, right: 30, top: 20),
                     child: Column(
                       children: [
-
-
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-
                             CustomText(
                               widget.purchase.product!.name.toString(),
                               fontWeight: FontWeight.w600,
                               fontSize: 11.sp,
                             ),
-
                           ],
                         ),
-
-                        
-
-
                         Padding(
                           padding: const EdgeInsets.all(8.0),
                           child: Divider(
                             color: Colors.grey,
                           ),
                         ),
+                        if (widget.purchase.totalAmountToPay!.toInt() !=
+                            widget.purchase.totalAmountPaid!.toInt())
+                          Row(
+                            children: [
+                              GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    PurchaseId = widget.purchase.id;
+                                    productId = widget.purchase.product!.id;
+                                    print(productId);
+                                  });
 
-                        if (widget.purchase.totalAmountToPay!.toInt() != widget.purchase.totalAmountPaid!.toInt())
-  Row(
-    children: [
-      GestureDetector(
-        onTap: () {
-          setState(() {
-            PurchaseId = widget.purchase.id;
-            productId = widget.purchase.product!.id;
-            print(productId);
-          });
-      
-          _showPaymentMethodDialog();
-        },
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(10),
-            color: RButtoncolor,
-          ),
-          child: Padding(
-            padding: const EdgeInsets.only(
-                left: 20, right: 20, top: 10, bottom: 10),
-            child: CustomText(
-              "Pay Installments",
-              fontWeight: FontWeight.w500,
-              fontSize: 11.sp,
-              color: Colors.white,
-            ),
-          ),
-        ),
-      ),
-    ],
-  ),
-
-                          Padding(
+                                  _showPaymentMethodDialog();
+                                },
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(10),
+                                    color: RButtoncolor,
+                                  ),
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(
+                                        left: 20,
+                                        right: 20,
+                                        top: 10,
+                                        bottom: 10),
+                                    child: CustomText(
+                                      "Pay Installments",
+                                      fontWeight: FontWeight.w500,
+                                      fontSize: 11.sp,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        Padding(
                           padding: const EdgeInsets.all(8.0),
                           child: Divider(
                             color: Colors.grey,
                           ),
                         ),
-
                         LinearCompletionIndicator(
                           totalAmountToPay:
                               widget.purchase.totalAmountToPay!.toInt(),
@@ -477,7 +460,6 @@ ListTile(
                       ],
                     ),
                   )
-
                 ],
               ),
             ),

@@ -81,7 +81,7 @@ class _TransactionsState extends ConsumerState<Transactions> {
   }
 
   Future<void> fetchUserBalance() async {
-    final url = Uri.parse('https://retilda-fintech.vercel.app/Api/userBalance');
+    final url = Uri.parse('https://retilda-fintech.vercel.app/Api/balance');
 
     try {
       final response = await http.get(url, headers: {
@@ -390,13 +390,15 @@ class _TransactionsState extends ConsumerState<Transactions> {
                           decimalDigits: 0,
                         ).format(transaction.amount);
 
-                        // Determine the title based on transaction type
-                        final titleText =
-                            transaction.transactionType == "purchase"
-                                ? (transaction.status == "settlement"
-                                    ? "Product Settlement"
-                                    : "Product Purchase")
-                                : transaction.senderName;
+// Determine the title based on transaction type
+final titleText = transaction.transactionType == "purchase"
+    ? (transaction.status == "settlement"
+        ? "Product Settlement"
+        : "Product Purchase")
+    : (transaction.senderName == "Unknown Sender"
+        ? "Service charge"
+        : transaction.senderName);
+
 
                         return Padding(
                           padding: const EdgeInsets.all(15.0),
