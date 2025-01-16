@@ -101,7 +101,7 @@ String _notificationText = "No new notifications";
       _isLoading = true;
     });
 
-    final url = 'https://retilda-fintech.vercel.app/Api/signUp';
+    final url = 'https://retilda-fintech.onrender.com/Api/signUp';
 
     final payload = {
       "fullName": _fullname.text.trim(),

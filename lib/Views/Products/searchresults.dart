@@ -43,7 +43,7 @@ class _SearchPageState extends State<SearchPage> {
 
     try {
       final response = await http.get(
-        Uri.parse('https://retilda-fintech.vercel.app/api/products/search?q=$query'),
+        Uri.parse('https://retilda-fintech.onrender.com/api/products/search?q=$query'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -118,6 +118,8 @@ class _SearchPageState extends State<SearchPage> {
         padding: EdgeInsets.all(16.0),
         child: Column(
           children: [
+
+
             Container(
               decoration: BoxDecoration(
                 color: Colors.grey[200],
@@ -141,7 +143,10 @@ class _SearchPageState extends State<SearchPage> {
                 ),
               ),
             ),
+
+
             SizedBox(height: 20.h),
+            
             _isLoading
                 ? Center(child: Padding(
                   padding: const EdgeInsets.all(15.0),

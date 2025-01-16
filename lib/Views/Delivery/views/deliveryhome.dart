@@ -59,7 +59,7 @@ class _DeliveryDashboardState extends State<DeliveryDashboard> {
 
     try {
       final response = await http.put(
-        Uri.parse("https://retilda-fintech.vercel.app/Api/updatedPurchasesForDeliveryCompleted/$id"),
+        Uri.parse("https://retilda-fintech.onrender.com/Api/updatedPurchasesForDeliveryCompleted/$id"),
         headers: {
           "Content-Type": "application/json",
           "Authorization": "Bearer $token", // Include the token in the request header

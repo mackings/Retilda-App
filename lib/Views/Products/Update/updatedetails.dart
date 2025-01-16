@@ -85,7 +85,7 @@ class _UpdateDetailsState extends State<UpdateDetails> {
 
     String rawPrice = _priceController.text.replaceAll(",", "");
     String url =
-        "https://retilda-fintech.vercel.app/Api/updateProductByPrice/${widget.product.id}";
+        "https://retilda-fintech.onrender.com/Api/updateProductByPrice/${widget.product.id}";
 
     Map<String, dynamic> body = {
       "price": rawPrice,
@@ -128,7 +128,7 @@ class _UpdateDetailsState extends State<UpdateDetails> {
     loading = true;
   });
 
-  String url = "https://retilda-fintech.vercel.app/Api/products/delete/${widget.product.id}";
+  String url = "https://retilda-fintech.onrender.com/Api/products/delete/${widget.product.id}";
 
   try {
     var response = await http.delete(

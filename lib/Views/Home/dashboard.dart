@@ -58,7 +58,7 @@ class _DashboardState extends ConsumerState<Dashboard> {
   }
 
   Future<ApiResponse> fetchData(String token) async {
-    final String url = 'https://retilda-fintech.vercel.app/Api/products';
+    final String url = 'https://retilda-fintech.onrender.com/Api/products';
 
     try {
       final response = await http.get(

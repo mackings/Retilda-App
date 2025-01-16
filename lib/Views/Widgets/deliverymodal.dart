@@ -8,6 +8,17 @@ import 'package:sizer/sizer.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
+
+
+
+
+
+
+
+
+
+
+
 class DeliveryModal extends StatefulWidget {
   final String purchaseId;
 
@@ -35,6 +46,8 @@ class _DeliveryModalState extends State<DeliveryModal> {
   String? _selectedCategory;
   bool isLoading = false;
   String? token;
+  int? deliveryFee;
+  bool isQuotationFetched = false;
 
   @override
   void initState() {
@@ -67,6 +80,81 @@ class _DeliveryModalState extends State<DeliveryModal> {
     }
   }
 
+
+
+
+Future<void> _fetchQuotation() async {
+  if (token == null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Unable to fetch user token.')),
+    );
+    return;
+  }
+
+  if (_addressController.text.isEmpty ||
+      _phoneNumberController.text.isEmpty ||
+      _dateController.text.isEmpty ||
+      _selectedTimeSlot == null ||
+      _selectedCategory == null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Please fill all the fields.')),
+    );
+    return;
+  }
+
+  setState(() => isLoading = true);
+
+  final url =
+      'https://retilda-fintech.vercel.app/Api/requestForGoodsDeliveryCalculation/${widget.purchaseId}';
+
+  final body = {
+    "deliveryAddress": _addressController.text,
+    "phoneNumber": _phoneNumberController.text,
+    "deliveryTime": _selectedTimeSlot,
+    "deliveryDate": _dateController.text,
+    "category": _selectedCategory,
+    "distance": _selectedCategory,
+  };
+
+  try {
+    final response = await http.post(
+      Uri.parse(url),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode(body),
+    );
+
+if (response.statusCode == 200) {
+  final data = jsonDecode(response.body);
+
+  // Log the response for debugging
+  print("API Response: ${data}");
+
+  setState(() {
+    // Access the deliveryFee field inside the data object
+    deliveryFee = data['data']['deliveryFee']; 
+    isQuotationFetched = true;
+  });
+} else {
+  final error = jsonDecode(response.body)['message'] ?? 'Quotation failed.';
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(content: Text('Failed: $error')),
+  );
+}
+
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('An error occurred: $e')),
+    );
+  } finally {
+    setState(() => isLoading = false);
+  }
+}
+
+
+
   Future<void> _requestDelivery() async {
     if (token == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -75,25 +163,11 @@ class _DeliveryModalState extends State<DeliveryModal> {
       return;
     }
 
-    if (_addressController.text.isEmpty ||
-        _phoneNumberController.text.isEmpty ||
-        _dateController.text.isEmpty ||
-        _selectedTimeSlot == null ||
-        _selectedCategory == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Please fill all the fields.')),
-      );
-      return;
-    }
-
-    setState(() {
-      isLoading = true;
-    });
-
     final url =
         'https://retilda-fintech.vercel.app/Api/requestForGoodsDelivery/${widget.purchaseId}';
 
     final body = {
+
       "deliveryAddress": _addressController.text,
       "phoneNumber": _phoneNumberController.text,
       "deliveryTime": _selectedTimeSlot,
@@ -101,6 +175,7 @@ class _DeliveryModalState extends State<DeliveryModal> {
       "category": _selectedCategory,
       "distance": _selectedCategory,
     };
+
 
     try {
       final response = await http.post(
@@ -112,15 +187,16 @@ class _DeliveryModalState extends State<DeliveryModal> {
         body: jsonEncode(body),
       );
 
-      print(body);
-
       if (response.statusCode == 200) {
+        print("Delivery Request sent");
         print(response.body);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Delivery requested successfully.')),
         );
-        Navigator.pop(context); // Close the dialog
+        Navigator.pop(context);
       } else {
+        print(response.body);
+        Navigator.pop(context);
         final error = jsonDecode(response.body)['message'] ?? 'Request failed.';
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed: $error')),
@@ -130,12 +206,10 @@ class _DeliveryModalState extends State<DeliveryModal> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('An error occurred: $e')),
       );
-    } finally {
-      setState(() {
-        isLoading = false;
-      });
     }
   }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -158,6 +232,7 @@ class _DeliveryModalState extends State<DeliveryModal> {
                   ),
                 ),
                 SizedBox(height: 15),
+
                 Row(
                   children: [
                     Text(
@@ -169,6 +244,8 @@ class _DeliveryModalState extends State<DeliveryModal> {
                     Icon(Icons.location_history),
                   ],
                 ),
+
+                Text("Your Delivery arrives in 2 weeks from the request date."),
                 SizedBox(height: 25),
                 TextFormField(
                   controller: _addressController,
@@ -240,9 +317,39 @@ class _DeliveryModalState extends State<DeliveryModal> {
                   },
                 ),
                 SizedBox(height: 20),
+                if (deliveryFee != null)
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        "Delivery Fee:",
+                        style: GoogleFonts.montserrat()
+                      ),
 
+                                            Text(
+                        "₦ $deliveryFee",
+                        style: GoogleFonts.montserrat(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 12.sp
+                        )
+                      ),
+                    ],
+                  ),
+                SizedBox(height: 16),
                 GestureDetector(
-                  onTap: isLoading ? null : _requestDelivery,
+                  onTap: isLoading
+                      ? null
+                      : () async {
+                          setState(() => isLoading = true);
+                          if (isQuotationFetched) {
+                            // Request Delivery API
+                            await _requestDelivery();
+                          } else {
+                            // Fetch Quotation API
+                            await _fetchQuotation();
+                          }
+                          setState(() => isLoading = false);
+                        },
                   child: Container(
                     width: double.infinity,
                     padding: EdgeInsets.symmetric(vertical: 15.0),
@@ -250,12 +357,19 @@ class _DeliveryModalState extends State<DeliveryModal> {
                       color: ROrange,
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: isLoading
-                        ? Center(child: CircularProgressIndicator(color: Colors.white))
-                        : Center(child: Text("Request Delivery", style: TextStyle(color: Colors.white))),
+                    child: Center(
+                      child: isLoading
+                          ? CircularProgressIndicator(color: Colors.white)
+                          : Text(
+                              isQuotationFetched
+                                  ? "Request Delivery"
+                                  : "View Delivery Quotation",
+                              style:
+                                  GoogleFonts.montserrat(color: Colors.white),
+                            ),
+                    ),
                   ),
                 ),
-                
               ],
             ),
           ),

@@ -69,7 +69,7 @@ class _UploadProductsState extends ConsumerState<UploadProducts> {
 
   Future<ApiCategoryResponse<List<String>>> fetchCategories(
       String token) async {
-    final String url = 'https://retilda-fintech.vercel.app/Api/products/allcategory';
+    final String url = 'https://retilda-fintech.onrender.com/Api/products/allcategory';
 
     try {
       final response = await http.get(
@@ -187,7 +187,7 @@ class _UploadProductsState extends ConsumerState<UploadProducts> {
       isLoading = true;
     });
 
-    var url = Uri.parse('https://retilda-fintech.vercel.app/Api/uploadproduct');
+    var url = Uri.parse('https://retilda-fintech.onrender.com/Api/uploadproduct');
     var request = http.MultipartRequest('POST', url);
 
     request.headers['Authorization'] = 'Bearer $_token';
