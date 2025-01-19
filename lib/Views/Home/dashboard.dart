@@ -15,6 +15,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sizer/sizer.dart';
 import 'package:http/http.dart' as http;
 
+
+
 class Dashboard extends ConsumerStatefulWidget {
   const Dashboard({Key? key}) : super(key: key);
 
@@ -57,6 +59,8 @@ class _DashboardState extends ConsumerState<Dashboard> {
     }
   }
 
+
+
   Future<ApiResponse> fetchData(String token) async {
     final String url = 'https://retilda-fintech.onrender.com/Api/products';
 
@@ -82,6 +86,8 @@ class _DashboardState extends ConsumerState<Dashboard> {
       throw error;
     }
   }
+
+
 
   @override
   void initState() {
@@ -224,7 +230,7 @@ class _DashboardState extends ConsumerState<Dashboard> {
                                               width: 120,
                                               fit: BoxFit.cover,
                                             ),
-                                          ),
+                                           ),
                                         ),
 
                                         SizedBox(height: 10),

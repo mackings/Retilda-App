@@ -18,6 +18,10 @@ import 'dart:convert';
 import 'package:sizer/sizer.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+
+
+
+
 class ProductDetails extends StatefulWidget {
   final Product product;
 
@@ -28,6 +32,209 @@ class ProductDetails extends StatefulWidget {
 }
 
 class _ProductDetailsState extends State<ProductDetails> {
+
+
+//DeliveryModal 
+
+
+  final TextEditingController _addressController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _timeController = TextEditingController();
+  DateTime? _selectedDate;
+  String? _selectedCategory;
+
+  bool _isLoading = false;
+
+  // API Call Function
+  Future<void> _calculateDeliveryFee(BuildContext context) async {
+    final url =
+        "https://retilda-fintech.onrender.com/Api/deliveryFeeCalculation/$productId";
+    final data = {
+      "deliveryAddress": _addressController.text,
+      "phoneNumber": _phoneController.text,
+      "deliveryTime": _timeController.text,
+      "deliveryDate": _selectedDate?.toIso8601String(),
+      "category": _selectedCategory,
+      "distance": _selectedCategory, // Assuming distance = category
+    };
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final response = await http.post(
+        Uri.parse(url),
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer $token",
+        },
+        body: json.encode(data),
+      );
+
+      if (response.statusCode == 200) {
+        final responseData = json.decode(response.body);
+        if (responseData['success']) {
+          final deliveryFee = responseData['data']['deliveryFee'];
+          final formattedFee = deliveryFee.toString().replaceAllMapped(
+                RegExp(r'\B(?=(\d{3})+(?!\d))'),
+                (match) => ',',
+              );
+
+          Navigator.of(context).pop(); // Close the modal
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text("Delivery Fee: ₦$formattedFee")),
+          );
+        } else {
+          throw Exception(responseData['message']);
+        }
+      } else {
+        throw Exception("Server Error: ${response.body}");
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error: $e")),
+      );
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  // Modal to collect delivery details
+  void _showDeliveryModal(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: MediaQuery.of(context).viewInsets,
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Enter Delivery Details",
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: 16),
+                  TextField(
+                    controller: _addressController,
+                    decoration: InputDecoration(
+                      labelText: "Delivery Address",
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  SizedBox(height: 16),
+                  TextField(
+                    controller: _phoneController,
+                    decoration: InputDecoration(
+                      labelText: "Phone Number",
+                      border: OutlineInputBorder(),
+                    ),
+                    keyboardType: TextInputType.phone,
+                  ),
+                  SizedBox(height: 16),
+                  TextField(
+                    controller: _timeController,
+                    decoration: InputDecoration(
+                      labelText: "Delivery Time",
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  SizedBox(height: 16),
+                  GestureDetector(
+                    onTap: () async {
+                      final DateTime? pickedDate = await showDatePicker(
+                        context: context,
+                        initialDate: DateTime.now(),
+                        firstDate: DateTime.now(),
+                        lastDate: DateTime(2100),
+                      );
+                      if (pickedDate != null) {
+                        setState(() {
+                          _selectedDate = pickedDate;
+                        });
+                      }
+                    },
+                    child: Container(
+                      padding: EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        _selectedDate == null
+                            ? "Select Delivery Date"
+                            : "${_selectedDate!.toLocal()}".split(' ')[0],
+                        style: TextStyle(color: Colors.black54),
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: 16),
+                  DropdownButtonFormField<String>(
+                    decoration: InputDecoration(
+                      labelText: "Category",
+                      border: OutlineInputBorder(),
+                    ),
+                    items: ["local", "regional", "interstate"]
+                        .map(
+                          (category) => DropdownMenuItem<String>(
+                            value: category,
+                            child: Text(category),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedCategory = value;
+                      });
+                    },
+                  ),
+                  SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _isLoading
+                          ? null
+                          : () {
+                              _calculateDeliveryFee(context);
+                            },
+                      style: ElevatedButton.styleFrom(
+                        padding: EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: _isLoading
+                          ? CircularProgressIndicator(color: Colors.white)
+                          : Text("Calculate Delivery Fee"),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+
+
+
+
+
   bool isFirstButtonActive = true;
   int? selectedChipValue;
 
@@ -328,8 +535,6 @@ Future<void> initializePayment(BuildContext context) async {
         );
       } else {
 
-
-
         showDialog(
           context: context,
           builder: (BuildContext context) {
@@ -402,10 +607,24 @@ Future<void> initializePayment(BuildContext context) async {
           backgroundColor: Colors.white,
           shadowColor: Colors.white,
           title: CustomText(
-            "Product details",
+            "Details",
             fontSize: 15.sp,
             fontWeight: FontWeight.w500,
           ),
+          actions: [
+ GestureDetector(
+            onTap: () => _showDeliveryModal(context),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Center(
+                child: Text(
+                  "Delivery",
+                  style: TextStyle(color: Colors.orange),
+                ),
+              ),
+            ),
+          ),
+          ],
         ),
         body: SingleChildScrollView(
           child: Center(

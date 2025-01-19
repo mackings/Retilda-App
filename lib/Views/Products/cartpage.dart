@@ -9,6 +9,7 @@ import 'package:retilda/model/cartmodel.dart';
 import 'package:sizer/sizer.dart';
 
 class CartPage extends StatefulWidget {
+  
   const CartPage({Key? key}) : super(key: key);
 
   @override
@@ -58,8 +59,8 @@ class _CartPageState extends State<CartPage> {
       description: cartItem.description,
       images: cartItem.images,
       categories: cartItem.categories,
-      specification: cartItem.specification,
-      brand: cartItem.brand,
+      specification: cartItem.specification.toString(),
+      brand: cartItem.brand.toString(),
     );
 
     Navigator.push(
