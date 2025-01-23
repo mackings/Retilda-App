@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:retilda/Views/Products/Update/alldetailsupdate.dart';
 import 'package:retilda/Views/Products/Update/searchupdate.dart';
 import 'package:retilda/Views/Products/Update/updatedetails.dart';
 import 'package:retilda/Views/Products/details.dart';
@@ -464,7 +465,7 @@ class _ProducupdateState extends ConsumerState<Producupdate> {
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (context) => UpdateDetails(
+                                      builder: (context) => UpdateAllDetails(
                                         product: displayedProducts[index],
                                       ),
                                     ),

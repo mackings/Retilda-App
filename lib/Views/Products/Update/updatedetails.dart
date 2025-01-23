@@ -14,6 +14,8 @@ import 'package:sizer/sizer.dart';
 
 
 
+
+
 class UpdateDetails extends StatefulWidget {
   final Product product;
 
