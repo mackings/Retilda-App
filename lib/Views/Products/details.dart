@@ -17,6 +17,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'package:sizer/sizer.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 
 
 
@@ -775,31 +776,33 @@ Future<void> initializePayment(BuildContext context) async {
                                                       });
                                                     },
                                                   ),
-                                                  Flexible(
-                                                    child: Row(
-                                                      children: [
-                                                        Text('I accept the'),
-                                                        TextButton(
-                                                          onPressed: () {
-                                                            Navigator.push(
-                                                              context,
-                                                              MaterialPageRoute(
-                                                                builder:
-                                                                    (context) =>
-                                                                        TermsAndPolicyPage(),
-                                                              ),
-                                                            );
-                                                          },
-                                                          child: Text(
-                                                            'Terms',
-                                                            style: TextStyle(
-                                                                color: Colors
-                                                                    .blue),
-                                                          ),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  ),
+
+Flexible(
+  child: Row(
+    children: [
+      Text('I accept the'),
+      TextButton(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => InAppWebViewPage(
+                url: 'https://docs.google.com/document/d/1zWEYmMZ_tRhC198qMsN5rP55YmeQ8rtiuTbaPEC_Fw0/edit?usp=sharing',
+                title: 'Terms and Policy',
+              ),
+            ),
+          );
+        },
+        child: Text(
+          'Terms',
+          style: TextStyle(color: Colors.blue),
+        ),
+      ),
+    ],
+  ),
+),
+
+
                                                 ],
                                               ),
                                             ],
@@ -932,5 +935,35 @@ Future<void> initializePayment(BuildContext context) async {
         ),
       );
     });
+  }
+}
+
+
+
+
+
+class InAppWebViewPage extends StatelessWidget {
+  final String url;
+  final String title;
+
+  const InAppWebViewPage({required this.url, required this.title, Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(title),
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back),
+          onPressed: () {
+            Navigator.pop(context);
+          },
+        ),
+      ),
+      body: WebView(
+        initialUrl: url,
+        javascriptMode: JavascriptMode.unrestricted,
+      ),
+    );
   }
 }

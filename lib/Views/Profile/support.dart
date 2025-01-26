@@ -1,12 +1,8 @@
 
 import 'package:flutter/material.dart';
-import 'package:retilda/Views/Widgets/widgets.dart';
-import 'package:sizer/sizer.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 
-import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 class Support extends StatefulWidget {
   const Support({super.key});
@@ -32,6 +28,8 @@ Future<void> _launchEmail() async {
     );
   }
 }
+
+
 
 
   // Function to launch WhatsApp
@@ -65,6 +63,20 @@ Future<void> _launchEmail() async {
       );
     }
   }
+
+
+Future<void> _launchGuide(BuildContext context) async {
+  final Uri youtubeUri = Uri.parse("https://youtu.be/DNpEHq_WKvQ?feature=shared");
+
+  if (await canLaunchUrl(youtubeUri)) {
+    await launchUrl(youtubeUri, mode: LaunchMode.externalApplication);
+  } else {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Could not launch YouTube link')),
+    );
+  }
+}
+
 
   @override
   Widget build(BuildContext context) {
@@ -112,6 +124,21 @@ Future<void> _launchEmail() async {
                 onTap: _launchCall,
               ),
             ),
+
+             SizedBox(height: 16),
+
+Card(
+  elevation: 4,
+  child: ListTile(
+    leading: const Icon(Icons.shopping_bag),
+    title: const Text("Purchase Guide"),
+    onTap: () {
+      _launchGuide(context); 
+    },
+  ),
+),
+
+
           ],
         ),
       ),

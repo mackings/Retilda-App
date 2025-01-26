@@ -109,6 +109,7 @@ class _DashboardState extends ConsumerState<Dashboard> {
     return Sizer(
       builder: (context, orientation, deviceType) {
         return Scaffold(
+          backgroundColor: Colors.white,
           body: SingleChildScrollView(
             physics: BouncingScrollPhysics(),
             child: Column(
@@ -125,7 +126,7 @@ class _DashboardState extends ConsumerState<Dashboard> {
                   ),
                 ),
                 SizedBox(
-                  height: 32.h,
+                  height: 30.h,
                   child: PageView(
                     children: [
                       CarouselPageView(),
@@ -160,7 +161,7 @@ class _DashboardState extends ConsumerState<Dashboard> {
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 20),
                       child: FutureBuilder<ApiResponse>(
-                        future: fetchData(Token!), // Fetch data using the Token
+                        future: Token != null ? fetchData(Token!) : Future.error("Token is not available"),
                         builder: (context, snapshot) {
                           if (snapshot.connectionState ==
                               ConnectionState.waiting) {
@@ -226,8 +227,8 @@ class _DashboardState extends ConsumerState<Dashboard> {
                                               product.images.isNotEmpty
                                                   ? product.images[0]
                                                   : 'default_image_url',
-                                              height: 120,
-                                              width: 120,
+                                              height: 100,
+                                              width: 100,
                                               fit: BoxFit.cover,
                                             ),
                                            ),
@@ -314,8 +315,7 @@ class _DashboardState extends ConsumerState<Dashboard> {
                               child: Text('No Products Found'),
                             );
                           } else if (snapshot.hasData) {
-                            print(snapshot.data);
-
+                          
                             return Padding(
                               padding:
                                   const EdgeInsets.only(left: 20, right: 20),

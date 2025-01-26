@@ -54,13 +54,13 @@ class ProductCard2 extends StatelessWidget {
                           child: CustomText(
   'N${NumberFormat("#,##0").format(product.price)}',
   fontWeight: FontWeight.w600,
-  fontSize: 12.sp,
+  fontSize: 12.sp, 
 ),
                         ),
                         IconButton(
                           icon: Icon(
                             Icons.favorite_border,
-                            color: Colors.red,
+                            color: Colors.orange,
                           ),
                           onPressed: onTap,
                         ),
@@ -139,7 +139,7 @@ class ProductCard extends StatelessWidget {
                         IconButton(
                           icon: Icon(
                             Icons.favorite_border,
-                            color: Colors.red,
+                            color: Colors.orange,
                           ),
                           onPressed: onTap,
                         ),

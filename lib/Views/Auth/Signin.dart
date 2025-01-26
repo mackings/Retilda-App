@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:retilda/Views/Auth/Signup.dart';
+import 'package:retilda/Views/Auth/resetpass.dart';
 import 'package:retilda/Views/Home/dashboard.dart';
 import 'package:retilda/Views/Home/home.dart';
 import 'package:retilda/Views/Widgets/components.dart';
@@ -24,8 +25,6 @@ class _SigninState extends State<Signin> {
   final TextEditingController _passwordController = TextEditingController();
   bool _isLoading = false;
   bool _isObscured = true;
-
-
 
   Future<void> _login() async {
     setState(() {
@@ -72,7 +71,9 @@ class _SigninState extends State<Signin> {
               onClosePressed: () {
                 Navigator.pop(context);
               },
-              onButtonPressed: () {Navigator.pop(context);},
+              onButtonPressed: () {
+                Navigator.pop(context);
+              },
             );
           },
         );
@@ -150,7 +151,10 @@ class _SigninState extends State<Signin> {
                 SizedBox(height: 2.h),
                 GestureDetector(
                   onTap: () {
-                    // Forgot password action
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => ResetPassword()));
                   },
                   child: Align(
                     alignment: Alignment.centerRight,
@@ -161,22 +165,23 @@ class _SigninState extends State<Signin> {
                   ),
                 ),
                 SizedBox(height: MediaQuery.of(context).size.height * 0.05),
-_isLoading
-    ? CircleAvatar(
-        radius: 25, // Adjust the radius as needed
-        backgroundColor: Colors.grey.shade200, // Optional background color
-        child: CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(Colors.blue), // Match with theme
-          strokeWidth: 3.0,
-        ),
-      )
-    : CustomBtn(
-        text: 'Sign in',
-        onPressed: _login,
-        backgroundColor: RButtoncolor,
-        borderRadius: 20.0,
-      ),
-
+                _isLoading
+                    ? CircleAvatar(
+                        radius: 25, // Adjust the radius as needed
+                        backgroundColor:
+                            Colors.grey.shade200, // Optional background color
+                        child: CircularProgressIndicator(
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.blue), // Match with theme
+                          strokeWidth: 3.0,
+                        ),
+                      )
+                    : CustomBtn(
+                        text: 'Sign in',
+                        onPressed: _login,
+                        backgroundColor: RButtoncolor,
+                        borderRadius: 20.0,
+                      ),
                 SizedBox(height: MediaQuery.of(context).size.height * 0.03),
                 Padding(
                   padding: const EdgeInsets.only(left: 10),

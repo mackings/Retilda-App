@@ -110,6 +110,7 @@ class _SearchUpdateState extends State<SearchUpdate> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
         title: CustomText('Search',
                       fontSize: 15.sp,

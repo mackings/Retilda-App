@@ -251,6 +251,7 @@ class _UploadProductsState extends ConsumerState<UploadProducts> {
   Widget build(BuildContext context) {
     return Sizer(builder: (context, deviceType, orientation) {
       return Scaffold(
+        backgroundColor: Colors.white,
         appBar: AppBar(
             title: Text(
           'Upload Product',

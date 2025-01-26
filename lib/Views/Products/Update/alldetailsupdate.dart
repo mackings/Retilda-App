@@ -77,6 +77,7 @@ class _UpdateAllDetailsState extends State<UpdateAllDetails> {
       default:
         return '';
     }
+
   }
 
   Future<void> _loadUserData() async {
@@ -169,6 +170,7 @@ Future<void> _updateProduct() async {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
         title: Text('Update Product Details'),
       ),
@@ -188,30 +190,39 @@ Future<void> _updateProduct() async {
                       : null,
                 );
               }).toList(),
-              Text('Select Images:'),
-              ...List.generate(3, (index) {
-                return Column(
-                  children: [
-                    GestureDetector(
-                      onTap: () => _pickImage(index),
-                      child: _selectedImages[index] != null
-                          ? Image.file(
-                              _selectedImages[index]!,
-                              width: 100,
-                              height: 100,
-                              fit: BoxFit.cover,
-                            )
-                          : Container(
-                              width: 100,
-                              height: 100,
-                              color: Colors.grey[300],
-                              child: Icon(Icons.add_a_photo),
-                            ),
-                    ),
-                    SizedBox(height: 10),
-                  ],
-                );
-              }),
+
+              Padding(
+                padding: const EdgeInsets.only(top: 20,bottom: 20),
+                child: Text('Select New Images:'),
+              ),
+
+Row(
+  mainAxisAlignment: MainAxisAlignment.spaceBetween, // Adjusts spacing between items
+  children: List.generate(3, (index) {
+    return GestureDetector(
+      onTap: () => _pickImage(index),
+      child: Column(
+        children: [
+          _selectedImages[index] != null
+              ? Image.file(
+                  _selectedImages[index]!,
+                  width: 100,
+                  height: 100,
+                  fit: BoxFit.cover,
+                )
+              : Container(
+                  width: 100,
+                  height: 100,
+                  color: Colors.grey[300],
+                  child: Icon(Icons.add_a_photo),
+                ),
+          SizedBox(height: 10), // Space below each image
+        ],
+      ),
+    );
+  }),
+),
+
 
               SizedBox(height: 20),
 

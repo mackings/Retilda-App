@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:retilda/Views/Products/details.dart';
 import 'package:retilda/Views/Widgets/productcard.dart';
+import 'package:retilda/Views/Widgets/widgets.dart';
 import 'package:retilda/model/products.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -74,8 +75,9 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: Text(widget.category),
+        title: CustomText(widget.category,fontSize: 18,fontWeight: FontWeight.w600,)
       ),
       body: token == null
           ? Center(

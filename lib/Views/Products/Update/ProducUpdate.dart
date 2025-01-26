@@ -15,9 +15,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'package:sizer/sizer.dart';
 
-
-
-
 class Producupdate extends ConsumerStatefulWidget {
   const Producupdate({Key? key}) : super(key: key);
 
@@ -26,7 +23,6 @@ class Producupdate extends ConsumerStatefulWidget {
 }
 
 class _ProducupdateState extends ConsumerState<Producupdate> {
-  
   late List<Product> _products = [];
   late List<String> _categories = [];
   late String _token;
@@ -45,7 +41,8 @@ class _ProducupdateState extends ConsumerState<Producupdate> {
 
   Future<ApiCategoryResponse<List<String>>> fetchCategories(
       String token) async {
-    final String url = 'https://retilda-fintech.onrender.com/Api/products/allcategory';
+    final String url =
+        'https://retilda-fintech.onrender.com/Api/products/allcategory';
 
     try {
       final response = await http.get(
@@ -410,19 +407,17 @@ class _ProducupdateState extends ConsumerState<Producupdate> {
               IconButton(
                 icon: Icon(Icons.search),
                 onPressed: () {
-                //  _showSearchDialog(context);
-                                Navigator.push(context,
-                    MaterialPageRoute(builder: (context) => SearchUpdate()));
+                  //  _showSearchDialog(context);
+                  Navigator.push(context,
+                      MaterialPageRoute(builder: (context) => SearchUpdate()));
                 },
               ),
-
               IconButton(
                 icon: Icon(Icons.sort),
                 onPressed: () {
                   _showCategoriesDrawer(context);
                 },
               ),
-
             ],
           ),
           body: _isLoading
@@ -465,12 +460,23 @@ class _ProducupdateState extends ConsumerState<Producupdate> {
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (context) => UpdateAllDetails(
+                                      builder: (context) => UpdateDetails(
                                         product: displayedProducts[index],
                                       ),
                                     ),
                                   );
                                 },
+onLongPress: () {
+                                    Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => UpdateAllDetails(
+                                        product: displayedProducts[index],
+                                      ),
+                                    ),
+                                  );
+},
+                
                                 child: ProductCard(
                                   product: displayedProducts[index],
                                   onTap: () {},
@@ -483,6 +489,7 @@ class _ProducupdateState extends ConsumerState<Producupdate> {
                     ),
                   ],
                 ),
+
         );
       },
     );
