@@ -1,4 +1,4 @@
-package com.example.retilda
+package com.retilda.app
 
 import io.flutter.embedding.android.FlutterActivity
 

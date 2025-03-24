@@ -3,12 +3,17 @@ import 'package:dots_indicator/dots_indicator.dart';
 import 'package:retilda/Views/Widgets/components.dart';
 import 'package:sizer/sizer.dart';
 
+
+
 class CarouselPageView extends StatefulWidget {
+
   @override
   _CarouselPageViewState createState() => _CarouselPageViewState();
 }
 
+
 class _CarouselPageViewState extends State<CarouselPageView> {
+
   final PageController _controller = PageController();
   int _currentIndex = 0;
 
@@ -30,12 +35,13 @@ class _CarouselPageViewState extends State<CarouselPageView> {
                 });
               },
               children: [
+
                 Padding(
                   padding: const EdgeInsets.all(10.0),
                   child: Container(
                     height: 20.h,
                   decoration: BoxDecoration(
-                    image: DecorationImage(image: AssetImage("assets/f4.jpg",
+                    image: DecorationImage(image: AssetImage("assets/banner1.jpeg",
                     ),
                     fit: BoxFit.fill
                     ),
@@ -49,7 +55,7 @@ class _CarouselPageViewState extends State<CarouselPageView> {
                   padding: const EdgeInsets.all(10.0),
                   child: Container(height: 20.h,
                   decoration: BoxDecoration(
-                   image: DecorationImage(image: AssetImage("assets/f3.jpg",
+                   image: DecorationImage(image: AssetImage("assets/banner2.jpeg",
                     ),
                     fit: BoxFit.fill
                     ),
@@ -62,7 +68,7 @@ class _CarouselPageViewState extends State<CarouselPageView> {
                   padding: const EdgeInsets.all(10.0),
                   child: Container(height: 20.h,
                   decoration: BoxDecoration(
-                   image: DecorationImage(image: AssetImage("assets/f1.jpg",
+                   image: DecorationImage(image: AssetImage("assets/banner3.jpeg",
                     ),
                     fit: BoxFit.fill
                     ),
@@ -70,12 +76,28 @@ class _CarouselPageViewState extends State<CarouselPageView> {
                   ),
                   ),
                 ),
+
+
+               Padding(
+                  padding: const EdgeInsets.all(10.0),
+                  child: Container(height: 20.h,
+                  decoration: BoxDecoration(
+                   image: DecorationImage(image: AssetImage("assets/banner4.jpeg",
+                    ),
+                    fit: BoxFit.fill
+                    ),
+                    borderRadius: BorderRadius.circular(15)
+                  ),
+                  ),
+                ),
+
               ],
             ),
           ),
         ),
+
         DotsIndicator(
-          dotsCount: 3, 
+          dotsCount: 4, 
           position: _currentIndex, 
           decorator: DotsDecorator(
             size: Size(10.0, 10.0),
@@ -85,6 +107,7 @@ class _CarouselPageViewState extends State<CarouselPageView> {
             spacing: EdgeInsets.all(5.0),
           ),
         ),
+        
       ],
     );
   }

@@ -120,43 +120,48 @@ class _UploadProductsState extends ConsumerState<UploadProducts> {
 
 
 
-  Future<void> addNewCategory() async {
-    final TextEditingController newCategoryController = TextEditingController();
-    await showDialog(
-      context: context,
-      builder: (ctx) {
-        return AlertDialog(
-          title: Text('Add New Category'),
-          content: TextFormField(
-            controller: newCategoryController,
-            decoration: InputDecoration(labelText: 'New Category'),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: Text('Cancel'),
+Future<void> addNewCategory() async {
+  final TextEditingController newCategoryController = TextEditingController();
+  await showDialog(
+    context: context,
+    builder: (ctx) {
+      return StatefulBuilder(
+        builder: (context, setState) {
+          return AlertDialog(
+            title: Text('Add New Category'),
+            content: TextFormField(
+              controller: newCategoryController,
+              decoration: InputDecoration(labelText: 'New Category'),
+              onChanged: (value) => setState(() {}), // Update UI on change
             ),
-            TextButton(
-              onPressed: () {
-                final newCategory = newCategoryController.text.trim();
-                if (newCategory.isNotEmpty) {
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: newCategoryController.text.trim().isEmpty
+                    ? null // Disable if empty
+                    : () {
+                        final newCategory = newCategoryController.text.trim();
+                        if (newCategory.isNotEmpty) {
+                          setState(() {
+                            categories.add(newCategory);
+                            selectedCategory = newCategory;
+                          });
+                          Navigator.of(ctx).pop();
+                        }
+                      },
+                child: Text('Add'),
+              ),
+            ],
+          );
+        },
+      );
+    },
+  );
+}
 
-
-
-                  setState(() {
-                    categories.add(newCategory);
-                    selectedCategory = newCategory;
-                  });
-                  Navigator.of(ctx).pop();
-                }
-              },
-              child: Text('Add'),
-            ),
-          ],
-        );
-      },
-    );
-  }
 
 
 
@@ -178,67 +183,78 @@ class _UploadProductsState extends ConsumerState<UploadProducts> {
   }
 
 
+Future<void> uploadProduct() async {
+  // Trim and extract price
+  String unformattedPrice = priceController.text.replaceAll(RegExp(r'[^\d]'), '');
 
-  Future<void> uploadProduct() async {
-    String unformattedPrice =
-        priceController.text.replaceAll(RegExp(r'[^\d]'), '');
-
-    setState(() {
-      isLoading = true;
-    });
-
-    var url = Uri.parse('https://retilda-fintech.onrender.com/Api/uploadproduct');
-    var request = http.MultipartRequest('POST', url);
-
-    request.headers['Authorization'] = 'Bearer $_token';
-
-    request.fields['name'] = nameController.text;
-    request.fields['description'] = descriptionController.text;
-    request.fields['specification'] = specificationController.text;
-    request.fields['brand'] = brandController.text;
-    request.fields['price'] = unformattedPrice;
-    request.fields['availableStock'] = "1000";
-    request.fields['categories'] = selectedCategory ?? '';
-    request.fields['height'] = heightController.text;
-    request.fields['weight'] = weightController.text;
-    request.fields['width'] = widthController.text;
-    request.fields['length'] = lengthController.text;
-
-
-    if (image1 != null) {
-      request.files
-          .add(await http.MultipartFile.fromPath('image1', image1!.path));
-    }
-
-    if (image2 != null) {
-      request.files
-          .add(await http.MultipartFile.fromPath('image2', image2!.path));
-    }
-
-
-    if (image3 != null) {
-      request.files
-          .add(await http.MultipartFile.fromPath('image3', image3!.path));
-    }
-
-
-    var response = await request.send();
-    var responseBody = await response.stream.bytesToString();
-
-    if (response.statusCode == 201) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Product Uploaded Successfully')),
-      );
-      Navigator.pop(context);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to upload product: $responseBody')),
-      );
-    }
-    setState(() {
-      isLoading = false;
-    });
+  // Check for empty fields
+  if (nameController.text.trim().isEmpty ||
+      descriptionController.text.trim().isEmpty ||
+      specificationController.text.trim().isEmpty ||
+      brandController.text.trim().isEmpty ||
+      priceController.text.trim().isEmpty ||
+      selectedCategory == null ||
+      heightController.text.trim().isEmpty ||
+      weightController.text.trim().isEmpty ||
+      widthController.text.trim().isEmpty ||
+      lengthController.text.trim().isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Please fill in all fields before uploading')),
+    );
+    return;
   }
+
+  setState(() {
+    isLoading = true;
+  });
+
+  var url = Uri.parse('https://retilda-fintech.onrender.com/Api/uploadproduct');
+  var request = http.MultipartRequest('POST', url);
+  request.headers['Authorization'] = 'Bearer $_token';
+
+  request.fields['name'] = nameController.text;
+  request.fields['description'] = descriptionController.text;
+  request.fields['specification'] = specificationController.text;
+  request.fields['brand'] = brandController.text;
+  request.fields['price'] = unformattedPrice;
+  request.fields['availableStock'] = "1000";
+  request.fields['categories'] = selectedCategory ?? '';
+  request.fields['height'] = heightController.text;
+  request.fields['weight'] = weightController.text;
+  request.fields['width'] = widthController.text;
+  request.fields['length'] = lengthController.text;
+
+  if (image1 != null) {
+    request.files.add(await http.MultipartFile.fromPath('image1', image1!.path));
+  }
+  if (image2 != null) {
+    request.files.add(await http.MultipartFile.fromPath('image2', image2!.path));
+  }
+  if (image3 != null) {
+    request.files.add(await http.MultipartFile.fromPath('image3', image3!.path));
+  }
+
+  var response = await request.send();
+  var responseBody = await response.stream.bytesToString();
+
+  if (response.statusCode == 201) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Product Uploaded Successfully')),
+    );
+    Navigator.pop(context);
+  } else {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Failed to upload product: $responseBody')),
+    );
+  }
+
+  setState(() {
+    isLoading = false;
+  });
+}
+
+
+
 
   @override
   void initState() {

@@ -13,12 +13,17 @@ import 'package:sizer/sizer.dart';
 
 
 
+
+
 class SearchUpdate extends StatefulWidget {
   @override
   _SearchUpdateState createState() => _SearchUpdateState();
 }
 
+
 class _SearchUpdateState extends State<SearchUpdate> {
+
+
   TextEditingController _searchController = TextEditingController();
   bool _isLoading = false;
   String? token;
@@ -30,18 +35,20 @@ class _SearchUpdateState extends State<SearchUpdate> {
       Map<String, dynamic> userData = jsonDecode(userDataString);
       String Token = userData['data']['token'];
       setState(() {
-        token = Token;
+        token = Token; 
       });
 
       print("All User>> $userData");
     }
   }
 
+
+
   void _searchProducts(BuildContext context, String query) async {
     setState(() {
       _isLoading = true;
     });
-
+ 
     try {
       final response = await http.get(
         Uri.parse('https://retilda-fintech.onrender.com/api/products/search?q=$query'),
@@ -81,6 +88,8 @@ class _SearchUpdateState extends State<SearchUpdate> {
     }
   }
 
+
+
   void _showErrorDialog(BuildContext context, String message) {
     showDialog(
       context: context,
@@ -101,11 +110,15 @@ class _SearchUpdateState extends State<SearchUpdate> {
     );
   }
 
+
+
   @override
   void initState() {
     _loadUserData();
     super.initState();
   }
+
+
 
   @override
   Widget build(BuildContext context) {

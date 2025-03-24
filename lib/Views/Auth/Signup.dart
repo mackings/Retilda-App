@@ -1,6 +1,4 @@
 import 'dart:convert';
-
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:retilda/Views/Auth/Signin.dart';
 import 'package:retilda/Views/Widgets/components.dart';
@@ -18,43 +16,43 @@ class Signup extends StatefulWidget {
 
 class _SignupState extends State<Signup> {
 
-late FirebaseMessaging _messaging;
-String _notificationText = "No new notifications";
+// late FirebaseMessaging _messaging;
+// String _notificationText = "No new notifications";
 
 
-  void _initializeFirebaseMessaging() async {
-    _messaging = FirebaseMessaging.instance;
+//   void _initializeFirebaseMessaging() async {
+//     _messaging = FirebaseMessaging.instance;
 
-    // Request permission for iOS
-    NotificationSettings settings = await _messaging.requestPermission(
-      alert: true,
-      badge: true,
-      sound: true,
-    );
+//     // Request permission for iOS
+//     NotificationSettings settings = await _messaging.requestPermission(
+//       alert: true,
+//       badge: true,
+//       sound: true,
+//     );
 
-    if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-      print('User granted permission');
-    } else {
-      print('User declined or has not granted permission');
-    }
+//     if (settings.authorizationStatus == AuthorizationStatus.authorized) {
+//       print('User granted permission');
+//     } else {
+//       print('User declined or has not granted permission');
+//     }
 
-    // Get the FCM token
-    String? token = await _messaging.getToken();
-    print("FCM Token: $token");
+//     // Get the FCM token
+//     String? token = await _messaging.getToken();
+//     print("FCM Token: $token");
 
-    // Listen for foreground messages
-    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      print("Received a foreground message: ${message.notification?.title}");
-      setState(() {
-        _notificationText = message.notification?.body ?? "No notification body";
-      });
-    });
+//     // Listen for foreground messages
+//     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+//       print("Received a foreground message: ${message.notification?.title}");
+//       setState(() {
+//         _notificationText = message.notification?.body ?? "No notification body";
+//       });
+//     });
 
-    // Handle when the app is opened from a notification
-    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-      print("Notification clicked: ${message.notification?.title}");
-    });
-  }
+//     // Handle when the app is opened from a notification
+//     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+//       print("Notification clicked: ${message.notification?.title}");
+//     });
+//   }
 
 
 
@@ -194,7 +192,7 @@ String _notificationText = "No new notifications";
 
   @override
   void initState() {
-    _initializeFirebaseMessaging();
+   // _initializeFirebaseMessaging();
     super.initState();
   }
 
