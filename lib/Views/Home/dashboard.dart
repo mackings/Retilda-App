@@ -18,6 +18,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 
 
 
+
+
 class Dashboard extends ConsumerStatefulWidget {
   const Dashboard({Key? key}) : super(key: key);
 
@@ -33,10 +35,10 @@ class _DashboardState extends ConsumerState<Dashboard> {
   String? Token;
 
   final List<String> _assetPaths = [
-    'assets/c1.jpg',
-    'assets/k1.jpg',
-    'assets/m1.jpg',
-    'assets/t1.jpg'
+    'assets/dr1.png',
+    'assets/dr2.png',
+    'assets/dr3.png',
+    'assets/dr4.png'
   ];
 
   Future<void> _loadUserData() async {
@@ -110,263 +112,223 @@ class _DashboardState extends ConsumerState<Dashboard> {
     return Sizer(
       builder: (context, orientation, deviceType) {
         return Scaffold(
+  backgroundColor: Colors.white,
+  body: RefreshIndicator(
+    onRefresh: () async {
+      setState(() {}); // Rebuild to refetch data
+    },
+    child: CustomScrollView(
+      physics: const BouncingScrollPhysics(),
+      slivers: [
+        SliverAppBar(
+          automaticallyImplyLeading: false,
           backgroundColor: Colors.white,
-          body: SingleChildScrollView(
-            physics: BouncingScrollPhysics(),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                SizedBox(height: MediaQuery.of(context).size.height * 0.08),
-                GestureDetector(
-                  onTap: () {
-                    Navigator.push(context,
-                        MaterialPageRoute(builder: (context) => Allproducts()));
-                  },
-                  child: SearchContainer(
-                    controller: searchcontroller,
-                  ),
-                ),
-                SizedBox(
-                  height: 30.h,
-                  child: PageView(
-                    children: [
-                      CarouselPageView(),
-                    ],
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.only(left: 30),
-                  child: Row(
-                    children: [
-                      CustomText(
-                        "Top Categories",
-                        fontSize: 12.sp,
-                        color: ROrange,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ],
-                  ),
-                ),
-                SizedBox(
-                  height: 2.h,
-                ),
-                GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => Allproducts()),
-                    );
-                  },
-                  child: SizedBox(
-                    height: 25.h,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: FutureBuilder<ApiResponse>(
-                        future: Token != null ? fetchData(Token!) : Future.error("Token is not available"),
-                        builder: (context, snapshot) {
-                          if (snapshot.connectionState ==
-                              ConnectionState.waiting) {
-                            return Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: const LinearProgressIndicator(),
-                            );
-                          } else if (snapshot.hasError) {
-                            return Center(
-                                child: Text("Error loading products"));
-                          } else if (snapshot.hasData) {
-                            final List<Product> products = snapshot.data!.data;
-
-                            // Create a map of categories and their associated products
-                            Map<String, Product> categoryProductMap = {};
-
-                            for (var product in products) {
-                              // For each category in the product, store the first product found
-                              for (var category in product.categories) {
-                                if (!categoryProductMap.containsKey(category)) {
-                                  categoryProductMap[category] = product;
-                                }
-                              }
-                            }
-
-                            // Convert map to list for displaying
-                            final categoriesWithProduct =
-                                categoryProductMap.entries.toList();
-
-                            return ListView.builder(
-                              scrollDirection: Axis.horizontal,
-                              itemCount: categoriesWithProduct.length,
-                              itemBuilder: (context, index) {
-                                var categoryEntry =
-                                    categoriesWithProduct[index];
-                                var category = categoryEntry.key;
-                                var product = categoryEntry.value;
-
-                                return GestureDetector(
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) =>
-                                            CategoryProductsPage(
-                                                category: category),
-                                      ),
-                                    );
-                                  },
-                                  child: Padding(
-  padding: const EdgeInsets.only(right: 10),
-  child: Column(
-    crossAxisAlignment: CrossAxisAlignment.center,
-    children: [
-      ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: CachedNetworkImage(
-          imageUrl: product.images.isNotEmpty ? product.images[0] : 'default_image_url',
-          height: 100,
-          width: 100,
-          fit: BoxFit.cover,
-          placeholder: (context, url) => Container(
-            height: 100,
-            width: 100,
-            color: Colors.grey[300],
-            child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+          elevation: 0,
+          floating: true,
+          pinned: false,
+          snap: true,
+          centerTitle: false,
+          title: GestureDetector(
+            onTap: () {
+              Navigator.push(context, MaterialPageRoute(builder: (_) => Allproducts()));
+            },
+            child: SearchContainer(controller: searchcontroller),
           ),
-          errorWidget: (context, url, error) => Icon(Icons.image_not_supported, size: 50, color: Colors.grey),
         ),
-      ),
-      const SizedBox(height: 10),
-      CustomText(
-        category ?? "Product",
-        fontSize: 10.sp,
-        fontWeight: FontWeight.w600,
-        color: Colors.black,
-      ),
-    ],
-  ),
-),
-                                );
-                              },
-                            );
-                          } else {
-                            return Center(child: Text("No products found"));
-                          }
-                        },
-                      ),
-                    ),
-                  ),
-                ),
-                SizedBox(
-                  height: 3.h,
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 30),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      CustomText(
-                        "Products",
-                        fontSize: 12.sp,
-                        color: ROrange,
-                        fontWeight: FontWeight.w600,
-                      ),
-                      GestureDetector(
-                        onTap: () {
-                          Navigator.push(
+
+        // Carousel
+        SliverToBoxAdapter(
+          child: SizedBox(
+            height: 30.h,
+            child: CarouselPageView(),
+          ),
+        ),
+
+        // Top Categories Heading
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            child: CustomText(
+              "Top Categories",
+              fontSize: 12.sp,
+              fontWeight: FontWeight.bold,
+              color: ROrange,
+            ),
+          ),
+        ),
+
+        // Category List
+        SliverToBoxAdapter(
+          child: SizedBox(
+            height: 20.h,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: FutureBuilder<ApiResponse>(
+                future: Token != null ? fetchData(Token!) : Future.error("Token not available"),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: LinearProgressIndicator());
+                  } else if (snapshot.hasError) {
+                    return const Center(child: Text("Error loading categories"));
+                  } else if (snapshot.hasData) {
+                    final List<Product> products = snapshot.data!.data;
+                    Map<String, Product> categoryProductMap = {};
+
+                    for (var product in products) {
+                      for (var category in product.categories) {
+                        if (!categoryProductMap.containsKey(category)) {
+                          categoryProductMap[category] = product;
+                        }
+                      }
+                    }
+
+                    final categories = categoryProductMap.entries.toList();
+
+                    return ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: categories.length,
+                      itemBuilder: (context, index) {
+                        var entry = categories[index];
+                        return GestureDetector(
+                          onTap: () {
+                            Navigator.push(
                               context,
                               MaterialPageRoute(
-                                  builder: (context) => Allproducts()));
-                        },
-                        child: CustomText(
-                          "View all",
-                          fontSize: 12.sp,
-                          color: RButtoncolor,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                
-                Token != null
-                    ? FutureBuilder<ApiResponse>(
-                        future: fetchData(Token!),
-                        builder: (context, snapshot) {
-                          if (snapshot.connectionState ==
-                              ConnectionState.waiting) {
-                            return Center(
-                                child: Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: Column(
-                                children: [
-                                  SizedBox(
-                                    height: 10.h,
-                                  ),
-                                  Padding(
-                                    padding: const EdgeInsets.only(
-                                        left: 40, right: 40),
-                                    child: LinearProgressIndicator(),
-                                  ),
-                                ],
+                                builder: (_) => CategoryProductsPage(category: entry.key),
                               ),
-                            ));
-                          } else if (snapshot.hasError) {
-                            return Center(
-                              child: Text('No Products Found'),
                             );
-                          } else if (snapshot.hasData) {
-                          
-                            return Padding(
-                              padding:
-                                  const EdgeInsets.only(left: 20, right: 20),
-                              child: SizedBox(
-                                height: 60
-                                    .h, // Set an appropriate height for the grid
-                                child: GridView.count(
-                                  crossAxisCount: 2,
-                                  shrinkWrap:
-                                      true, // Ensure the grid does not take infinite height
-                                  physics:
-                                      NeverScrollableScrollPhysics(), // Disable scrolling inside the GridView
-                                  mainAxisSpacing: 10,
-                                  crossAxisSpacing: 10,
-                                  padding: EdgeInsets.symmetric(horizontal: 3),
-                                  children: snapshot.data!.data
-                                      .take(10)
-                                      .map(
-                                        (product) => GestureDetector(
-                                          onTap: () {
-                                            print("heyy");
-                                            Navigator.push(
-                                              context,
-                                              MaterialPageRoute(
-                                                builder: (context) =>
-                                                    ProductDetails(
-                                                        product: product),
-                                              ),
-                                            );
-                                          },
-                                          child: ProductCard2(
-                                            product: product,
-                                            onTap: () {},
-                                          ),
-                                        ),
-                                      )
-                                      .toList(),
+                          },
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: CachedNetworkImage(
+                                  imageUrl: entry.value.images.isNotEmpty
+                                      ? entry.value.images[0]
+                                      : 'default_image_url',
+                                  height: 90,
+                                  width: 90,
+                                  fit: BoxFit.cover,
+                                  placeholder: (_, __) => Container(
+                                    color: Colors.grey[300],
+                                    child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                                  ),
+                                  errorWidget: (_, __, ___) =>
+                                      const Icon(Icons.broken_image, size: 50, color: Colors.grey),
                                 ),
                               ),
-                            );
-                          } else {
-                            return Center(
-                              child: Text('No products available'),
-                            );
-                          }
-                        },
-                      )
-                    : CircularProgressIndicator(),
+                              SizedBox(height: 8),
+   CustomText(
+  '${entry.key[0].toUpperCase()}${entry.key.substring(1)}',
+  fontSize: 10.sp,
+  fontWeight: FontWeight.w600,
+  color: Colors.black,
+),
+
+                            ],
+                          ),
+                        );
+                      },
+                      separatorBuilder: (_, __) => SizedBox(width: 16),
+                    );
+                  } else {
+                    return const Center(child: Text("No categories available"));
+                  }
+                },
+              ),
+            ),
+          ),
+        ),
+
+        // Product Header
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                CustomText(
+                  "Products",
+                  fontSize: 12.sp,
+                  fontWeight: FontWeight.bold,
+                  color: ROrange,
+                ),
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => Allproducts()));
+                  },
+                  child: CustomText(
+                    "View all",
+                    fontSize: 12.sp,
+                    fontWeight: FontWeight.w600,
+                    color: RButtoncolor,
+                  ),
+                ),
               ],
             ),
           ),
-        );
+        ),
+
+        // Products Grid
+        SliverToBoxAdapter(
+          child: Token != null
+              ? FutureBuilder<ApiResponse>(
+                  future: fetchData(Token!),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: Padding(
+                        padding: EdgeInsets.all(20),
+                        child: LinearProgressIndicator(),
+                      ));
+                    } else if (snapshot.hasError || !snapshot.hasData) {
+                      return const Center(child: Text("No Products Found"));
+                    }
+
+                    final products = snapshot.data!.data.take(10).toList();
+
+                    return Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 10),
+                      child: GridView.builder(
+                        physics: NeverScrollableScrollPhysics(),
+                        shrinkWrap: true,
+                        itemCount: products.length,
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          mainAxisSpacing: 10,
+                          crossAxisSpacing: 16,
+                          childAspectRatio: 0.9,
+                        ),
+                        itemBuilder: (context, index) {
+                          final product = products[index];
+                          return GestureDetector(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => ProductDetails(product: product),
+                                ),
+                              );
+                            },
+                            child: ProductCard2(
+                              product: product,
+                              onTap: () {},
+                            ),
+                          );
+                        },
+                      ),
+                    );
+                  },
+                )
+              : const Center(child: CircularProgressIndicator()),
+        ),
+
+        SliverToBoxAdapter(child: SizedBox(height: 40)),
+      ],
+    ),
+  ),
+);
+
       },
     );
   }

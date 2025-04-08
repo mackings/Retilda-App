@@ -41,7 +41,7 @@ class _CarouselPageViewState extends State<CarouselPageView> {
                   child: Container(
                     height: 20.h,
                   decoration: BoxDecoration(
-                    image: DecorationImage(image: AssetImage("assets/banner1.jpeg",
+                    image: DecorationImage(image: AssetImage("assets/dr1.png",
                     ),
                     fit: BoxFit.fill
                     ),
@@ -55,7 +55,7 @@ class _CarouselPageViewState extends State<CarouselPageView> {
                   padding: const EdgeInsets.all(10.0),
                   child: Container(height: 20.h,
                   decoration: BoxDecoration(
-                   image: DecorationImage(image: AssetImage("assets/banner2.jpeg",
+                   image: DecorationImage(image: AssetImage("assets/dr2.png",
                     ),
                     fit: BoxFit.fill
                     ),
@@ -68,7 +68,7 @@ class _CarouselPageViewState extends State<CarouselPageView> {
                   padding: const EdgeInsets.all(10.0),
                   child: Container(height: 20.h,
                   decoration: BoxDecoration(
-                   image: DecorationImage(image: AssetImage("assets/banner3.jpeg",
+                   image: DecorationImage(image: AssetImage("assets/dr3.png",
                     ),
                     fit: BoxFit.fill
                     ),
@@ -82,7 +82,7 @@ class _CarouselPageViewState extends State<CarouselPageView> {
                   padding: const EdgeInsets.all(10.0),
                   child: Container(height: 20.h,
                   decoration: BoxDecoration(
-                   image: DecorationImage(image: AssetImage("assets/banner4.jpeg",
+                   image: DecorationImage(image: AssetImage("assets/dr4.png",
                     ),
                     fit: BoxFit.fill
                     ),

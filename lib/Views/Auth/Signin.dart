@@ -16,6 +16,8 @@ import 'dart:convert';
 
 
 
+
+
 class Signin extends StatefulWidget {
   const Signin({Key? key}) : super(key: key);
 
@@ -29,6 +31,8 @@ class _SigninState extends State<Signin> {
   final TextEditingController _passwordController = TextEditingController();
   bool _isLoading = false;
   bool _isObscured = true;
+
+
 
   Future<void> _login() async {
     setState(() {
@@ -106,6 +110,8 @@ class _SigninState extends State<Signin> {
     }
   }
 
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -139,7 +145,9 @@ class _SigninState extends State<Signin> {
                   suffixIcon: Icons.email,
                   onChanged: (value) {},
                 ),
+
                 SizedBox(height: 4.h),
+
                 CustomTextFormField(
                   controller: _passwordController,
                   hintText: 'Password',
@@ -152,6 +160,8 @@ class _SigninState extends State<Signin> {
                     return null;
                   },
                 ),
+
+                
                 SizedBox(height: 2.h),
                 GestureDetector(
                   onTap: () {
@@ -171,12 +181,12 @@ class _SigninState extends State<Signin> {
                 SizedBox(height: MediaQuery.of(context).size.height * 0.05),
                 _isLoading
                     ? CircleAvatar(
-                        radius: 25, // Adjust the radius as needed
+                        radius: 25, 
                         backgroundColor:
-                            Colors.grey.shade200, // Optional background color
+                            Colors.grey.shade200, 
                         child: CircularProgressIndicator(
                           valueColor: AlwaysStoppedAnimation<Color>(
-                              Colors.blue), // Match with theme
+                              Colors.blue), 
                           strokeWidth: 3.0,
                         ),
                       )

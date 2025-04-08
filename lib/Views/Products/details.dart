@@ -33,10 +33,7 @@ class ProductDetails extends StatefulWidget {
 }
 
 class _ProductDetailsState extends State<ProductDetails> {
-
-
-//DeliveryModal 
-
+//DeliveryModal
 
   final TextEditingController _addressController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
@@ -72,8 +69,10 @@ class _ProductDetailsState extends State<ProductDetails> {
         },
         body: json.encode(data),
       );
+      print(data);
 
       if (response.statusCode == 200) {
+        print(response.body);
         final responseData = json.decode(response.body);
         if (responseData['success']) {
           final deliveryFee = responseData['data']['deliveryFee'];
@@ -82,17 +81,22 @@ class _ProductDetailsState extends State<ProductDetails> {
                 (match) => ',',
               );
 
-          Navigator.of(context).pop(); // Close the modal
+          Navigator.of(context).pop(); 
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text("Delivery Fee: ₦$formattedFee")),
           );
+
         } else {
+          print(response.body);
           throw Exception(responseData['message']);
         }
+
       } else {
         throw Exception("Server Error: ${response.body}");
       }
     } catch (e) {
+      Navigator.of(context).pop();
+      print(e);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Error: $e")),
       );
@@ -104,135 +108,198 @@ class _ProductDetailsState extends State<ProductDetails> {
   }
 
   // Modal to collect delivery details
-  void _showDeliveryModal(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return Padding(
-          padding: MediaQuery.of(context).viewInsets,
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "Enter Delivery Details",
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+void _showDeliveryModal(BuildContext context) {
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.white,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (context) {
+      return StatefulBuilder(
+        builder: (context, setModalState) {
+          return Padding(
+            padding: MediaQuery.of(context).viewInsets,
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(20.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                     Center(
+                  child: Container(
+                    width: 50,
+                    height: 5,
+                    margin: const EdgeInsets.only(bottom: 20),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(10),
                     ),
                   ),
-                  SizedBox(height: 16),
-                  TextField(
-                    controller: _addressController,
-                    decoration: InputDecoration(
-                      labelText: "Delivery Address",
-                      border: OutlineInputBorder(),
-                    ),
+                ),
+                Text(
+                  "Delivery Details",
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.black87,
                   ),
-                  SizedBox(height: 16),
-                  TextField(
-                    controller: _phoneController,
-                    decoration: InputDecoration(
-                      labelText: "Phone Number",
-                      border: OutlineInputBorder(),
+                ),
+                const SizedBox(height: 20),
+
+                // Address
+                TextFormField(
+                  controller: _addressController,
+                  decoration: InputDecoration(
+                    labelText: "Delivery Address",
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    keyboardType: TextInputType.phone,
+                    prefixIcon: Icon(Icons.location_on_outlined),
                   ),
-                  SizedBox(height: 16),
-                  TextField(
-                    controller: _timeController,
-                    decoration: InputDecoration(
-                      labelText: "Delivery Time",
-                      border: OutlineInputBorder(),
+                ),
+                const SizedBox(height: 16),
+
+                // Phone
+                TextFormField(
+                  controller: _phoneController,
+                  keyboardType: TextInputType.phone,
+                  decoration: InputDecoration(
+                    labelText: "Phone Number",
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
+                    prefixIcon: Icon(Icons.phone_outlined),
                   ),
-                  SizedBox(height: 16),
-                  GestureDetector(
-                    onTap: () async {
-                      final DateTime? pickedDate = await showDatePicker(
-                        context: context,
-                        initialDate: DateTime.now(),
-                        firstDate: DateTime.now(),
-                        lastDate: DateTime(2100),
-                      );
-                      if (pickedDate != null) {
-                        setState(() {
-                          _selectedDate = pickedDate;
-                        });
-                      }
-                    },
-                    child: Container(
-                      padding: EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        _selectedDate == null
-                            ? "Select Delivery Date"
-                            : "${_selectedDate!.toLocal()}".split(' ')[0],
-                        style: TextStyle(color: Colors.black54),
-                      ),
+                ),
+                const SizedBox(height: 16),
+
+                // Time
+                TextFormField(
+                  controller: _timeController,
+                  decoration: InputDecoration(
+                    labelText: "Delivery Time",
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
+                    prefixIcon: Icon(Icons.access_time_outlined),
                   ),
-                  SizedBox(height: 16),
-                  DropdownButtonFormField<String>(
-                    decoration: InputDecoration(
-                      labelText: "Category",
-                      border: OutlineInputBorder(),
-                    ),
-                    items: ["local", "regional", "interstate"]
-                        .map(
-                          (category) => DropdownMenuItem<String>(
-                            value: category,
-                            child: Text(category),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (value) {
+                ),
+                const SizedBox(height: 16),
+
+                // Date Picker
+                GestureDetector(
+                  onTap: () async {
+                    final DateTime? pickedDate = await showDatePicker(
+                      context: context,
+                      initialDate: DateTime.now(),
+                      firstDate: DateTime.now(),
+                      lastDate: DateTime(2100),
+                    );
+                    if (pickedDate != null) {
                       setState(() {
-                        _selectedCategory = value;
+                        _selectedDate = pickedDate;
                       });
-                    },
-                  ),
-                  SizedBox(height: 24),
-                  SizedBox(
+                    }
+                  },
+                  child: Container(
                     width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: _isLoading
-                          ? null
-                          : () {
-                              _calculateDeliveryFee(context);
-                            },
-                      style: ElevatedButton.styleFrom(
-                        padding: EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                    padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey.shade400),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.calendar_today_outlined, size: 20, color: Colors.grey[600]),
+                        const SizedBox(width: 12),
+                        Text(
+                          _selectedDate == null
+                              ? "Select Delivery Date"
+                              : "${_selectedDate!.toLocal()}".split(' ')[0],
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.black87,
+                          ),
                         ),
-                      ),
-                      child: _isLoading
-                          ? CircularProgressIndicator(color: Colors.white)
-                          : Text("Calculate Delivery Fee"),
+                      ],
                     ),
                   ),
-                ],
+                ),
+                const SizedBox(height: 16),
+
+                // Category Dropdown
+                DropdownButtonFormField<String>(
+                  value: _selectedCategory,
+                  decoration: InputDecoration(
+                    labelText: "Category",
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    prefixIcon: Icon(Icons.category_outlined),
+                  ),
+                  items: ["local", "regional", "interstate"].map((category) {
+                    return DropdownMenuItem(
+                      value: category,
+                      child: Text(category[0].toUpperCase() + category.substring(1)),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedCategory = value;
+                    });
+                  },
+                ),
+                const SizedBox(height: 24),
+
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: _isLoading
+                            ? null
+                            : () async {
+                                setModalState(() => _isLoading = true);
+                                await _calculateDeliveryFee(context);
+                                setModalState(() => _isLoading = false);
+                              },
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          backgroundColor: Colors.orangeAccent,
+                        ),
+                        child: _isLoading
+                            ? const SizedBox(
+                                height: 24,
+                                width: 24,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Text(
+                                "Calculate Delivery Fee",
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                ),
+                              ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-        );
-      },
-    );
-  }
-
-
-
+          );
+        },
+      );
+    },
+  );
+}
 
 
 
@@ -262,52 +329,51 @@ class _ProductDetailsState extends State<ProductDetails> {
     _loadCartItems();
   }
 
-Future<void> initializePayment(BuildContext context) async {
-  const String apiUrl =
-      "https://retilda-fintech.onrender.com/Api/buyproductonsales/onetimepaymentusingcard";
+  Future<void> initializePayment(BuildContext context) async {
+    const String apiUrl =
+        "https://retilda-fintech.onrender.com/Api/buyproductonsales/onetimepaymentusingcard";
 
-  try {
-    // Make the API call
-    final response = await http.post(
-      Uri.parse(apiUrl),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-      body: json.encode({"productId": productId}),
-    );
+    try {
+      // Make the API call
+      final response = await http.post(
+        Uri.parse(apiUrl),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: json.encode({"productId": productId}),
+      );
 
-    if (response.statusCode == 200) {
-      // Parse the response
-      final responseData = json.decode(response.body);
+      if (response.statusCode == 200) {
+        // Parse the response
+        final responseData = json.decode(response.body);
 
-      if (responseData['success'] == true) {
-        final String paymentUrl = responseData['data']['authorizationUrl'];
+        if (responseData['success'] == true) {
+          final String paymentUrl = responseData['data']['authorizationUrl'];
 
-        // Navigate to the WebViewScreen
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => WebViewScreen(url: paymentUrl),
-          ),
-        );
+          // Navigate to the WebViewScreen
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => WebViewScreen(url: paymentUrl),
+            ),
+          );
+        } else {
+          // Handle API error response
+          _showErrorDialog(context, responseData['message']);
+        }
       } else {
-        // Handle API error response
-        _showErrorDialog(context, responseData['message']);
+        // Handle HTTP error
+        _showErrorDialog(
+            context, "Failed to initialize payment. Please try again.");
+        print(response.body);
       }
-    } else {
-      // Handle HTTP error
-      _showErrorDialog(
-          context, "Failed to initialize payment. Please try again.");
-      print(response.body);
+    } catch (e) {
+      print(e);
+      // Handle exceptions
+      _showErrorDialog(context, "An error occurred: $e");
     }
-  } catch (e) {
-    print(e);
-    // Handle exceptions
-    _showErrorDialog(context, "An error occurred: $e");
   }
-}
-
 
   void _showErrorDialog(BuildContext context, String message) {
     showDialog(
@@ -384,7 +450,8 @@ Future<void> initializePayment(BuildContext context) async {
   }
 
   Future<void> getWalletBalance(String walletAccountNumber) async {
-    final Uri url = Uri.parse('https://retilda-fintech.onrender.com/Api/balance');
+    final Uri url =
+        Uri.parse('https://retilda-fintech.onrender.com/Api/balance');
 
     Map<String, String> requestBody = {
       'walletAccountNumber': wallet,
@@ -535,7 +602,6 @@ Future<void> initializePayment(BuildContext context) async {
           },
         );
       } else {
-
         showDialog(
           context: context,
           builder: (BuildContext context) {
@@ -549,9 +615,10 @@ Future<void> initializePayment(BuildContext context) async {
                 TextButton(
                   onPressed: () {
                     Navigator.of(context).pop();
-           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: CustomText('Please complete  your KYC on your profile page'),
-      ));
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                      content: CustomText(
+                          'Please complete  your KYC on your profile page'),
+                    ));
                   },
                   child: Text('OK'),
                 ),
@@ -613,18 +680,18 @@ Future<void> initializePayment(BuildContext context) async {
             fontWeight: FontWeight.w500,
           ),
           actions: [
- GestureDetector(
-            onTap: () => _showDeliveryModal(context),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Center(
-                child: Text(
-                  "Delivery",
-                  style: TextStyle(color: Colors.orange),
+            GestureDetector(
+              onTap: () => _showDeliveryModal(context),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Center(
+                  child: Text(
+                    "Delivery",
+                    style: TextStyle(color: Colors.orange),
+                  ),
                 ),
               ),
             ),
-          ),
           ],
         ),
         body: SingleChildScrollView(
@@ -776,33 +843,36 @@ Future<void> initializePayment(BuildContext context) async {
                                                       });
                                                     },
                                                   ),
-
-Flexible(
-  child: Row(
-    children: [
-      Text('I accept the'),
-      TextButton(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => InAppWebViewPage(
-                url: 'https://docs.google.com/document/d/1zWEYmMZ_tRhC198qMsN5rP55YmeQ8rtiuTbaPEC_Fw0/edit?usp=sharing',
-                title: 'Terms and Policy',
-              ),
-            ),
-          );
-        },
-        child: Text(
-          'Terms',
-          style: TextStyle(color: Colors.blue),
-        ),
-      ),
-    ],
-  ),
-),
-
-
+                                                  Flexible(
+                                                    child: Row(
+                                                      children: [
+                                                        Text('I accept the'),
+                                                        TextButton(
+                                                          onPressed: () {
+                                                            Navigator.push(
+                                                              context,
+                                                              MaterialPageRoute(
+                                                                builder:
+                                                                    (context) =>
+                                                                        InAppWebViewPage(
+                                                                  url:
+                                                                      'https://docs.google.com/document/d/1zWEYmMZ_tRhC198qMsN5rP55YmeQ8rtiuTbaPEC_Fw0/edit?usp=sharing',
+                                                                  title:
+                                                                      'Terms and Policy',
+                                                                ),
+                                                              ),
+                                                            );
+                                                          },
+                                                          child: Text(
+                                                            'Terms',
+                                                            style: TextStyle(
+                                                                color: Colors
+                                                                    .blue),
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
                                                 ],
                                               ),
                                             ],
@@ -938,15 +1008,12 @@ Flexible(
   }
 }
 
-
-
-
-
 class InAppWebViewPage extends StatelessWidget {
   final String url;
   final String title;
 
-  const InAppWebViewPage({required this.url, required this.title, Key? key}) : super(key: key);
+  const InAppWebViewPage({required this.url, required this.title, Key? key})
+      : super(key: key);
 
   @override
   Widget build(BuildContext context) {
