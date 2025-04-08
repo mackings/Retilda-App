@@ -8,6 +8,7 @@ import 'package:retilda/Views/Products/Connect/views/connect.dart';
 import 'package:retilda/Views/Products/cartpage.dart';
 import 'package:retilda/Views/Products/terms.dart';
 import 'package:retilda/Views/Widgets/components.dart';
+import 'package:retilda/Views/Widgets/paymentoption.dart';
 import 'package:retilda/Views/Widgets/togglebtn.dart';
 import 'package:retilda/Views/Widgets/webview.dart';
 import 'package:retilda/Views/Widgets/widgets.dart';
@@ -18,10 +19,6 @@ import 'dart:convert';
 import 'package:sizer/sizer.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
-
-
-
-
 
 class ProductDetails extends StatefulWidget {
   final Product product;
@@ -81,16 +78,14 @@ class _ProductDetailsState extends State<ProductDetails> {
                 (match) => ',',
               );
 
-          Navigator.of(context).pop(); 
+          Navigator.of(context).pop();
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text("Delivery Fee: ₦$formattedFee")),
           );
-
         } else {
           print(response.body);
           throw Exception(responseData['message']);
         }
-
       } else {
         throw Exception("Server Error: ${response.body}");
       }
@@ -108,200 +103,203 @@ class _ProductDetailsState extends State<ProductDetails> {
   }
 
   // Modal to collect delivery details
-void _showDeliveryModal(BuildContext context) {
-  showModalBottomSheet(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.white,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-    ),
-    builder: (context) {
-      return StatefulBuilder(
-        builder: (context, setModalState) {
-          return Padding(
-            padding: MediaQuery.of(context).viewInsets,
-            child: SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.all(20.0),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                     Center(
-                  child: Container(
-                    width: 50,
-                    height: 5,
-                    margin: const EdgeInsets.only(bottom: 20),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[300],
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                ),
-                Text(
-                  "Delivery Details",
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.black87,
-                  ),
-                ),
-                const SizedBox(height: 20),
-
-                // Address
-                TextFormField(
-                  controller: _addressController,
-                  decoration: InputDecoration(
-                    labelText: "Delivery Address",
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    prefixIcon: Icon(Icons.location_on_outlined),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Phone
-                TextFormField(
-                  controller: _phoneController,
-                  keyboardType: TextInputType.phone,
-                  decoration: InputDecoration(
-                    labelText: "Phone Number",
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    prefixIcon: Icon(Icons.phone_outlined),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Time
-                TextFormField(
-                  controller: _timeController,
-                  decoration: InputDecoration(
-                    labelText: "Delivery Time",
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    prefixIcon: Icon(Icons.access_time_outlined),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Date Picker
-                GestureDetector(
-                  onTap: () async {
-                    final DateTime? pickedDate = await showDatePicker(
-                      context: context,
-                      initialDate: DateTime.now(),
-                      firstDate: DateTime.now(),
-                      lastDate: DateTime(2100),
-                    );
-                    if (pickedDate != null) {
-                      setState(() {
-                        _selectedDate = pickedDate;
-                      });
-                    }
-                  },
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey.shade400),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.calendar_today_outlined, size: 20, color: Colors.grey[600]),
-                        const SizedBox(width: 12),
-                        Text(
-                          _selectedDate == null
-                              ? "Select Delivery Date"
-                              : "${_selectedDate!.toLocal()}".split(' ')[0],
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.black87,
+  void _showDeliveryModal(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: MediaQuery.of(context).viewInsets,
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Center(
+                        child: Container(
+                          width: 50,
+                          height: 5,
+                          margin: const EdgeInsets.only(bottom: 20),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[300],
+                            borderRadius: BorderRadius.circular(10),
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
+                      ),
+                      Text(
+                        "Delivery Details",
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 20),
 
-                // Category Dropdown
-                DropdownButtonFormField<String>(
-                  value: _selectedCategory,
-                  decoration: InputDecoration(
-                    labelText: "Category",
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    prefixIcon: Icon(Icons.category_outlined),
-                  ),
-                  items: ["local", "regional", "interstate"].map((category) {
-                    return DropdownMenuItem(
-                      value: category,
-                      child: Text(category[0].toUpperCase() + category.substring(1)),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      _selectedCategory = value;
-                    });
-                  },
-                ),
-                const SizedBox(height: 24),
-
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: _isLoading
-                            ? null
-                            : () async {
-                                setModalState(() => _isLoading = true);
-                                await _calculateDeliveryFee(context);
-                                setModalState(() => _isLoading = false);
-                              },
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
+                      // Address
+                      TextFormField(
+                        controller: _addressController,
+                        decoration: InputDecoration(
+                          labelText: "Delivery Address",
+                          border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          backgroundColor: Colors.orangeAccent,
+                          prefixIcon: Icon(Icons.location_on_outlined),
                         ),
-                        child: _isLoading
-                            ? const SizedBox(
-                                height: 24,
-                                width: 24,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
-                              )
-                            : const Text(
-                                "Calculate Delivery Fee",
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Phone
+                      TextFormField(
+                        controller: _phoneController,
+                        keyboardType: TextInputType.phone,
+                        decoration: InputDecoration(
+                          labelText: "Phone Number",
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          prefixIcon: Icon(Icons.phone_outlined),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Time
+                      TextFormField(
+                        controller: _timeController,
+                        decoration: InputDecoration(
+                          labelText: "Delivery Time",
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          prefixIcon: Icon(Icons.access_time_outlined),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Date Picker
+                      GestureDetector(
+                        onTap: () async {
+                          final DateTime? pickedDate = await showDatePicker(
+                            context: context,
+                            initialDate: DateTime.now(),
+                            firstDate: DateTime.now(),
+                            lastDate: DateTime(2100),
+                          );
+                          if (pickedDate != null) {
+                            setState(() {
+                              _selectedDate = pickedDate;
+                            });
+                          }
+                        },
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 16, horizontal: 12),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey.shade400),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.calendar_today_outlined,
+                                  size: 20, color: Colors.grey[600]),
+                              const SizedBox(width: 12),
+                              Text(
+                                _selectedDate == null
+                                    ? "Select Delivery Date"
+                                    : "${_selectedDate!.toLocal()}"
+                                        .split(' ')[0],
                                 style: TextStyle(
                                   fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white,
+                                  color: Colors.black87,
                                 ),
                               ),
+                            ],
+                          ),
+                        ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 16),
+
+                      // Category Dropdown
+                      DropdownButtonFormField<String>(
+                        value: _selectedCategory,
+                        decoration: InputDecoration(
+                          labelText: "Category",
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          prefixIcon: Icon(Icons.category_outlined),
+                        ),
+                        items:
+                            ["local", "regional", "interstate"].map((category) {
+                          return DropdownMenuItem(
+                            value: category,
+                            child: Text(category[0].toUpperCase() +
+                                category.substring(1)),
+                          );
+                        }).toList(),
+                        onChanged: (value) {
+                          setState(() {
+                            _selectedCategory = value;
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 24),
+
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: _isLoading
+                              ? null
+                              : () async {
+                                  setModalState(() => _isLoading = true);
+                                  await _calculateDeliveryFee(context);
+                                  setModalState(() => _isLoading = false);
+                                },
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            backgroundColor: Colors.orangeAccent,
+                          ),
+                          child: _isLoading
+                              ? const SizedBox(
+                                  height: 24,
+                                  width: 24,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Text(
+                                  "Calculate Delivery Fee",
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          );
-        },
-      );
-    },
-  );
-}
-
-
+            );
+          },
+        );
+      },
+    );
+  }
 
   bool isFirstButtonActive = true;
   int? selectedChipValue;
@@ -679,20 +677,6 @@ void _showDeliveryModal(BuildContext context) {
             fontSize: 15.sp,
             fontWeight: FontWeight.w500,
           ),
-          actions: [
-            GestureDetector(
-              onTap: () => _showDeliveryModal(context),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: Center(
-                  child: Text(
-                    "Delivery",
-                    style: TextStyle(color: Colors.orange),
-                  ),
-                ),
-              ),
-            ),
-          ],
         ),
         body: SingleChildScrollView(
           child: Center(
@@ -701,7 +685,7 @@ void _showDeliveryModal(BuildContext context) {
                 height: 2.h,
               ),
               SizedBox(
-                height: 30.h,
+                height: 25.h,
                 child: PageView(
                   children: widget.product.images.map((image) {
                     return Container(
@@ -719,60 +703,69 @@ void _showDeliveryModal(BuildContext context) {
                   }).toList(),
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.only(left: 25, right: 25, top: 10),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    CustomText(
-                      widget.product.name,
-                      fontWeight: FontWeight.w500,
-                      fontSize: 12.sp,
-                    ),
-                    Row(
-                      children: [
-                        IconButton(
-                          icon: Icon(Icons.add_shopping_cart),
-                          onPressed: addToCart,
-                        ),
-                        IconButton(
-                          icon: Icon(Icons.favorite_border),
-                          onPressed: () {
-                            // Favorite action
-                          },
-                        ),
-                        IconButton(
-                          icon: Icon(Icons.share),
-                          onPressed: () {
-                            // Share action
-                          },
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.only(left: 25, right: 25, top: 5),
+Padding(
+  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+  child: Row(
+    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    children: [
+      Expanded(
+        child: CustomText(
+          widget.product.name,
+          fontWeight: FontWeight.w600,
+          fontSize: 14.sp,
+         // maxLines: 1,
+         // overflow: TextOverflow.ellipsis,
+        ),
+      ),
+      Row(
+        children: [
+          _buildActionIcon(
+            icon: Icons.add_shopping_cart_outlined,
+            onTap: addToCart,
+          ),
+          _buildActionIcon(
+            icon: Icons.favorite_border,
+            onTap: () {
+              // TODO: Favorite logic
+            },
+          ),
+          _buildActionIcon(
+            icon: Icons.share_outlined,
+            onTap: () {
+              // TODO: Share logic
+            },
+          ),
+        ],
+      ),
+    ],
+  ),
+),
+
+             const Padding(
+                padding: EdgeInsets.only(left: 25, right: 25, top: 5),
                 child: Divider(
                   color: Colors.grey,
                 ),
               ),
+
+
               Padding(
-                padding: const EdgeInsets.only(left: 25, top: 20),
+                padding: const EdgeInsets.only(left: 25, top: 15),
                 child: Row(
                   children: [
                     CustomText(
-                      "Select desired Payment frequency",
+                      "Select your payment plan",
                       fontSize: 12.sp,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w400,
                     ),
                   ],
                 ),
               ),
+
               SizedBox(
                 height: 2.h,
               ),
+
               ToggleButtonsWidget(
                 firstButtonText: 'Weekly',
                 secondButtonText: 'Monthly',
@@ -780,12 +773,13 @@ void _showDeliveryModal(BuildContext context) {
                 onChipSelected: handleChipSelected,
                 onActionSelected: handleActionSelected,
               ),
+
               if (selectedChipValue != null)
                 Padding(
                   padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 1.h),
                   child: Row(
                     children: [
-                      Icon(
+                     const Icon(
                         Icons.error,
                         color: Colors.grey,
                       ),
@@ -798,137 +792,139 @@ void _showDeliveryModal(BuildContext context) {
                     ],
                   ),
                 ),
-              Padding(
-                padding: const EdgeInsets.only(left: 25, right: 25, top: 15),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    CustomText(
-                      "N${NumberFormat('#,##0').format(widget.product.price)}",
-                      fontWeight: FontWeight.w700,
-                      fontSize: 12.sp,
-                    ),
-                    loading
-                        ? CustomText('Making payments...')
-                        : GestureDetector(
-                            onTap: () {
-                              if (Activated == false) {
-                                showDialog(
-                                  context: context,
-                                  builder: (context) {
-                                    bool termsAccepted =
-                                        false; // Local state for dialog
 
-                                    return StatefulBuilder(
-                                      builder: (context, setState) {
-                                        return AlertDialog(
-                                          title: Text(
-                                            'Connect',
-                                            style: GoogleFonts.poppins(
-                                                fontWeight: FontWeight.w500),
-                                          ),
-                                          content: Column(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Text(
-                                                'To proceed, please consent to connect your bank account to the platform and read our privacy policy for more details.',
-                                              ),
-                                              Row(
-                                                children: [
-                                                  Checkbox(
-                                                    value: termsAccepted,
-                                                    onChanged: (value) {
-                                                      setState(() {
-                                                        termsAccepted = value!;
-                                                      });
-                                                    },
-                                                  ),
-                                                  Flexible(
-                                                    child: Row(
-                                                      children: [
-                                                        Text('I accept the'),
-                                                        TextButton(
-                                                          onPressed: () {
-                                                            Navigator.push(
-                                                              context,
-                                                              MaterialPageRoute(
-                                                                builder:
-                                                                    (context) =>
-                                                                        InAppWebViewPage(
-                                                                  url:
-                                                                      'https://docs.google.com/document/d/1zWEYmMZ_tRhC198qMsN5rP55YmeQ8rtiuTbaPEC_Fw0/edit?usp=sharing',
-                                                                  title:
-                                                                      'Terms and Policy',
-                                                                ),
-                                                              ),
-                                                            );
-                                                          },
-                                                          child: Text(
-                                                            'Terms',
-                                                            style: TextStyle(
-                                                                color: Colors
-                                                                    .blue),
-                                                          ),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ],
-                                          ),
-                                          actions: [
-                                            TextButton(
-                                              onPressed: () {
-                                                Navigator.of(context).pop();
-                                              },
-                                              child: Text('Cancel'),
-                                            ),
-                                            TextButton(
-                                              onPressed: termsAccepted
-                                                  ? () {
-                                                      Navigator.of(context)
-                                                          .pop();
-                                                      Navigator.push(
-                                                        context,
-                                                        MaterialPageRoute(
-                                                            builder: (context) =>
-                                                                ConnectAccount()),
-                                                      );
-                                                      print(
-                                                          "Bank account connected");
-                                                    }
-                                                  : null, // Disable button if terms are not accepted
-                                              child: Text('Connect'),
-                                            ),
-                                          ],
-                                        );
-                                      },
-                                    );
-                                  },
-                                );
-                              } else {
-                                purchaseProduct();
-                              }
-                            },
-                            child: Container(
-                              height: 6.h,
-                              width: 50.w,
-                              decoration: BoxDecoration(
-                                color: RButtoncolor,
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Center(
-                                child: CustomText(
-                                  "Pay Installments",
-                                  color: Colors.white,
-                                ),
+
+
+Padding(
+  padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 15),
+  child: Row(
+    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    children: [
+      CustomText(
+        "N${NumberFormat('#,##0').format(widget.product.price)}",
+        fontWeight: FontWeight.w700,
+        fontSize: 12.sp,
+      ),
+      loading
+          ? const CircularProgressIndicator(strokeWidth: 2)
+          : GestureDetector(
+              onTap: () {
+                if (Activated == false) {
+                  showDialog(
+                    context: context,
+                    builder: (context) {
+                      bool termsAccepted = false;
+
+                      return StatefulBuilder(
+                        builder: (context, setState) {
+                          return AlertDialog(
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            title: Text(
+                              'Connect',
+                              style: GoogleFonts.poppins(
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
-                          )
-                  ],
+                            content: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Text(
+                                  'To proceed, please consent to connect your bank account and read our privacy policy for more details.',
+                                  style: TextStyle(fontSize: 14),
+                                ),
+                                const SizedBox(height: 12),
+                                Row(
+                                  children: [
+                                    Checkbox(
+                                      value: termsAccepted,
+                                      onChanged: (value) {
+                                        setState(() {
+                                          termsAccepted = value!;
+                                        });
+                                      },
+                                    ),
+                                    Expanded(
+                                      child: Wrap(
+                                        children: [
+                                          const Text('I accept the '),
+                                          TextButton(
+                                            onPressed: () {
+                                              Navigator.push(
+                                                context,
+                                                MaterialPageRoute(
+                                                  builder: (_) => InAppWebViewPage(
+                                                    url:
+                                                        'https://docs.google.com/document/d/1zWEYmMZ_tRhC198qMsN5rP55YmeQ8rtiuTbaPEC_Fw0/edit?usp=sharing',
+                                                    title: 'Terms and Policy',
+                                                  ),
+                                                ),
+                                              );
+                                            },
+                                            child: const Text(
+                                              'Terms',
+                                              style: TextStyle(color: Colors.blue),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context),
+                                child: const Text('Cancel'),
+                              ),
+                              TextButton(
+                                onPressed: termsAccepted
+                                    ? () {
+                                        Navigator.pop(context);
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) => ConnectAccount(),
+                                          ),
+                                        );
+                                        debugPrint("Bank account connected");
+                                      }
+                                    : null,
+                                child: const Text('Connect'),
+                              ),
+                            ],
+                          );
+                        },
+                      );
+                    },
+                  );
+                } else {
+                  purchaseProduct();
+                }
+              },
+              child: Container(
+                height: 6.h,
+                width: 50.w,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border.all(width: 0.5,color: Colors.orange),
+                  borderRadius: BorderRadius.circular(15),
+                ),
+                child: const Center(
+                  child: CustomText(
+                    "Pay Now",
+                    color: Colors.orange,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ),
+            ),
+    ],
+  ),
+),
+
               SizedBox(
                 height: 2.h,
               ),
@@ -942,17 +938,17 @@ void _showDeliveryModal(BuildContext context) {
                   height: 6.h,
                   width: MediaQuery.of(context).size.width - 10.w,
                   decoration: BoxDecoration(
-                    color: Colors.orange,
-                    borderRadius: BorderRadius.circular(10),
+                   // border: Border.all(width: 0.5,color: Colors.orange,),
+                   color: Colors.black,
+                    borderRadius: BorderRadius.circular(15),
                   ),
                   child: Center(
-                    child: Text(
-                      "One Time Payment",
-                      style: TextStyle(color: Colors.white, fontSize: 18),
-                    ),
+                    child: CustomText("One Time Pay",color: Colors.white,)
                   ),
                 ),
               ),
+
+
               Padding(
                 padding: const EdgeInsets.only(left: 25, top: 20),
                 child: Row(
@@ -1003,11 +999,48 @@ void _showDeliveryModal(BuildContext context) {
             ]),
           ),
         ),
+        bottomNavigationBar: BottomAppBar(
+          color: Colors.orange,
+          height: 50,
+          child: GestureDetector(
+            onTap: () {
+              _showDeliveryModal(context);
+            },
+            child: const Center(
+                child: CustomText(
+              "Calculate Delivery",
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            )),
+          ),
+        ),
       );
     });
   }
 }
 
+
+Widget _buildActionIcon({required IconData icon, required VoidCallback onTap}) {
+  return Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 4),
+    child: InkWell(
+      borderRadius: BorderRadius.circular(8),
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(
+          icon,
+          size: 20,
+          color: Colors.black87,
+        ),
+      ),
+    ),
+  );
+}
 class InAppWebViewPage extends StatelessWidget {
   final String url;
   final String title;

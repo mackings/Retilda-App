@@ -26,76 +26,80 @@ class ToggleButtonsWidget extends StatefulWidget {
 class _ToggleButtonsWidgetState extends State<ToggleButtonsWidget> {
   bool? isFirstButtonActive;
   int? selectedChipValue;
-  String? selectedAction;
 
-  void _toggleButtons(bool isFirst) {
+  void _toggle(bool isFirst) {
     setState(() {
       isFirstButtonActive = isFirst;
       selectedChipValue = null;
-      selectedAction = null;
     });
     widget.onToggle(isFirst);
   }
 
   List<int> getChips() {
-    if (isFirstButtonActive == true) {
-      return [4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40];
-    } else if (isFirstButtonActive == false) {
-      return [2, 4, 6, 8, 10, 12];
-    }
-    return [];
+    return isFirstButtonActive == true
+        ? [4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40]
+        : isFirstButtonActive == false
+            ? [2, 4, 6, 8, 10, 12]
+            : [];
   }
 
   @override
   Widget build(BuildContext context) {
-    List<int> chips = getChips();
+    final chips = getChips();
 
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
+        // Toggle Buttons
         Padding(
-          padding: const EdgeInsets.all(8.0),
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              GestureDetector(
-                onTap: () => _toggleButtons(true),
-                child: Container(
-                  height: 6.h,
-                  width: 40.w,
-                  decoration: BoxDecoration(
-                    color: isFirstButtonActive == true ? Colors.black : Colors.white,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.black, width: 2),
-                  ),
-                  child: Center(
-                    child: Text(
-                      widget.firstButtonText,
-                      style: TextStyle(
-                        color: isFirstButtonActive == true ? Colors.white : Colors.black,
-                        fontSize: 12.sp,
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => _toggle(true),
+                  child: AnimatedContainer(
+                    duration: Duration(milliseconds: 200),
+                    padding: EdgeInsets.symmetric(vertical: 10),
+                    decoration: BoxDecoration(
+                      color: isFirstButtonActive == true ? Colors.black : Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.black),
+                    ),
+                    child: Center(
+                      child: Text(
+                        widget.firstButtonText,
+                        style: TextStyle(
+                          color: isFirstButtonActive == true ? Colors.white : Colors.black,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 12.sp,
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
-              SizedBox(width: 4.w),
-
-              GestureDetector(
-                onTap: () => _toggleButtons(false),
-                child: Container(
-                  height: 6.h,
-                  width: 40.w,
-                  decoration: BoxDecoration(
-                    color: isFirstButtonActive == false ? Colors.black : Colors.white,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.black, width: 2),
-                  ),
-                  child: Center(
-                    child: Text(
-                      widget.secondButtonText,
-                      style: TextStyle(
-                        color: isFirstButtonActive == false ? Colors.white : Colors.black,
-                        fontSize: 12.sp,
+              SizedBox(width: 16),
+              
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => _toggle(false),
+                  child: AnimatedContainer(
+                    duration: Duration(milliseconds: 200),
+                    padding: EdgeInsets.symmetric(vertical: 10),
+                    decoration: BoxDecoration(
+                      color: isFirstButtonActive == false ? Colors.black : Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.black),
+                    ),
+                    child: Center(
+                      child: Text(
+                        widget.secondButtonText,
+                        style: TextStyle(
+                          color: isFirstButtonActive == false ? Colors.white : Colors.black,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 12.sp,
+                        ),
                       ),
                     ),
                   ),
@@ -104,40 +108,43 @@ class _ToggleButtonsWidgetState extends State<ToggleButtonsWidget> {
             ],
           ),
         ),
+
+        // Chips
         if (isFirstButtonActive != null)
           Padding(
-            padding: const EdgeInsets.all(8.0),
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: Wrap(
-              spacing: 8.0,
-              runSpacing: 4.0,
+              spacing: 12,
+              runSpacing: 12,
               children: chips.map((chipValue) {
+                final isSelected = chipValue == selectedChipValue;
                 return GestureDetector(
                   onTap: () {
                     setState(() {
                       selectedChipValue = chipValue;
-                      selectedAction = null; // Reset the selected action when a new chip is selected
                     });
                     widget.onChipSelected(chipValue, isFirstButtonActive!);
                   },
                   child: Chip(
-                    label: Text(chipValue.toString(),style: GoogleFonts.poppins(color: Colors.white),),
-                    backgroundColor: chipValue == selectedChipValue ? Colors.black : Colors.grey,
+                    label: Text(
+                      chipValue.toString(),
+                      style: GoogleFonts.poppins(
+                        color: isSelected ? Colors.white : Colors.black,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    backgroundColor: isSelected ? Colors.black : Colors.grey.shade300,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   ),
                 );
               }).toList(),
-            ),
-          ),
-        if (selectedChipValue != null)
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-
-              ],
             ),
           ),
       ],
     );
   }
 }
+
