@@ -111,7 +111,7 @@ Future<void> _updateProduct() async {
   });
 
   final url = Uri.parse(
-      'https://retilda-fintech.onrender.com/Api/products/update/${widget.product.id}');
+      'https://retilda-fintech-3jy7.onrender.com/Api/products/update/${widget.product.id}');
   final headers = {
     'Authorization': 'Bearer $token',
   };

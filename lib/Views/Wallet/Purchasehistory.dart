@@ -27,7 +27,7 @@ class _PurchaseHistoryState extends ConsumerState<PurchaseHistory> {
   bool _isLoading = true;
 
   Future<PurchaseResponse> fetchPurchases(String userId, String token) async {
-    final url = 'https://retilda-fintech.onrender.com/Api/getAllPendingPurchases';
+    final url = 'https://retilda-fintech-3jy7.onrender.com/Api/getAllPendingPurchases';
     final response = await http.get(
       Uri.parse(url),
       headers: {

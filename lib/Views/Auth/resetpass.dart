@@ -25,7 +25,7 @@ class _ResetPasswordState extends State<ResetPassword> {
     setState(() => _isRequesting = true);
 
     final url =
-        Uri.parse("https://retilda-fintech.onrender.com/Api/forgotPassword");
+        Uri.parse("https://retilda-fintech-3jy7.onrender.com/Api/forgotPassword");
     final response = await http.post(
       url,
       headers: {'Content-Type': 'application/json'},
@@ -73,7 +73,7 @@ class _ResetPasswordState extends State<ResetPassword> {
     setState(() => _isUpdating = true);
 
     final url =
-        Uri.parse("https://retilda-fintech.onrender.com/Api/resetPassword");
+        Uri.parse("https://retilda-fintech-3jy7.onrender.com/Api/resetPassword");
     final response = await http.post(
       url,
       headers: {'Content-Type': 'application/json'},

@@ -45,7 +45,7 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
       print("Payload >> $requestBodyJson");
       http.Response response = await http.post(
         Uri.parse(
-            'https://retilda-fintech.onrender.com/Api/installmentRepaymentUsingWallet'),
+            'https://retilda-fintech-3jy7.onrender.com/Api/installmentRepaymentUsingWallet'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token', // Use the provided token
@@ -110,7 +110,7 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
   Future<void> installmentRepaymentUsingCard(
       BuildContext context, String productId) async {
     const String url =
-        'https://retilda-fintech.onrender.com/Api/installmentRepaymentUsingCard';
+        'https://retilda-fintech-3jy7.onrender.com/Api/installmentRepaymentUsingCard';
 
     final Map<String, String> requestBody = {
       'productId': productId,

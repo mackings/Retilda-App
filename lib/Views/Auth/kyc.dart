@@ -44,7 +44,7 @@ class _KYCState extends ConsumerState<KYC> {
     }
   }
 
-  final String kycApiUrl = 'https://retilda-fintech.onrender.com/Api/kyc';
+  final String kycApiUrl = 'https://retilda-fintech-3jy7.onrender.com/Api/kyc';
 
   Future<void> updateKyc() async {
     final url = Uri.parse(kycApiUrl);

@@ -58,7 +58,7 @@ class _TransactionsState extends ConsumerState<Transactions> {
 
   Future<void> fetchTransactions() async {
     final url =
-        Uri.parse('https://retilda-fintech.onrender.com/Api/viewTransactionHistory');
+        Uri.parse('https://retilda-fintech-3jy7.onrender.com/Api/viewTransactionHistory');
 
     final response = await http.get(url, headers: {
       'Content-Type': 'application/json',
@@ -81,7 +81,7 @@ class _TransactionsState extends ConsumerState<Transactions> {
   }
 
   Future<void> fetchUserBalance() async {
-    final url = Uri.parse('https://retilda-fintech.onrender.com/Api/balance');
+    final url = Uri.parse('https://retilda-fintech-3jy7.onrender.com/Api/balance');
 
     try {
       final response = await http.get(url, headers: {

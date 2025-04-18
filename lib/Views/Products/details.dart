@@ -43,7 +43,7 @@ class _ProductDetailsState extends State<ProductDetails> {
   // API Call Function
   Future<void> _calculateDeliveryFee(BuildContext context) async {
     final url =
-        "https://retilda-fintech.onrender.com/Api/deliveryFeeCalculation/$productId";
+        "https://retilda-fintech-3jy7.onrender.com/Api/deliveryFeeCalculation/$productId";
     final data = {
       "deliveryAddress": _addressController.text,
       "phoneNumber": _phoneController.text,
@@ -329,7 +329,7 @@ class _ProductDetailsState extends State<ProductDetails> {
 
   Future<void> initializePayment(BuildContext context) async {
     const String apiUrl =
-        "https://retilda-fintech.onrender.com/Api/buyproductonsales/onetimepaymentusingcard";
+        "https://retilda-fintech-3jy7.onrender.com/Api/buyproductonsales/onetimepaymentusingcard";
 
     try {
       // Make the API call
@@ -449,7 +449,7 @@ class _ProductDetailsState extends State<ProductDetails> {
 
   Future<void> getWalletBalance(String walletAccountNumber) async {
     final Uri url =
-        Uri.parse('https://retilda-fintech.onrender.com/Api/balance');
+        Uri.parse('https://retilda-fintech-3jy7.onrender.com/Api/balance');
 
     Map<String, String> requestBody = {
       'walletAccountNumber': wallet,
@@ -568,7 +568,7 @@ class _ProductDetailsState extends State<ProductDetails> {
       print("Payload >> $requestBodyJson");
       final response = await http.post(
         Uri.parse(
-            'https://retilda-fintech.onrender.com/Api/buyProductOnInstallment'),
+            'https://retilda-fintech-3jy7.onrender.com/Api/buyProductOnInstallment'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -800,11 +800,13 @@ Padding(
   child: Row(
     mainAxisAlignment: MainAxisAlignment.spaceBetween,
     children: [
+      
       CustomText(
         "N${NumberFormat('#,##0').format(widget.product.price)}",
         fontWeight: FontWeight.w700,
         fontSize: 12.sp,
       ),
+
       loading
           ? const CircularProgressIndicator(strokeWidth: 2)
           : GestureDetector(

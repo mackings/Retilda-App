@@ -48,7 +48,7 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
   Future<List<Product>> fetchCategoryProducts(
       String category, String token) async {
     final String url =
-        'https://retilda-fintech.onrender.com/Api/products/category/$category';
+        'https://retilda-fintech-3jy7.onrender.com/Api/products/category/$category';
 
     try {
       final response = await http.get(

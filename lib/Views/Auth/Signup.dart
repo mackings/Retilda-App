@@ -99,7 +99,7 @@ class _SignupState extends State<Signup> {
       _isLoading = true;
     });
 
-    final url = 'https://retilda-fintech.onrender.com/Api/signUp';
+    final url = 'https://retilda-fintech-3jy7.onrender.com/Api/signUp';
 
     final payload = {
       "fullName": _fullname.text.trim(),

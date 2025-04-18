@@ -59,7 +59,7 @@ class _DeliveryDashboardState extends State<DeliveryDashboard> {
 
     try {
       final response = await http.put(
-        Uri.parse("https://retilda-fintech.onrender.com/Api/updatedPurchasesForDeliveryCompleted/$id"),
+        Uri.parse("https://retilda-fintech-3jy7.onrender.com/Api/updatedPurchasesForDeliveryCompleted/$id"),
         headers: {
           "Content-Type": "application/json",
           "Authorization": "Bearer $token", // Include the token in the request header
@@ -101,6 +101,7 @@ class _DeliveryDashboardState extends State<DeliveryDashboard> {
       } else {
         final payments = snapshot.data!.data;
 
+
         // Sort payments by deliveryStatus: 'processing' first, 'completed' later
         final sortedPayments = payments
             ..sort((a, b) {
@@ -112,6 +113,7 @@ class _DeliveryDashboardState extends State<DeliveryDashboard> {
                 return 0; // If both are the same status, maintain the order
               }
             });
+
 
         return ListView.builder(
           itemCount: sortedPayments.length,
@@ -173,8 +175,11 @@ Padding(
               ),
             ],
           ),
+          
           SizedBox(height: 8),
+
           Divider(),
+
           Row(
             children: [
               Icon(Icons.shopping_cart, color: Colors.purple),
