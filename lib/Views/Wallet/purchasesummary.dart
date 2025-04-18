@@ -269,6 +269,104 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
     );
   }
 
+
+
+
+bool _isLoading = false;
+
+Future<void> installmentRepaymentUsingWalletByPercentage(
+      BuildContext context, String productId, int topUpPercentage) async {
+    const String url =
+        'https://retilda-fintech-3jy7.onrender.com/Api/installmentRepaymentUsingWalletByPercentage';
+
+    final Map<String, dynamic> requestBody = {
+      'productId': productId,
+      'topUpPercentage': topUpPercentage,
+    };
+
+    try {
+      final response = await http.post(
+        Uri.parse(url),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $Token', // Make sure Token is not null
+        },
+        body: jsonEncode(requestBody),
+      );
+
+      print('Request Body: $requestBody');
+      print('Response: ${response.body}');
+
+      final responseData = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        if (responseData['success'] == true) {
+          showDialog(
+            context: context,
+            builder: (_) => AlertDialog(
+              title: const Text("Top-up Successful"),
+              content: Text(responseData['message'] ?? 'Repayment was successful.'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text("OK"),
+                ),
+              ],
+            ),
+          );
+        } else {
+          showDialog(
+            context: context,
+            builder: (_) => AlertDialog(
+              title: const Text("Failed"),
+              content: Text(responseData['message'] ?? 'An error occurred.'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text("Close"),
+                ),
+              ],
+            ),
+          );
+        }
+      } else {
+
+        showDialog(
+          context: context,
+          builder: (_) => AlertDialog(
+            title: const Text("Payment Failed"),
+            content: Text("Insufficient Wallet Balance"),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text("Close"),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (error) {
+      print("Exception: $error");
+      showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text("Error"),
+          content: Text("An exception occurred: $error"),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Close"),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
+
+
+
+
   @override
   void initState() {
     Timer(Duration(seconds: 1), () {
@@ -306,6 +404,35 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
       builder: (context, orientation, deviceType) {
         return Scaffold(
           backgroundColor: Colors.white,
+          bottomNavigationBar: BottomAppBar(
+            color: Colors.orange,
+            height: 50,
+            child: InkWell(
+              onTap: () async {
+                if (_isLoading) return;
+                setState(() => _isLoading = true);
+
+                await installmentRepaymentUsingWalletByPercentage(
+                  context,
+                  productId!,
+                  60,
+                );
+
+                setState(() => _isLoading = false);
+              },
+              child: Center(
+                child: _isLoading
+                    ? const CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      )
+                    : const CustomText(
+                        "Delivery Top-up",
+                        color: Colors.white,
+                      ),
+              ),
+            ),
+          ),
           appBar: AppBar(
             backgroundColor: Colors.white,
             title: GestureDetector(
@@ -314,7 +441,7 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
                 print(widget.purchase.product!.toJson());
               },
               child: CustomText(
-                "Purchase summary",
+                "Payment summary",
                 fontSize: 15.sp,
                 fontWeight: FontWeight.w500,
               ),
