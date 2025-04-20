@@ -269,19 +269,17 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
     );
   }
 
+  bool _isLoading = false;
+  dynamic topupAmount;
 
-
-
-bool _isLoading = false;
-
-Future<void> installmentRepaymentUsingWalletByPercentage(
+  Future<void> installmentRepaymentUsingWalletByPercentage(
       BuildContext context, String productId, int topUpPercentage) async {
     const String url =
         'https://retilda-fintech-3jy7.onrender.com/Api/installmentRepaymentUsingWalletByPercentage';
 
     final Map<String, dynamic> requestBody = {
       'productId': productId,
-      'topUpPercentage': topUpPercentage,
+      'targetAmount': topupAmount,
     };
 
     try {
@@ -289,7 +287,7 @@ Future<void> installmentRepaymentUsingWalletByPercentage(
         Uri.parse(url),
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer $Token', // Make sure Token is not null
+          'Authorization': 'Bearer $Token', // Ensure Token is valid
         },
         body: jsonEncode(requestBody),
       );
@@ -299,43 +297,31 @@ Future<void> installmentRepaymentUsingWalletByPercentage(
 
       final responseData = jsonDecode(response.body);
 
-      if (response.statusCode == 200) {
-        if (responseData['success'] == true) {
-          showDialog(
-            context: context,
-            builder: (_) => AlertDialog(
-              title: const Text("Top-up Successful"),
-              content: Text(responseData['message'] ?? 'Repayment was successful.'),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text("OK"),
-                ),
-              ],
-            ),
-          );
-        } else {
-          showDialog(
-            context: context,
-            builder: (_) => AlertDialog(
-              title: const Text("Failed"),
-              content: Text(responseData['message'] ?? 'An error occurred.'),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text("Close"),
-                ),
-              ],
-            ),
-          );
-        }
-      } else {
-
+      if (response.statusCode == 200 && responseData['success'] == true) {
         showDialog(
           context: context,
           builder: (_) => AlertDialog(
-            title: const Text("Payment Failed"),
-            content: Text("Insufficient Wallet Balance"),
+            title: const Text("Top-up Successful"),
+            content: const Text("You can now request for Delivery"),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  // Delay the dialog pop to avoid animation issues
+                  Future.delayed(Duration(milliseconds: 100), () {
+                    Navigator.pop(context); // Close the dialog here
+                  });
+                },
+                child: const Text("OK"),
+              ),
+            ],
+          ),
+        );
+      } else {
+        await showDialog(
+          context: context,
+          builder: (_) => AlertDialog(
+            title: const Text("Failed"),
+            content: Text(responseData['message'] ?? 'An error occurred.'),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
@@ -363,9 +349,70 @@ Future<void> installmentRepaymentUsingWalletByPercentage(
     }
   }
 
+  void processTopUp() async {
+    final total = widget.purchase.totalAmountToPay!;
+    final paid = widget.purchase.totalAmountPaid!;
 
+    // Calculate the amount to top up (60% of total minus paid)
+    final amountToTopUp = (total * 0.6) - paid;
 
+    // Validate calculation
+    if (total <= 0) {
+      await showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text("Error"),
+          content: const Text("Total amount is invalid."),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Close"),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
 
+    // Calculate percentage (ensure it's an integer between 0-100)
+    final percentageToTopUp =
+        ((amountToTopUp / total) * 100).round().clamp(0, 100);
+
+    // Debug logs
+    print('Amount to top up: $amountToTopUp');
+    print('Percentage to top up: $percentageToTopUp%');
+
+    // No top-up needed
+    if (percentageToTopUp <= 0) {
+      await showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text("No Top-up Needed"),
+          content: const Text("You've already paid enough for delivery."),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Okay"),
+            ),
+          ],
+        ),
+      );
+      setState(() => _isLoading = false);
+      return;
+    }
+
+    // Send to API
+    setState(() => _isLoading = true);
+    try {
+      await installmentRepaymentUsingWalletByPercentage(
+        context,
+        widget.purchase.product!.id!,
+        percentageToTopUp, // Integer (e.g., 30 for 30%)
+      );
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
 
   @override
   void initState() {
@@ -409,16 +456,78 @@ Future<void> installmentRepaymentUsingWalletByPercentage(
             height: 50,
             child: InkWell(
               onTap: () async {
-                if (_isLoading) return;
+                if (_isLoading) return; // Prevent double taps
                 setState(() => _isLoading = true);
 
-                await installmentRepaymentUsingWalletByPercentage(
-                  context,
-                  productId!,
-                  60,
-                );
+                final total = widget.purchase.totalAmountToPay!;
+                final paid = widget.purchase.totalAmountPaid!;
 
-                setState(() => _isLoading = false);
+                // Step 1: Calculate 60% of the total (minimum required for delivery)
+                final sixtyPercent = total * 0.6;
+
+                // Step 2: Compute remaining amount needed to reach 60%
+                final amountToTopUp = sixtyPercent - paid;
+
+                // Case 1: User has already paid enough (>= 60%)
+                if (amountToTopUp <= 0) {
+                  await showDialog(
+                    context: context,
+                    builder: (_) => AlertDialog(
+                      title: const Text("No Top-up Needed"),
+                      content: const Text(
+                          "You've already paid 60% or more. Delivery can be requested."),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text("OK"),
+                        ),
+                      ],
+                    ),
+                  );
+                  setState(() => _isLoading = false);
+                  return;
+                }
+
+                // Step 3: Convert remaining amount into a percentage (e.g., 30%)
+                final topUpPercentage = ((amountToTopUp / total) * 100).round();
+
+                // Debug logs (remove in production)
+                print('Total amount: $total');
+                print('Amount paid: $paid');
+                print('60% threshold: $sixtyPercent');
+                print('Amount to top up: $amountToTopUp');
+                print('Percentage to debit: $topUpPercentage%');
+
+                setState(() {
+                  topupAmount = amountToTopUp.toInt();
+                });
+
+                // Step 4: Debit the user via API
+                try {
+                  await installmentRepaymentUsingWalletByPercentage(
+                    context,
+                    widget.purchase.product!.id!,
+                   topupAmount, // e.g., 30 (for 30%)
+                  );
+                } catch (e) {
+                  // Handle API errors gracefully
+                  await showDialog(
+                    context: context,
+                    builder: (_) => AlertDialog(
+                      title: const Text("Error"),
+                      content:
+                          Text("Failed to process top-up: ${e.toString()}"),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text("Retry"),
+                        ),
+                      ],
+                    ),
+                  );
+                } finally {
+                  setState(() => _isLoading = false);
+                }
               },
               child: Center(
                 child: _isLoading
@@ -427,7 +536,7 @@ Future<void> installmentRepaymentUsingWalletByPercentage(
                         strokeWidth: 2,
                       )
                     : const CustomText(
-                        "Delivery Top-up",
+                        "Top-up for Delivery",
                         color: Colors.white,
                       ),
               ),

@@ -47,6 +47,21 @@ class _PurchaseHistoryState extends ConsumerState<PurchaseHistory> {
     }
   }
 
+
+Future<void> _refreshPurchases() async {
+  if (_token != null && _userId != null) {
+    try {
+      final apiResponse = await fetchPurchases(_userId!, _token!);
+      setState(() {
+        _purchases = apiResponse.data!.purchasesData!;
+      });
+    } catch (error) {
+      print('Error refreshing purchases: $error');
+    } 
+  }
+}
+
+
   Future<void> _loadUserData() async {
     SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
     String? userDataString = sharedPreferences.getString('userData');
@@ -71,13 +86,19 @@ class _PurchaseHistoryState extends ConsumerState<PurchaseHistory> {
         });
       });
 
+
       print("User >>> $userData");
+
     } else {
       setState(() {
         _isLoading = false;
       });
     }
+
   }
+
+
+  
 
   @override
   void initState() {
@@ -100,51 +121,62 @@ class _PurchaseHistoryState extends ConsumerState<PurchaseHistory> {
               fontWeight: FontWeight.w500,
             ),
           ),
-          body: _isLoading
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.only(left: 40, right: 40),
-                    child: LinearProgressIndicator(),
-                  ),
-                )
-              : _purchases.isEmpty
-                  ? Center(
+body: _isLoading
+    ? Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 40),
+          child: LinearProgressIndicator(),
+        ),
+      )
+    : RefreshIndicator(
+        onRefresh: _refreshPurchases,
+        child: _purchases.isEmpty
+            ? ListView( // Important: Use ListView so RefreshIndicator works even with empty list
+                children: [
+                  Center(
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 100),
                       child: CustomText(
                         "You have no purchases.",
                         fontSize: 14.sp,
                         fontWeight: FontWeight.w400,
                       ),
-                    )
-                  : ListView.builder(
-                      itemCount: _purchases.length,
-                      itemBuilder: (context, index) {
-                        final purchase = _purchases[index];
-                        final DateTime paymentDate = purchase
-                                .payments!.isNotEmpty
-                            ? DateTime.parse(
-                                purchase.payments!.first.paymentDate.toString())
-                            : DateTime.now();
-
-                        return GestureDetector(
-                          onTap: () {
-                            print(purchase.id);
-                            Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (context) =>
-                                        Purchasesummary(purchase: purchase)));
-                          },
-                          child: PaymentSummaryCard(
-                            date: paymentDate,
-                            imageUrl: purchase.product!.images![0],
-                            title: purchase.product!.name.toString(),
-                            subtitle: purchase.paymentPlan == "once"
-                                ? "One time payment of N${NumberFormat('#,##0').format(purchase.payments!.first.amountPaid)}"
-                                : "N${NumberFormat('#,##0').format(purchase.totalAmountPaid)} out of N${NumberFormat('#,##0').format(purchase.totalAmountToPay)}",
-                          ),
-                        );
-                      },
                     ),
+                  ),
+                ],
+              )
+            : ListView.builder(
+                itemCount: _purchases.length,
+                itemBuilder: (context, index) {
+                  final purchase = _purchases[index];
+                  final DateTime paymentDate =
+                      purchase.payments!.isNotEmpty
+                          ? DateTime.parse(
+                              purchase.payments!.first.paymentDate.toString())
+                          : DateTime.now();
+
+                  return GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              Purchasesummary(purchase: purchase),
+                        ),
+                      );
+                    },
+                    child: PaymentSummaryCard(
+                      date: paymentDate,
+                      imageUrl: purchase.product!.images![0],
+                      title: purchase.product!.name.toString(),
+                      subtitle: purchase.paymentPlan == "once"
+                          ? "One time payment of N${NumberFormat('#,##0').format(purchase.payments!.first.amountPaid)}"
+                          : "N${NumberFormat('#,##0').format(purchase.totalAmountPaid)} out of N${NumberFormat('#,##0').format(purchase.totalAmountToPay)}",
+                    ),
+                  );
+                },
+              ),
+      ),
         );
       },
     );

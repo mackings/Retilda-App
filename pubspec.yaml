@@ -39,7 +39,7 @@ dependencies:
   shared_preferences: ^2.2.3
   flutter_riverpod: ^2.4.10
   riverpod: ^2.5.0
-  google_fonts: ^5.0.0
+  google_fonts: ^6.2.1
   sizer: ^2.0.15
   pull_to_refresh: ^2.0.0
   dots_indicator: ^3.0.0

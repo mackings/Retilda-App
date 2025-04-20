@@ -1,12 +1,12 @@
 class Content {
   final String senderName;
-  final int amount;
+  final num amount;
   final String description;
   final String transactionType;
   final String status;
-  final String transactionDate;
+  final DateTime transactionDate;
   final String? paymentMethod; // optional for deposits
-  final String? paymentPlan; // optional for deposits
+  final String? paymentPlan;   // optional for deposits
 
   Content({
     required this.senderName,
@@ -26,9 +26,18 @@ class Content {
       description: json['description'] ?? 'No description',
       transactionType: json['transactionType'] ?? 'Unknown Type',
       status: json['status'] ?? 'Unknown Status',
-      transactionDate: json['createdAt'] ?? json['paymentDate'] ?? 'Unknown Date',
+      transactionDate: _parseDate(json['paymentDate'] ?? json['createdAt']),
       paymentMethod: json['paymentMethod'],
       paymentPlan: json['paymentPlan'],
     );
+  }
+
+  static DateTime _parseDate(String? dateStr) {
+    if (dateStr == null) return DateTime.now();
+    try {
+      return DateTime.parse(dateStr);
+    } catch (_) {
+      return DateTime.now(); // fallback
+    }
   }
 }

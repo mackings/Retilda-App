@@ -10,8 +10,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sizer/sizer.dart';
 import 'package:http/http.dart' as http;
 
-
-
 class Transactions extends ConsumerStatefulWidget {
   const Transactions({super.key});
 
@@ -21,7 +19,7 @@ class Transactions extends ConsumerStatefulWidget {
 
 class _TransactionsState extends ConsumerState<Transactions> {
   String? _token;
-  int? WalletBalance;
+  num? WalletBalance;
   String? AccountNumber;
   String? AccountName;
   List<Content> _transactions = [];
@@ -40,7 +38,7 @@ class _TransactionsState extends ConsumerState<Transactions> {
 
       String? token = userData['data']?['token'];
       String? account = userData['data']?['user']?['wallet']?['accountNumber'];
-      int? balance = userData['data']?['user']?['balance'];
+      num balance = userData['data']?['user']?['balance'];
       String? name = userData['data']?['user']?['wallet']?['accountName'];
 
       setState(() {
@@ -50,15 +48,14 @@ class _TransactionsState extends ConsumerState<Transactions> {
         WalletBalance = balance;
       });
 
-
       await fetchTransactions();
-      await fetchUserBalance(); 
+      await fetchUserBalance();
     }
   }
 
   Future<void> fetchTransactions() async {
-    final url =
-        Uri.parse('https://retilda-fintech-3jy7.onrender.com/Api/viewTransactionHistory');
+    final url = Uri.parse(
+        'https://retilda-fintech-3jy7.onrender.com/Api/viewTransactionHistory');
 
     final response = await http.get(url, headers: {
       'Content-Type': 'application/json',
@@ -68,6 +65,7 @@ class _TransactionsState extends ConsumerState<Transactions> {
     if (response.statusCode == 200) {
       final responseData = jsonDecode(response.body);
       final List<dynamic> transactionsData = responseData['transactions'];
+      print(transactionsData);
 
       setState(() {
         _transactions = transactionsData
@@ -81,14 +79,15 @@ class _TransactionsState extends ConsumerState<Transactions> {
   }
 
   Future<void> fetchUserBalance() async {
-    final url = Uri.parse('https://retilda-fintech-3jy7.onrender.com/Api/balance');
+    final url =
+        Uri.parse('https://retilda-fintech-3jy7.onrender.com/Api/balance');
 
     try {
       final response = await http.get(url, headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $_token',
       });
- 
+
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
 
@@ -379,7 +378,7 @@ class _TransactionsState extends ConsumerState<Transactions> {
                         final transaction =
                             _transactions[_transactions.length - 1 - index];
                         final transactionDateTime =
-                            DateTime.parse(transaction.transactionDate)
+                            DateTime.parse(transaction.transactionDate.toString())
                                 .add(Duration(hours: 1));
                         final formattedDate = DateFormat('MMMM d, yyyy, h:mma')
                             .format(transactionDateTime);
@@ -391,14 +390,14 @@ class _TransactionsState extends ConsumerState<Transactions> {
                         ).format(transaction.amount);
 
 // Determine the title based on transaction type
-final titleText = transaction.transactionType == "purchase"
-    ? (transaction.status == "settlement"
-        ? "Product Settlement"
-        : "Product Purchase")
-    : (transaction.senderName == "Unknown Sender"
-        ? "Service charge"
-        : transaction.senderName);
-
+                        final titleText =
+                            transaction.transactionType == "purchase"
+                                ? (transaction.status == "settlement"
+                                    ? "Product Settlement"
+                                    : "Product Purchase")
+                                : (transaction.senderName == "Unknown Sender"
+                                    ? "Service charge"
+                                    : transaction.senderName);
 
                         return Padding(
                           padding: const EdgeInsets.all(15.0),
