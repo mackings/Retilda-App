@@ -57,7 +57,7 @@ Future<void> _refreshPurchases() async {
       });
     } catch (error) {
       print('Error refreshing purchases: $error');
-    } 
+    }  
   }
 }
 

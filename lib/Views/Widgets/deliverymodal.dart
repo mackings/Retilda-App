@@ -12,13 +12,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 
 
-
-
-
-
-
-
-
 class DeliveryModal extends StatefulWidget {
   final String purchaseId;
 
@@ -105,7 +98,7 @@ Future<void> _fetchQuotation() async {
   setState(() => isLoading = true);
 
   final url =
-      'https://retilda-fintech.vercel.app/Api/requestForGoodsDeliveryCalculation/${widget.purchaseId}';
+      'https://retilda-fintech-3jy7.onrender.com/Api/requestForGoodsDeliveryCalculation/${widget.purchaseId}';
 
   final body = {
     "deliveryAddress": _addressController.text,

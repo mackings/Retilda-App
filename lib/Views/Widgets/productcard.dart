@@ -70,7 +70,7 @@ class ProductCard2 extends StatelessWidget {
                 style: GoogleFonts.poppins(
                   fontSize: 15,
                   fontWeight: FontWeight.bold,
-                  color: Colors.green.shade700,
+                  color: Colors.orange,
                 ),
               ),
             ],
