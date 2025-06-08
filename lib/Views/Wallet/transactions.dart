@@ -236,8 +236,8 @@ class _TransactionsState extends ConsumerState<Transactions> {
         automaticallyImplyLeading: false,
         title: CustomText(
           "Transactions",
-          fontSize: 15.sp,
-          fontWeight: FontWeight.w500,
+          fontSize: 17.sp,
+          fontWeight: FontWeight.w700,
         ),
         actions: [
           GestureDetector(
@@ -252,7 +252,7 @@ class _TransactionsState extends ConsumerState<Transactions> {
           Padding(
             padding: const EdgeInsets.only(left: 30, right: 30),
             child: Container(
-              height: 20.h,
+              height: 18.h,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(8),
                 image: DecorationImage(
@@ -272,11 +272,11 @@ class _TransactionsState extends ConsumerState<Transactions> {
                         CustomText(
                           "Available Balance",
                           color: Colors.white,
-                          fontSize: 8.sp,
+                          fontSize: 15.sp,
                         ),
                         CustomText(
                           'N${formatBalance(_userBalance)}',
-                          fontSize: 15.sp,
+                          fontSize: 17.sp,
                           fontWeight: FontWeight.w500,
                           color: Colors.white,
                         ),
@@ -286,12 +286,12 @@ class _TransactionsState extends ConsumerState<Transactions> {
                         CustomText(
                           "$AccountNumber",
                           color: Colors.white,
-                          fontSize: 10.sp,
+                          fontSize: 16.sp,
                         ),
                         CustomText(
                           "Wema Bank",
                           color: Colors.white,
-                          fontSize: 8.sp,
+                          fontSize: 12.sp,
                         ),
                       ],
                     ),
@@ -319,7 +319,7 @@ class _TransactionsState extends ConsumerState<Transactions> {
                                     CustomText(
                                       "Top Up",
                                       color: Colors.white,
-                                      fontSize: 8.sp,
+                                      fontSize: 14.sp,
                                     ),
                                     Icon(
                                       Icons.add,
@@ -345,7 +345,7 @@ class _TransactionsState extends ConsumerState<Transactions> {
               children: [
                 CustomText(
                   "Transaction History",
-                  fontSize: 13.sp,
+                  fontSize: 15.sp,
                   fontWeight: FontWeight.w500,
                 ),
               ],
@@ -421,7 +421,7 @@ class _TransactionsState extends ConsumerState<Transactions> {
                                   CustomText(formattedDate),
                                   CustomText(
                                     transaction.description, // Description
-                                    fontSize: 8.sp,
+                                    fontSize: 13.sp,
                                   ),
                                 ],
                               ),

@@ -117,8 +117,8 @@ Future<void> _refreshPurchases() async {
             automaticallyImplyLeading: false,
             title: CustomText(
               "Purchase history",
-              fontSize: 15.sp,
-              fontWeight: FontWeight.w500,
+              fontSize: 17.sp,
+              fontWeight: FontWeight.w700,
             ),
           ),
 body: _isLoading
@@ -135,10 +135,10 @@ body: _isLoading
                 children: [
                   Center(
                     child: Padding(
-                      padding: const EdgeInsets.only(top: 100),
+                      padding: const EdgeInsets.only(top: 300),
                       child: CustomText(
                         "You have no purchases.",
-                        fontSize: 14.sp,
+                        fontSize: 18.sp,
                         fontWeight: FontWeight.w400,
                       ),
                     ),

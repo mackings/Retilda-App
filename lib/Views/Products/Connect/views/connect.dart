@@ -3,15 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
-
 import 'package:webview_flutter/webview_flutter.dart';
-
-import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
-import 'package:webview_flutter/webview_flutter.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class ConnectAccount extends StatefulWidget {
   const ConnectAccount({super.key});
@@ -23,7 +15,8 @@ class ConnectAccount extends StatefulWidget {
 class _ConnectAccountState extends State<ConnectAccount> {
   String? token;
 
-  final TextEditingController _accountNumberController = TextEditingController();
+  final TextEditingController _accountNumberController =
+      TextEditingController();
   final TextEditingController _stateController = TextEditingController();
   final TextEditingController _cityController = TextEditingController();
   final TextEditingController _streetController = TextEditingController();
@@ -150,7 +143,8 @@ class _ConnectAccountState extends State<ConnectAccount> {
       _isLoading = true;
     });
 
-    final url = Uri.parse('https://retilda-fintech-3jy7.onrender.com/Api/direct-debit');
+    final url =
+        Uri.parse('https://retilda-fintech-3jy7.onrender.com/Api/direct-debit');
     final response = await http.post(
       url,
       headers: {
@@ -191,6 +185,7 @@ class _ConnectAccountState extends State<ConnectAccount> {
         );
       }
     } else {
+      print(response.body);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('An error occurred. Please try again.')),
       );
@@ -292,19 +287,34 @@ class _ConnectAccountState extends State<ConnectAccount> {
 }
 
 // WebView Page to open the redirect URL
-class WebViewPage extends StatelessWidget {
+class WebViewPage extends StatefulWidget {
   final String url;
 
   WebViewPage({required this.url});
 
   @override
+  State<WebViewPage> createState() => _WebViewPageState();
+}
+
+class _WebViewPageState extends State<WebViewPage> {
+  late final WebViewController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _controller = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..loadRequest(Uri.parse(widget.url));
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text('Bank Authorization')),
-      body: WebView(
-        initialUrl: url,
-        javascriptMode: JavascriptMode.unrestricted,
-      ),
+      body: WebViewWidget(controller: _controller),
     );
   }
 }
+
+

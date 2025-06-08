@@ -78,8 +78,8 @@ class _CartPageState extends State<CartPage> {
       automaticallyImplyLeading: false,
       title: CustomText(
         'Cart',
-        fontSize: 15.sp,
-        fontWeight: FontWeight.w500,
+        fontSize: 17.sp,
+        fontWeight: FontWeight.w700,
       ),
     ),
     body: cartItems.isEmpty
@@ -90,7 +90,7 @@ class _CartPageState extends State<CartPage> {
                 Icon(Icons.shopping_basket,size: 15.h,),
                 CustomText(
                   'Your cart is empty.',
-                  fontSize: 13.sp,
+                  fontSize: 16.sp,
                   fontWeight: FontWeight.w500
                 ),
               ],
@@ -138,12 +138,12 @@ class _CartPageState extends State<CartPage> {
                                 fontWeight: FontWeight.w600,
                               ),
                               SizedBox(height: 8.0),
-                              CustomText(cartItem.description),
+                            //  CustomText(cartItem.description),
                               SizedBox(height: 8.0),
                               CustomText(
                                 'N${NumberFormat('#,##0').format(cartItem.price)}',
                                 fontWeight: FontWeight.w600,
-                                fontSize: 12.sp,
+                                fontSize: 16.sp,
                               ),
                             ],
                           ),

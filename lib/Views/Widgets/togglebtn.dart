@@ -72,7 +72,7 @@ class _ToggleButtonsWidgetState extends State<ToggleButtonsWidget> {
                         style: TextStyle(
                           color: isFirstButtonActive == true ? Colors.white : Colors.black,
                           fontWeight: FontWeight.w600,
-                          fontSize: 12.sp,
+                          fontSize: 15.sp,
                         ),
                       ),
                     ),
@@ -98,7 +98,7 @@ class _ToggleButtonsWidgetState extends State<ToggleButtonsWidget> {
                         style: TextStyle(
                           color: isFirstButtonActive == false ? Colors.white : Colors.black,
                           fontWeight: FontWeight.w600,
-                          fontSize: 12.sp,
+                          fontSize: 15.sp,
                         ),
                       ),
                     ),

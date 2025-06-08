@@ -133,7 +133,7 @@ class _SigninState extends State<Signin> {
                 SizedBox(height: 4.h),
                 CustomText(
                   'Sign in',
-                  fontSize: 15.sp,
+                  fontSize: 17.sp,
                   fontWeight: FontWeight.bold,
                   color: Colors.black,
                 ),

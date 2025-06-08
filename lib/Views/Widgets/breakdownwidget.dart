@@ -35,12 +35,12 @@ class PaymentBreakdownWidget extends StatelessWidget {
                 children: [
                   CustomText(
                     title,
-                    fontSize: 12.sp,
+                    fontSize: 15.sp,
                     fontWeight: FontWeight.w500,
                   ),
                   CustomText(
                     amount,
-                    fontSize: 12.sp,
+                    fontSize: 15.sp,
                     fontWeight: FontWeight.w500,
                     color: ROrange,
                   ),

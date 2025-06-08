@@ -5,6 +5,7 @@ import 'package:sizer/sizer.dart';
 class SliderWidget extends StatelessWidget {
   final List<SliderItem> items;
 
+
   SliderWidget({required this.items});
 
   @override

@@ -157,7 +157,7 @@ if (response.statusCode == 200) {
     }
 
     final url =
-        'https://retilda-fintech.vercel.app/Api/requestForGoodsDelivery/${widget.purchaseId}';
+        'https://retilda-fintech-3jy7.onrender.com/Api/requestForGoodsDelivery/${widget.purchaseId}';
 
     final body = {
 

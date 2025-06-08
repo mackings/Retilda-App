@@ -25,6 +25,7 @@ class Profile extends ConsumerStatefulWidget {
 }
 
 class _ProfileState extends ConsumerState<Profile> {
+  
   String? Token;
   String? Username;
   String? Acctype;
@@ -43,7 +44,7 @@ class _ProfileState extends ConsumerState<Profile> {
       String accttype = userData['data']['user']['accountType'];
       int credit = userData['data']['user']['creditScore'];
       String myrole = userData['data']['user']['roles'];
-      String mycode = userData['data']['user']['referralCode'];
+      String? mycode = userData['data']['user']['referralCode'];
       int mybonus = userData['data']['user']['referralBonus'];
 
       setState(() {
@@ -78,8 +79,8 @@ class _ProfileState extends ConsumerState<Profile> {
         automaticallyImplyLeading: false,
         title: CustomText(
           'Profile',
-          fontSize: 15.sp,
-          fontWeight: FontWeight.w500,
+          fontSize: 17.sp,
+          fontWeight: FontWeight.w700,
         ),
       ),
       body: Column(
@@ -101,7 +102,7 @@ Padding(
           // Username Display
           CustomText(
             Username ?? "Admin", // Fallback for null Username
-            fontSize: 13.sp,
+            fontSize: 15.sp,
             fontWeight: FontWeight.w500,
           ),
           SizedBox(height: 1.h),
@@ -112,7 +113,7 @@ Padding(
             children: [
               CustomText(
                 '${(Acctype ?? "Standard") == "premium" ? "Premium" : "Standard"} Account',
-                fontSize: 11.sp,
+                fontSize: 14.sp,
                 fontWeight: FontWeight.w500,
               ),
               SizedBox(width: 1.w),

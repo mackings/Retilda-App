@@ -412,8 +412,8 @@ class _AllproductsState extends ConsumerState<Allproducts> {
             backgroundColor: Colors.white,
             title: CustomText(
               "Products",
-              fontSize: 15.sp,
-              fontWeight: FontWeight.w500,
+              fontSize: 17.sp,
+              fontWeight: FontWeight.w700,
             ),
             actions: [
               IconButton(

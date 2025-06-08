@@ -96,17 +96,18 @@ class _CarouselPageViewState extends State<CarouselPageView> {
           ),
         ),
 
-        DotsIndicator(
-          dotsCount: 4, 
-          position: _currentIndex, 
-          decorator: DotsDecorator(
-            size: Size(10.0, 10.0),
-            activeSize: Size(20.0, 10.0),
-            color: Colors.grey, 
-            activeColor: Colors.black, 
-            spacing: EdgeInsets.all(5.0),
-          ),
-        ),
+DotsIndicator(
+  dotsCount: 4,
+  position: _currentIndex.toDouble(), // Convert int to double
+  decorator: DotsDecorator(
+    size: Size(10.0, 10.0),
+    activeSize: Size(20.0, 10.0),
+    color: Colors.grey,
+    activeColor: Colors.black,
+    spacing: EdgeInsets.all(5.0),
+  ),
+),
+
         
       ],
     );

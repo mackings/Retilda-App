@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:retilda/Views/Products/Connect/views/connect.dart';
 import 'package:retilda/Views/Widgets/breakdownwidget.dart';
 import 'package:retilda/Views/Widgets/components.dart';
 import 'package:retilda/Views/Widgets/deliverymodal.dart';
@@ -13,6 +14,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sizer/sizer.dart';
 import 'package:http/http.dart' as http;
 import 'package:webview_flutter/webview_flutter.dart';
+
+
+
 
 class Purchasesummary extends ConsumerStatefulWidget {
   final Purchase purchase;
@@ -151,10 +155,12 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
                     },
                   ),
                 ),
-                body: WebView(
-                  initialUrl: paymentUrl,
-                  javascriptMode: JavascriptMode.unrestricted,
-                ),
+                body: WebViewPage(url: paymentUrl)
+
+                //                 body: WebView(
+                //   initialUrl: paymentUrl,
+                //   javascriptMode: JavascriptMode.unrestricted,
+                // ),
               );
             },
           );
@@ -414,6 +420,9 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
     }
   }
 
+
+
+
   @override
   void initState() {
     Timer(Duration(seconds: 1), () {
@@ -551,8 +560,8 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
               },
               child: CustomText(
                 "Payment summary",
-                fontSize: 15.sp,
-                fontWeight: FontWeight.w500,
+                fontSize: 17.sp,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ),
@@ -586,7 +595,7 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
                             CustomText(
                               widget.purchase.product!.name.toString(),
                               fontWeight: FontWeight.w600,
-                              fontSize: 11.sp,
+                              fontSize: 15.sp,
                             ),
                           ],
                         ),
@@ -624,7 +633,7 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
                                     child: CustomText(
                                       "Pay Installments",
                                       fontWeight: FontWeight.w500,
-                                      fontSize: 11.sp,
+                                      fontSize: 14.sp,
                                       color: Colors.white,
                                     ),
                                   ),

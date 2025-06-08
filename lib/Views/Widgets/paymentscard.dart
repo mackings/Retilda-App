@@ -54,7 +54,7 @@ class PaymentSummaryCard extends StatelessWidget {
               ),
               title: CustomText(
                 title,
-                fontSize: 12.sp,
+                fontSize: 14.sp,
                 fontWeight: FontWeight.w700,
               ),
               subtitle: CustomText(subtitle,color: ROrange,),

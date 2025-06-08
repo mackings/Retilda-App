@@ -223,7 +223,7 @@ class _SignupState extends State<Signup> {
 
                       CustomText(
                         'Sign up',
-                        fontSize: 15.sp,
+                        fontSize: 17.sp,
                         fontWeight: FontWeight.bold,
                         color: Colors.black,
                       ),

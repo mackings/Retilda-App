@@ -674,8 +674,8 @@ class _ProductDetailsState extends State<ProductDetails> {
           shadowColor: Colors.white,
           title: CustomText(
             "Details",
-            fontSize: 15.sp,
-            fontWeight: FontWeight.w500,
+            fontSize: 17.sp,
+            fontWeight: FontWeight.w600,
           ),
         ),
         body: SingleChildScrollView(
@@ -712,9 +712,7 @@ Padding(
         child: CustomText(
           widget.product.name,
           fontWeight: FontWeight.w600,
-          fontSize: 14.sp,
-         // maxLines: 1,
-         // overflow: TextOverflow.ellipsis,
+          fontSize: 15.sp,
         ),
       ),
       Row(
@@ -755,7 +753,7 @@ Padding(
                   children: [
                     CustomText(
                       "Select your payment plan",
-                      fontSize: 12.sp,
+                      fontSize: 16.sp,
                       fontWeight: FontWeight.w400,
                     ),
                   ],
@@ -804,7 +802,7 @@ Padding(
       CustomText(
         "N${NumberFormat('#,##0').format(widget.product.price)}",
         fontWeight: FontWeight.w700,
-        fontSize: 12.sp,
+        fontSize: 18.sp,
       ),
 
       loading
@@ -812,96 +810,134 @@ Padding(
           : GestureDetector(
               onTap: () {
                 if (Activated == false) {
-                  showDialog(
-                    context: context,
-                    builder: (context) {
-                      bool termsAccepted = false;
 
-                      return StatefulBuilder(
-                        builder: (context, setState) {
-                          return AlertDialog(
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            title: Text(
-                              'Connect',
-                              style: GoogleFonts.poppins(
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            content: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Text(
-                                  'To proceed, please consent to connect your bank account and read our privacy policy for more details.',
-                                  style: TextStyle(fontSize: 14),
-                                ),
-                                const SizedBox(height: 12),
-                                Row(
-                                  children: [
-                                    Checkbox(
-                                      value: termsAccepted,
-                                      onChanged: (value) {
-                                        setState(() {
-                                          termsAccepted = value!;
-                                        });
-                                      },
-                                    ),
-                                    Expanded(
-                                      child: Wrap(
-                                        children: [
-                                          const Text('I accept the '),
-                                          TextButton(
-                                            onPressed: () {
-                                              Navigator.push(
-                                                context,
-                                                MaterialPageRoute(
-                                                  builder: (_) => InAppWebViewPage(
-                                                    url:
-                                                        'https://docs.google.com/document/d/1zWEYmMZ_tRhC198qMsN5rP55YmeQ8rtiuTbaPEC_Fw0/edit?usp=sharing',
-                                                    title: 'Terms and Policy',
-                                                  ),
-                                                ),
-                                              );
-                                            },
-                                            child: const Text(
-                                              'Terms',
-                                              style: TextStyle(color: Colors.blue),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(context),
-                                child: const Text('Cancel'),
-                              ),
-                              TextButton(
-                                onPressed: termsAccepted
-                                    ? () {
-                                        Navigator.pop(context);
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (_) => ConnectAccount(),
-                                          ),
-                                        );
-                                        debugPrint("Bank account connected");
-                                      }
-                                    : null,
-                                child: const Text('Connect'),
-                              ),
-                            ],
-                          );
-                        },
-                      );
+showDialog(
+  context: context,
+  builder: (context) {
+    bool termsAccepted = false;
+
+    return StatefulBuilder(
+      builder: (context, setState) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+          contentPadding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
+          title: Text(
+            'Connect',
+            style: GoogleFonts.poppins(
+              fontSize: 20,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'To proceed, please consent to connect your bank account and read our privacy policy for more details.',
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  color: Colors.grey[800],
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Checkbox(
+                    value: termsAccepted,
+                    onChanged: (value) {
+                      setState(() {
+                        termsAccepted = value ?? false;
+                      });
                     },
-                  );
+                  ),
+                  Expanded(
+                    child: Wrap(
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        Text(
+                          'I agree to the ',
+                          style: GoogleFonts.poppins(fontSize: 14),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => InAppWebViewPage(
+                                  url:
+                                      'https://docs.google.com/document/d/17afb6dSPPh2RVRodtq-r7v16eEAjZ6SVHOUb6h_edFs/edit?usp=sharing',
+                                  title: 'Terms and Policy',
+                                ),
+                              ),
+                            );
+                          },
+                          style: TextButton.styleFrom(padding: EdgeInsets.zero),
+                          child: Text(
+                            'Terms and Policy',
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              color: Colors.blue,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                'Cancel',
+                style: GoogleFonts.poppins(),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: termsAccepted
+                  ? () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ConnectAccount(),
+                        ),
+                      );
+                      debugPrint("Bank account connected");
+                    }
+                  : null,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+                disabledBackgroundColor: Colors.grey.shade400,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: Text(
+                'Connect',
+                style: GoogleFonts.poppins(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  },
+);
+
+
+
                 } else {
                   purchaseProduct();
                 }
@@ -957,7 +993,7 @@ Padding(
                   children: [
                     CustomText(
                       "Product Description :",
-                      fontSize: 12.sp,
+                      fontSize: 16.sp,
                       fontWeight: FontWeight.w600,
                       color: Colors.grey,
                     ),
@@ -972,7 +1008,7 @@ Padding(
                 child: ListTile(
                   title: CustomText(
                     widget.product.description.toString(),
-                    fontSize: 12.sp,
+                    fontSize: 14.sp,
                   ),
                 ),
               ),
@@ -982,7 +1018,7 @@ Padding(
                   children: [
                     CustomText(
                       "Product Specifications :",
-                      fontSize: 12.sp,
+                      fontSize: 16.sp,
                       fontWeight: FontWeight.w600,
                       color: Colors.grey,
                     ),
@@ -994,7 +1030,7 @@ Padding(
                 child: ListTile(
                   title: CustomText(
                     widget.product.specification ?? "No Product Specifications",
-                    fontSize: 12.sp,
+                    fontSize: 14.sp,
                   ),
                 ),
               ),
@@ -1043,7 +1079,9 @@ Widget _buildActionIcon({required IconData icon, required VoidCallback onTap}) {
     ),
   );
 }
-class InAppWebViewPage extends StatelessWidget {
+
+
+class InAppWebViewPage extends StatefulWidget {
   final String url;
   final String title;
 
@@ -1051,21 +1089,32 @@ class InAppWebViewPage extends StatelessWidget {
       : super(key: key);
 
   @override
+  State<InAppWebViewPage> createState() => _InAppWebViewPageState();
+}
+
+class _InAppWebViewPageState extends State<InAppWebViewPage> {
+  late final WebViewController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _controller = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..loadRequest(Uri.parse(widget.url));
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(title),
+        title: Text(widget.title),
         leading: IconButton(
           icon: Icon(Icons.arrow_back),
-          onPressed: () {
-            Navigator.pop(context);
-          },
+          onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: WebView(
-        initialUrl: url,
-        javascriptMode: JavascriptMode.unrestricted,
-      ),
+      body: WebViewWidget(controller: _controller),
     );
   }
 }

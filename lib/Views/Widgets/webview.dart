@@ -1,10 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
-class WebViewScreen extends StatelessWidget {
+
+class WebViewScreen extends StatefulWidget {
   final String url;
 
-  WebViewScreen({required this.url});
+  const WebViewScreen({required this.url, Key? key}) : super(key: key);
+
+  @override
+  State<WebViewScreen> createState() => _WebViewScreenState();
+}
+
+class _WebViewScreenState extends State<WebViewScreen> {
+  late final WebViewController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..loadRequest(Uri.parse(widget.url));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -16,10 +32,7 @@ class WebViewScreen extends StatelessWidget {
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),
-      body: WebView(
-        initialUrl: url,
-        javascriptMode: JavascriptMode.unrestricted,
-      ),
+      body: WebViewWidget(controller: _controller),
     );
   }
 }

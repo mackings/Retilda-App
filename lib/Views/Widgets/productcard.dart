@@ -131,7 +131,7 @@ class ProductCard extends StatelessWidget {
                     CustomText(
                       product.name,
                       fontWeight: FontWeight.w600,
-                      fontSize: 10.sp,
+                      fontSize: 14.sp,
                     ),
                     SizedBox(height: 1),
                     Row(
@@ -140,7 +140,7 @@ class ProductCard extends StatelessWidget {
                         Flexible(child: CustomText(
   'N${NumberFormat("#,##0").format(product.price)}',
   fontWeight: FontWeight.w600,
-  fontSize: 11.sp,
+  fontSize: 15.sp,
 ),),
                         IconButton(
                           icon: Icon(

@@ -150,7 +150,7 @@ class _DashboardState extends ConsumerState<Dashboard> {
             padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             child: CustomText(
               "Top Categories",
-              fontSize: 12.sp,
+              fontSize: 16.sp,
               fontWeight: FontWeight.bold,
               color: ROrange,
             ),
@@ -221,7 +221,7 @@ class _DashboardState extends ConsumerState<Dashboard> {
                               SizedBox(height: 8),
    CustomText(
   '${entry.key[0].toUpperCase()}${entry.key.substring(1)}',
-  fontSize: 10.sp,
+  fontSize: 15.sp,
   fontWeight: FontWeight.w600,
   color: Colors.black,
 ),
@@ -250,7 +250,7 @@ class _DashboardState extends ConsumerState<Dashboard> {
               children: [
                 CustomText(
                   "Products",
-                  fontSize: 12.sp,
+                  fontSize: 16.sp,
                   fontWeight: FontWeight.bold,
                   color: ROrange,
                 ),
@@ -260,7 +260,7 @@ class _DashboardState extends ConsumerState<Dashboard> {
                   },
                   child: CustomText(
                     "View all",
-                    fontSize: 12.sp,
+                    fontSize: 16.sp,
                     fontWeight: FontWeight.w600,
                     color: RButtoncolor,
                   ),
