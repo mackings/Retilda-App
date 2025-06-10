@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:retilda/Views/Products/Update/alldetailsupdate.dart';
 import 'package:retilda/Views/Products/Update/updatedetails.dart';
 import 'package:retilda/Views/Products/details.dart';
 import 'package:retilda/Views/Widgets/components.dart';
@@ -203,6 +204,17 @@ class SearchUpdateResultsScreen extends StatelessWidget {
                               UpdateDetails(product: searchResults[index]),
                         ),
                       );
+                    },
+
+                    onLongPress: (){
+                                   Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => UpdateAllDetails(
+                                        product: searchResults[index],
+                                      ),
+                                    ),
+                                  );
                     },
                     child: ProductCard(
                       product: searchResults[index],

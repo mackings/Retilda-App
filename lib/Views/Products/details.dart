@@ -843,6 +843,7 @@ showDialog(
                 ),
               ),
               const SizedBox(height: 16),
+              
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -854,6 +855,7 @@ showDialog(
                       });
                     },
                   ),
+
                   Expanded(
                     child: Wrap(
                       crossAxisAlignment: WrapCrossAlignment.center,
