@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class CustomText extends StatelessWidget {
@@ -25,6 +26,27 @@ class CustomText extends StatelessWidget {
         fontWeight: fontWeight,
         color: color,
       ),
+    );
+  }
+}
+
+
+class _NoLeadingOrTrailingWhitespaceFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+      TextEditingValue oldValue,
+      TextEditingValue newValue,
+  ) {
+    String trimmed = newValue.text.trimLeft();
+
+    // Prevent multiple trailing spaces
+    if (trimmed.endsWith("  ")) {
+      trimmed = trimmed.replaceAll(RegExp(r'\s{2,}'), ' ');
+    }
+
+    return newValue.copyWith(
+      text: trimmed,
+      selection: TextSelection.collapsed(offset: trimmed.length),
     );
   }
 }
@@ -83,27 +105,34 @@ class CustomTextFormField extends StatelessWidget {
             onFieldSubmitted: onFieldSubmitted,
             validator: validator,
             style: GoogleFonts.poppins(),
-            decoration: InputDecoration(
-              hintText: hintText,
-              suffixIcon: isPasswordField
-                  ? GestureDetector(
-                      onTap: () {
-                        obscureText.value = !isObscured;
-                      },
-                      child: Icon(
-                        isObscured ? Icons.visibility_off : Icons.visibility,
-                      ),
-                    )
-                  : (suffixIcon != null
-                      ? GestureDetector(
-                          onTap: onSuffixIconTap,
-                          child: Icon(suffixIcon),
-                        )
-                      : null),
-              contentPadding:
-                  const EdgeInsets.symmetric(vertical: 13.0, horizontal: 20.0),
-              border: InputBorder.none,
-            ),
+            inputFormatters: [
+  FilteringTextInputFormatter.deny(RegExp(r'\s{2,}')), // No multiple spaces
+  _NoLeadingOrTrailingWhitespaceFormatter(), // Custom formatter below
+],
+
+decoration: InputDecoration(
+  hintText: hintText,
+  isDense: true, // Reduces default padding
+  contentPadding: EdgeInsets.symmetric(vertical: 13.0, horizontal: 20.0),
+  border: InputBorder.none,
+  suffixIcon: isPasswordField
+      ? GestureDetector(
+          onTap: () {
+            obscureText.value = !isObscured;
+          },
+          child: Icon(
+            isObscured ? Icons.visibility_off : Icons.visibility,
+          ),
+        )
+      : (suffixIcon != null
+          ? GestureDetector(
+              onTap: onSuffixIconTap,
+              child: Icon(suffixIcon),
+            )
+          : null),
+),
+textAlignVertical: TextAlignVertical.center,
+
           ),
         );
       },

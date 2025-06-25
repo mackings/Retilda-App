@@ -229,14 +229,26 @@ class _SignupState extends State<Signup> {
                       ),
 
                       SizedBox(height: 4.h),
+CustomTextFormField(
+  controller: _fullname,
+  isPasswordField: false,
+  suffixIcon: Icons.person_2,
+  hintText: 'Full Name',
+  onChanged: (value) {},
+  validator: (value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Full name is required';
+    }
 
-                      CustomTextFormField(
-                        controller: _fullname,
-                        isPasswordField: false,
-                        suffixIcon: Icons.person_2,
-                        hintText: 'Full Name',
-                        onChanged: (value) {},
-                      ),
+    final words = value.trim().split(RegExp(r'\s+'));
+    if (words.length < 2) {
+      return 'Please enter your full name';
+    }
+
+    return null;
+  },
+),
+
 
                       SizedBox(height: 4.h),
 

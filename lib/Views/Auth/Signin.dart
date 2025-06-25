@@ -41,8 +41,8 @@ class _SigninState extends State<Signin> {
 
     try {
       final Map<String, String> payload = {
-        'email': _emailController.text,
-        "password": _passwordController.text
+        'email': _emailController.text.trim(),
+        "password": _passwordController.text.trim()
       };
 
       final String payloadJson = jsonEncode(payload);
