@@ -3,8 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:retilda/Views/Auth/Signup.dart';
 
 
-
-
 // Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 //   // Handle background notifications
 //   print("Handling a background message: ${message.messageId}");

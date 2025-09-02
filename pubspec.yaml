@@ -51,6 +51,7 @@ dependencies:
   webview_flutter: ^4.10.0
   url_launcher: ^6.3.0
   cached_network_image: ^3.4.1
+  flutter_launcher_icons: ^0.14.4
 
 
 dev_dependencies:
@@ -62,6 +63,10 @@ dev_dependencies:
   # activated in the `analysis_options.yaml` file located at the root of your
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
+flutter_icons:
+  android: true
+  ios: true
+  image_path: "assets/la.png"
   
   flutter_lints: ^5.0.0
   

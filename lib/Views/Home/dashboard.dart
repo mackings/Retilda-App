@@ -147,7 +147,7 @@ class _DashboardState extends ConsumerState<Dashboard> {
         // Top Categories Heading
         SliverToBoxAdapter(
           child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            padding: EdgeInsets.symmetric(horizontal: 20, vertical: 15),
             child: CustomText(
               "Top Categories",
               fontSize: 16.sp,
@@ -156,7 +156,7 @@ class _DashboardState extends ConsumerState<Dashboard> {
             ),
           ),
         ),
-
+    
         // Category List
         SliverToBoxAdapter(
           child: SizedBox(
@@ -244,7 +244,7 @@ class _DashboardState extends ConsumerState<Dashboard> {
         // Product Header
         SliverToBoxAdapter(
           child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: 15, vertical: 15),
+            padding: EdgeInsets.symmetric(horizontal: 15, vertical: 12),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [

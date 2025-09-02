@@ -120,7 +120,7 @@ class _GlaceState extends State<Glace> {
                   style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
                 ),
 Text(
-  '₦${NumberFormat("#,##0.00", "en_NG").format(_totalPaid)}',
+  'N${NumberFormat("#,##0.00", "en_NG").format(_totalPaid)}',
   style: GoogleFonts.poppins(fontSize: 15),
 ),
 
