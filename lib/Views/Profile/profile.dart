@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:retilda/Views/Admin/glance.dart';
+import 'package:retilda/Views/Admin/views/glance.dart';
 import 'package:retilda/Views/Auth/kyc.dart';
 import 'package:retilda/Views/Delivery/views/deliveryhome.dart';
 import 'package:retilda/Views/Merchant/upload.dart';

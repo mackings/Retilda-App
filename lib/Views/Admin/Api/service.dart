@@ -82,7 +82,5 @@ static Future<List<GlancePurchase>> fetchUserPurchases(String userId) async {
 }
 
 
-
-
 }
 
