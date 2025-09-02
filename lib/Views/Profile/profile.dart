@@ -152,7 +152,7 @@ Padding(
           SizedBox(height: 2.h),
 
           // Redeem Button with Referral Bonus
-        if (role != 'user')
+       // if (role != 'user')
 
           GestureDetector(  
             onTap: () async {
@@ -205,7 +205,7 @@ Padding(
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    CustomText('Referral Bonus: ${refferalBonus ?? "0"}'),
+                    CustomText('Referral Points: ${refferalBonus ?? "0"}'),
                      SizedBox(width: 5.w),
                 Container(
                   height: 5.h,
