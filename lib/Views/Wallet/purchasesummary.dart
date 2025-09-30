@@ -28,6 +28,7 @@ class Purchasesummary extends ConsumerStatefulWidget {
 }
 
 class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
+
   String? productId;
   String? UserId;
   String? PurchaseId;
@@ -37,79 +38,97 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
   String? balance;
   bool? loading;
 
-  Future<void> makeInstallmentPaymentRequest(
-      BuildContext context, String productId, String token) async {
-    Map<String, String> requestBody = {
-      "productId": productId,
-    };
 
-    String requestBodyJson = jsonEncode(requestBody);
 
-    try {
-      print("Payload >> $requestBodyJson");
-      http.Response response = await http.post(
-        Uri.parse(
-            'https://retilda-fintech-3jy7.onrender.com/Api/installmentRepaymentUsingWallet'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token', // Use the provided token
-        },
-        body: requestBodyJson,
-      );
 
-      if (response.statusCode == 200) {
-        print('Installment payment request successful');
-        print('Response: ${response.body}');
+Future<void> makeInstallmentPaymentRequest(
+    BuildContext context, String productId, String token) async {
+  Map<String, String> requestBody = {
+    "productId": productId,
+  };
 
-        // Ensure the context is still valid
-        if (context.mounted) {
-          showDialog(
-            context: context,
-            builder: (BuildContext context) {
-              return AlertDialog(
-                title: Text('Success'),
-                content: Text('Payment successful!'),
-                actions: <Widget>[
-                  TextButton(
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                      Navigator.of(context).pop();
-                    },
-                    child: Text('OK'),
-                  ),
-                ],
-              );
-            },
-          );
-        }
-      } else {
-        if (context.mounted) {
-          showDialog(
-            context: context,
-            builder: (BuildContext context) {
-              return AlertDialog(
-                title: Text('Error'),
-                content: Text('Payment Error, kindly retry'),
-                actions: <Widget>[
-                  TextButton(
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                    },
-                    child: Text('OK'),
-                  ),
-                ],
-              );
-            },
-          );
-        }
-        print(response.body);
-        print(
-            'Installment payment request failed with status code: ${response.statusCode}');
+  String requestBodyJson = jsonEncode(requestBody);
+
+  try {
+    print("Payload >> $requestBodyJson");
+    http.Response response = await http.post(
+      Uri.parse(
+          'https://retilda-fintech-3jy7.onrender.com/Api/installmentRepaymentUsingWallet'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token', // Use the provided token
+      },
+      body: requestBodyJson,
+    );
+
+    if (response.statusCode == 200) {
+      print('Installment payment request successful');
+      print('Response: ${response.body}');
+
+      if (context.mounted) {
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: const Text('Success'),
+              content: const Text('Payment successful!'),
+              actions: <Widget>[
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop(); // close dialog
+                    Navigator.of(context).pop(); // go back
+                  },
+                  child: const Text('OK'),
+                ),
+              ],
+            );
+          },
+        );
       }
-    } catch (error) {
-      print('Error making installment payment request: $error');
+    } else {
+      // Decode and show backend error message
+      String errorMessage = 'Payment Error, kindly retry';
+      try {
+        final responseData = jsonDecode(response.body);
+        if (responseData is Map && responseData.containsKey('message')) {
+          errorMessage = responseData['message'];
+        }
+      } catch (e) {
+        print('Failed to parse error response: $e');
+      }
+
+      if (context.mounted) {
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: const Text('Error'),
+              content: Text(errorMessage), // ✅ Show API error message
+              actions: <Widget>[
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text('OK'),
+                ),
+              ],
+            );
+          },
+        );
+      }
+
+      print(response.body);
+      print(
+          'Installment payment request failed with status code: ${response.statusCode}');
     }
+  } catch (error) {
+    print('Error making installment payment request: $error');
   }
+}
+
+
+
+
 
   Future<void> installmentRepaymentUsingCard(
       BuildContext context, String productId) async {

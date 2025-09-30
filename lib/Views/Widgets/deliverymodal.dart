@@ -8,10 +8,6 @@ import 'package:sizer/sizer.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
-
-
-
-
 class DeliveryModal extends StatefulWidget {
   final String purchaseId;
 
@@ -73,80 +69,78 @@ class _DeliveryModalState extends State<DeliveryModal> {
     }
   }
 
+  Future<void> _fetchQuotation() async {
+    if (token == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Unable to fetch user token.')),
+      );
+      return;
+    }
 
+    if (_addressController.text.isEmpty ||
+        _phoneNumberController.text.isEmpty ||
+        _dateController.text.isEmpty ||
+        _selectedTimeSlot == null ||
+        _selectedCategory == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Please fill all the fields.')),
+      );
+      return;
+    }
 
+    setState(() => isLoading = true);
 
-Future<void> _fetchQuotation() async {
-  if (token == null) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Unable to fetch user token.')),
-    );
-    return;
+    final url =
+        'https://retilda-fintech-3jy7.onrender.com/Api/requestForGoodsDeliveryCalculation/${widget.purchaseId}';
+
+    final body = {
+      "deliveryAddress": _addressController.text,
+      "phoneNumber": _phoneNumberController.text,
+      "deliveryTime": _selectedTimeSlot,
+      "deliveryDate": _dateController.text,
+      "category": _selectedCategory,
+      "distance": _selectedCategory,
+    };
+
+    try {
+      final response = await http.post(
+        Uri.parse(url),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(body),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+
+        // Log the response for debugging
+        print("API Response: ${data}");
+
+        setState(() {
+          // Access the deliveryFee field inside the data object
+          deliveryFee = data['data']['deliveryFee'];
+          isQuotationFetched = true;
+        });
+      } else {
+        final error =
+            jsonDecode(response.body)['message'] ?? 'Quotation failed.';
+            
+        print(response.body);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed: $error')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('An error occurred: $e')),
+      );
+    } finally {
+      setState(() => isLoading = false);
+    }
   }
-
-  if (_addressController.text.isEmpty ||
-      _phoneNumberController.text.isEmpty ||
-      _dateController.text.isEmpty ||
-      _selectedTimeSlot == null ||
-      _selectedCategory == null) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Please fill all the fields.')),
-    );
-    return;
-  }
-
-  setState(() => isLoading = true);
-
-  final url =
-      'https://retilda-fintech-3jy7.onrender.com/Api/requestForGoodsDeliveryCalculation/${widget.purchaseId}';
-
-  final body = {
-    "deliveryAddress": _addressController.text,
-    "phoneNumber": _phoneNumberController.text,
-    "deliveryTime": _selectedTimeSlot,
-    "deliveryDate": _dateController.text,
-    "category": _selectedCategory,
-    "distance": _selectedCategory,
-  };
-
-  try {
-    final response = await http.post(
-      Uri.parse(url),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-      body: jsonEncode(body),
-    );
-
-if (response.statusCode == 200) {
-  final data = jsonDecode(response.body);
-
-  // Log the response for debugging
-  print("API Response: ${data}");
-
-  setState(() {
-    // Access the deliveryFee field inside the data object
-    deliveryFee = data['data']['deliveryFee']; 
-    isQuotationFetched = true;
-  });
-} else {
-  final error = jsonDecode(response.body)['message'] ?? 'Quotation failed.';
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(content: Text('Failed: $error')),
-  );
-}
-
-  } catch (e) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('An error occurred: $e')),
-    );
-  } finally {
-    setState(() => isLoading = false);
-  }
-}
-
-
 
   Future<void> _requestDelivery() async {
     if (token == null) {
@@ -160,7 +154,6 @@ if (response.statusCode == 200) {
         'https://retilda-fintech-3jy7.onrender.com/Api/requestForGoodsDelivery/${widget.purchaseId}';
 
     final body = {
-
       "deliveryAddress": _addressController.text,
       "phoneNumber": _phoneNumberController.text,
       "deliveryTime": _selectedTimeSlot,
@@ -168,7 +161,6 @@ if (response.statusCode == 200) {
       "category": _selectedCategory,
       "distance": _selectedCategory,
     };
-
 
     try {
       final response = await http.post(
@@ -202,8 +194,6 @@ if (response.statusCode == 200) {
     }
   }
 
-
-
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
@@ -225,7 +215,6 @@ if (response.statusCode == 200) {
                   ),
                 ),
                 SizedBox(height: 15),
-
                 Row(
                   children: [
                     Text(
@@ -237,7 +226,6 @@ if (response.statusCode == 200) {
                     Icon(Icons.location_history),
                   ],
                 ),
-
                 Text("Your Delivery arrives in 2 weeks from the request date."),
                 SizedBox(height: 25),
                 TextFormField(
@@ -314,18 +302,10 @@ if (response.statusCode == 200) {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        "Delivery Fee:",
-                        style: GoogleFonts.montserrat()
-                      ),
-
-                                            Text(
-                        "₦ $deliveryFee",
-                        style: GoogleFonts.montserrat(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 12.sp
-                        )
-                      ),
+                      Text("Delivery Fee:", style: GoogleFonts.montserrat()),
+                      Text("₦ $deliveryFee",
+                          style: GoogleFonts.montserrat(
+                              fontWeight: FontWeight.w600, fontSize: 12.sp)),
                     ],
                   ),
                 SizedBox(height: 16),
