@@ -1,19 +1,17 @@
 import 'dart:async';
-import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:retilda/Views/Products/Connect/views/connect.dart';
+import 'package:retilda/Views/Wallet/Api/ApiService.dart';
 import 'package:retilda/Views/Widgets/breakdownwidget.dart';
 import 'package:retilda/Views/Widgets/components.dart';
 import 'package:retilda/Views/Widgets/deliverymodal.dart';
 import 'package:retilda/Views/Widgets/linearpercent.dart';
 import 'package:retilda/Views/Widgets/widgets.dart';
 import 'package:retilda/model/purchases.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sizer/sizer.dart';
-import 'package:http/http.dart' as http;
-import 'package:webview_flutter/webview_flutter.dart';
 
 
 
@@ -28,197 +26,31 @@ class Purchasesummary extends ConsumerStatefulWidget {
 }
 
 class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
+  final WalletApiService _walletService = WalletApiService();
 
   String? productId;
   String? UserId;
   String? PurchaseId;
   String? Token;
-  String? UserOptions;
   dynamic Wallet;
-  String? balance;
-  bool? loading;
-
-
-
-
-Future<void> makeInstallmentPaymentRequest(
-    BuildContext context, String productId, String token) async {
-  Map<String, String> requestBody = {
-    "productId": productId,
-  };
-
-  String requestBodyJson = jsonEncode(requestBody);
-
-  try {
-    print("Payload >> $requestBodyJson");
-    http.Response response = await http.post(
-      Uri.parse(
-          'https://retilda-fintech-3jy7.onrender.com/Api/installmentRepaymentUsingWallet'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token', // Use the provided token
-      },
-      body: requestBodyJson,
-    );
-
-    if (response.statusCode == 200) {
-      print('Installment payment request successful');
-      print('Response: ${response.body}');
-
-      if (context.mounted) {
-        showDialog(
-          context: context,
-          builder: (BuildContext context) {
-            return AlertDialog(
-              title: const Text('Success'),
-              content: const Text('Payment successful!'),
-              actions: <Widget>[
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop(); // close dialog
-                    Navigator.of(context).pop(); // go back
-                  },
-                  child: const Text('OK'),
-                ),
-              ],
-            );
-          },
-        );
-      }
-    } else {
-      // Decode and show backend error message
-      String errorMessage = 'Payment Error, kindly retry';
-      try {
-        final responseData = jsonDecode(response.body);
-        if (responseData is Map && responseData.containsKey('message')) {
-          errorMessage = responseData['message'];
-        }
-      } catch (e) {
-        print('Failed to parse error response: $e');
-      }
-
-      if (context.mounted) {
-        showDialog(
-          context: context,
-          builder: (BuildContext context) {
-            return AlertDialog(
-              title: const Text('Error'),
-              content: Text(errorMessage), // ✅ Show API error message
-              actions: <Widget>[
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                  child: const Text('OK'),
-                ),
-              ],
-            );
-          },
-        );
-      }
-
-      print(response.body);
-      print(
-          'Installment payment request failed with status code: ${response.statusCode}');
-    }
-  } catch (error) {
-    print('Error making installment payment request: $error');
-  }
-}
-
-
-
-
-
-  Future<void> installmentRepaymentUsingCard(
-      BuildContext context, String productId) async {
-    const String url =
-        'https://retilda-fintech-3jy7.onrender.com/Api/installmentRepaymentUsingCard';
-
-    final Map<String, String> requestBody = {
-      'productId': productId,
-    };
-
-    try {
-      // Make the POST request
-      final response = await http.post(
-        Uri.parse(url),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $Token',
-        },
-        body: jsonEncode(requestBody),
-      );
-
-      if (response.statusCode == 200) {
-        final responseData = jsonDecode(response.body);
-
-        if (responseData['success'] == true &&
-            responseData['data'] != null &&
-            responseData['data']['paymentUrl'] != null) {
-          final String paymentUrl = responseData['data']['paymentUrl'];
-          print('Payment URL: $paymentUrl');
-
-          // Show the WebView in an overlay
-          showDialog(
-            context: context,
-            barrierDismissible: false,
-            builder: (BuildContext context) {
-              return Scaffold(
-                appBar: AppBar(
-                  title: const Text('Card Payment'),
-                  leading: IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () {
-                      Navigator.of(context).pop(); // Close the overlay
-                    },
-                  ),
-                ),
-                body: WebViewPage(url: paymentUrl)
-
-                //                 body: WebView(
-                //   initialUrl: paymentUrl,
-                //   javascriptMode: JavascriptMode.unrestricted,
-                // ),
-              );
-            },
-          );
-        } else {
-          print('Invalid response data: ${response.body}');
-        }
-      } else {
-        print('Error: ${response.statusCode}');
-        print('Response Body: ${response.body}');
-      }
-    } catch (error) {
-      print('Exception occurred: $error');
-    }
-  }
+  bool _isLoading = false;
 
   Future<void> _loadUserData() async {
-    SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
-    String? userDataString = sharedPreferences.getString('userData');
-    if (userDataString != null) {
-      Map<String, dynamic> userData = jsonDecode(userDataString);
-      String token = userData['data']['token'];
-      String userId = userData['data']['user']['_id'];
-      String wallet = userData['data']['user']['wallet']['accountNumber'];
-
+    final userData = await _walletService.getUserData();
+    if (userData != null) {
       setState(() {
-        Token = token;
-        UserId = userId;
+        Token = userData['token'];
+        UserId = userData['userId'];
         PurchaseId = widget.purchase.id;
         productId = widget.purchase.product!.id;
-        Wallet = wallet;
+        Wallet = userData['wallet'];
       });
 
       print("Product ID >> $productId");
       print("Purchase ID >> $PurchaseId");
-      print("Purchase ${widget.purchase.id}");
     }
   }
 
-  late final int index = 0;
   String getNextPaymentDate(List<Payment> payments) {
     for (int i = 0; i < payments.length; i++) {
       if (payments[i].paymentDate == null) {
@@ -234,25 +66,125 @@ Future<void> makeInstallmentPaymentRequest(
   String getNextPaymentAmount(List<Payment> payments) {
     for (int i = 0; i < payments.length; i++) {
       if (payments[i].paymentDate == null) {
-        return 'N${payments[i].amountToPay}';
+        final amountToPay = payments[i].amountToPay ?? 0;
+        final amountPaid = payments[i].amountPaid ?? 0;
+        final remainingAmount = amountToPay - amountPaid;
+        return 'N${remainingAmount.toStringAsFixed(0)}';
       }
     }
     return "N 0";
   }
 
-  bool _showPaymentOptions = false;
-
-  void _togglePaymentOptionsVisibility() {
-    setState(() {
-      _showPaymentOptions = !_showPaymentOptions;
-    });
+  String getNextPaymentStatus(List<Payment> payments) {
+    for (int i = 0; i < payments.length; i++) {
+      if (payments[i].paymentDate == null) {
+        final amountToPay = payments[i].amountToPay ?? 0;
+        final amountPaid = payments[i].amountPaid ?? 0;
+        
+        if (amountPaid > 0 && amountPaid < amountToPay) {
+          return 'Partially Paid (N${amountPaid.toStringAsFixed(0)} of N${amountToPay.toStringAsFixed(0)})';
+        } else if (amountPaid == 0) {
+          return 'Not Paid';
+        }
+      }
+    }
+    return "Fully Paid";
   }
 
-  void _handlePaymentOptionSelected(String option) {
-    if (option == 'wallet') {
-      makeInstallmentPaymentRequest(context, productId!, Token!);
+  Future<void> _handleWalletPayment() async {
+    if (productId == null) return;
+
+    setState(() => _isLoading = true);
+
+    final result = await _walletService.makeInstallmentPaymentUsingWallet(productId!);
+
+    setState(() => _isLoading = false);
+
+    if (!mounted) return;
+
+    if (result['success']) {
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text('Success'),
+            content: Text(result['message']),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  Navigator.of(context).pop();
+                },
+                child: const Text('OK'),
+              ),
+            ],
+          );
+        },
+      );
     } else {
-      //installmentRepaymentUsingCard(productId!);
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text('Error'),
+            content: Text(result['message']),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('OK'),
+              ),
+            ],
+          );
+        },
+      );
+    }
+  }
+
+  Future<void> _handleCardPayment() async {
+    if (productId == null) return;
+
+    setState(() => _isLoading = true);
+
+    final result = await _walletService.makeInstallmentPaymentUsingCard(productId!);
+
+    setState(() => _isLoading = false);
+
+    if (!mounted) return;
+
+    if (result['success']) {
+      final String paymentUrl = result['paymentUrl'];
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return Scaffold(
+            appBar: AppBar(
+              title: const Text('Card Payment'),
+              leading: IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ),
+            body: WebViewPage(url: paymentUrl),
+          );
+        },
+      );
+    } else {
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text('Error'),
+            content: Text(result['message']),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('OK'),
+              ),
+            ],
+          );
+        },
+      );
     }
   }
 
@@ -269,24 +201,20 @@ Future<void> makeInstallmentPaymentRequest(
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Wallet payment option
               ListTile(
                 title: Text('Pay from Wallet'),
                 onTap: () {
                   Navigator.pop(context);
-                  _handlePaymentOptionSelected('wallet');
+                  _handleWalletPayment();
                 },
               ),
               ListTile(
                 title: Text('Pay with Card'),
                 onTap: () {
-                  if (productId != null) {
-                    installmentRepaymentUsingCard(context, productId!);
-                  } else {
-                    print("Error: productId is null");
-                  }
+                  Navigator.pop(context);
+                  _handleCardPayment();
                 },
-              )
+              ),
             ],
           ),
         );
@@ -294,156 +222,81 @@ Future<void> makeInstallmentPaymentRequest(
     );
   }
 
-  bool _isLoading = false;
-  dynamic topupAmount;
+  Future<void> _handleTopUpForDelivery() async {
+    if (_isLoading || productId == null) return;
 
-  Future<void> installmentRepaymentUsingWalletByPercentage(
-      BuildContext context, String productId, int topUpPercentage) async {
-    const String url =
-        'https://retilda-fintech-3jy7.onrender.com/Api/installmentRepaymentUsingWalletByPercentage';
+    setState(() => _isLoading = true);
 
-    final Map<String, dynamic> requestBody = {
-      'productId': productId,
-      'targetAmount': topupAmount,
-    };
+    final calculation = _walletService.calculateTopUpAmount(
+      totalAmount: widget.purchase.totalAmountToPay!.toDouble(),
+      amountPaid: widget.purchase.totalAmountPaid!.toDouble(),
+    );
 
-    try {
-      final response = await http.post(
-        Uri.parse(url),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $Token', // Ensure Token is valid
-        },
-        body: jsonEncode(requestBody),
-      );
-
-      print('Request Body: $requestBody');
-      print('Response: ${response.body}');
-
-      final responseData = jsonDecode(response.body);
-
-      if (response.statusCode == 200 && responseData['success'] == true) {
-        showDialog(
-          context: context,
-          builder: (_) => AlertDialog(
-            title: const Text("Top-up Successful"),
-            content: const Text("You can now request for Delivery"),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  // Delay the dialog pop to avoid animation issues
-                  Future.delayed(Duration(milliseconds: 100), () {
-                    Navigator.pop(context); // Close the dialog here
-                  });
-                },
-                child: const Text("OK"),
-              ),
-            ],
-          ),
-        );
-      } else {
-        await showDialog(
-          context: context,
-          builder: (_) => AlertDialog(
-            title: const Text("Failed"),
-            content: Text(responseData['message'] ?? 'An error occurred.'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text("Close"),
-              ),
-            ],
-          ),
-        );
-      }
-    } catch (error) {
-      print("Exception: $error");
-      showDialog(
-        context: context,
-        builder: (_) => AlertDialog(
-          title: const Text("Error"),
-          content: Text("An exception occurred: $error"),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Close"),
-            ),
-          ],
-        ),
-      );
-    }
-  }
-
-  void processTopUp() async {
-    final total = widget.purchase.totalAmountToPay!;
-    final paid = widget.purchase.totalAmountPaid!;
-
-    // Calculate the amount to top up (60% of total minus paid)
-    final amountToTopUp = (total * 0.6) - paid;
-
-    // Validate calculation
-    if (total <= 0) {
-      await showDialog(
-        context: context,
-        builder: (_) => AlertDialog(
-          title: const Text("Error"),
-          content: const Text("Total amount is invalid."),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Close"),
-            ),
-          ],
-        ),
-      );
-      return;
-    }
-
-    // Calculate percentage (ensure it's an integer between 0-100)
-    final percentageToTopUp =
-        ((amountToTopUp / total) * 100).round().clamp(0, 100);
-
-    // Debug logs
-    print('Amount to top up: $amountToTopUp');
-    print('Percentage to top up: $percentageToTopUp%');
-
-    // No top-up needed
-    if (percentageToTopUp <= 0) {
+    if (!calculation['isValid']) {
+      setState(() => _isLoading = false);
       await showDialog(
         context: context,
         builder: (_) => AlertDialog(
           title: const Text("No Top-up Needed"),
-          content: const Text("You've already paid enough for delivery."),
+          content: Text(calculation['message']),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text("Okay"),
+              child: const Text("OK"),
             ),
           ],
         ),
       );
-      setState(() => _isLoading = false);
       return;
     }
 
-    // Send to API
-    setState(() => _isLoading = true);
-    try {
-      await installmentRepaymentUsingWalletByPercentage(
-        context,
-        widget.purchase.product!.id!,
-        percentageToTopUp, // Integer (e.g., 30 for 30%)
+    final result = await _walletService.topUpWalletForDelivery(
+      productId!,
+      calculation['amountToTopUp'],
+    );
+
+    setState(() => _isLoading = false);
+
+    if (!mounted) return;
+
+    if (result['success']) {
+      showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text("Top-up Successful"),
+          content: const Text("You can now request for Delivery"),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text("OK"),
+            ),
+          ],
+        ),
       );
-    } finally {
-      setState(() => _isLoading = false);
+    } else {
+      showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text("Failed"),
+          content: Text(result['message']),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Close"),
+            ),
+          ],
+        ),
+      );
     }
   }
 
-
-
-
   @override
   void initState() {
+    super.initState();
+    _loadUserData();
+    
     Timer(Duration(seconds: 1), () {
       if (widget.purchase.totalAmountPaid! >=
           widget.purchase.totalAmountToPay! * 0.6) {
@@ -456,9 +309,6 @@ Future<void> makeInstallmentPaymentRequest(
         );
       }
     });
-
-    _loadUserData();
-    super.initState();
   }
 
   @override
@@ -483,80 +333,7 @@ Future<void> makeInstallmentPaymentRequest(
             color: Colors.orange,
             height: 50,
             child: InkWell(
-              onTap: () async {
-                if (_isLoading) return; // Prevent double taps
-                setState(() => _isLoading = true);
-
-                final total = widget.purchase.totalAmountToPay!;
-                final paid = widget.purchase.totalAmountPaid!;
-
-                // Step 1: Calculate 60% of the total (minimum required for delivery)
-                final sixtyPercent = total * 0.6;
-
-                // Step 2: Compute remaining amount needed to reach 60%
-                final amountToTopUp = sixtyPercent - paid;
-
-                // Case 1: User has already paid enough (>= 60%)
-                if (amountToTopUp <= 0) {
-                  await showDialog(
-                    context: context,
-                    builder: (_) => AlertDialog(
-                      title: const Text("No Top-up Needed"),
-                      content: const Text(
-                          "You've already paid 60% or more. Delivery can be requested."),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: const Text("OK"),
-                        ),
-                      ],
-                    ),
-                  );
-                  setState(() => _isLoading = false);
-                  return;
-                }
-
-                // Step 3: Convert remaining amount into a percentage (e.g., 30%)
-                final topUpPercentage = ((amountToTopUp / total) * 100).round();
-
-                // Debug logs (remove in production)
-                print('Total amount: $total');
-                print('Amount paid: $paid');
-                print('60% threshold: $sixtyPercent');
-                print('Amount to top up: $amountToTopUp');
-                print('Percentage to debit: $topUpPercentage%');
-
-                setState(() {
-                  topupAmount = amountToTopUp.toInt();
-                });
-
-                // Step 4: Debit the user via API
-                try {
-                  await installmentRepaymentUsingWalletByPercentage(
-                    context,
-                    widget.purchase.product!.id!,
-                   topupAmount, // e.g., 30 (for 30%)
-                  );
-                } catch (e) {
-                  // Handle API errors gracefully
-                  await showDialog(
-                    context: context,
-                    builder: (_) => AlertDialog(
-                      title: const Text("Error"),
-                      content:
-                          Text("Failed to process top-up: ${e.toString()}"),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: const Text("Retry"),
-                        ),
-                      ],
-                    ),
-                  );
-                } finally {
-                  setState(() => _isLoading = false);
-                }
-              },
+              onTap: _handleTopUpForDelivery,
               child: Center(
                 child: _isLoading
                     ? const CircularProgressIndicator(
@@ -572,16 +349,10 @@ Future<void> makeInstallmentPaymentRequest(
           ),
           appBar: AppBar(
             backgroundColor: Colors.white,
-            title: GestureDetector(
-              onTap: () {
-                print(widget.purchase.product!.images.toString());
-                print(widget.purchase.product!.toJson());
-              },
-              child: CustomText(
-                "Payment summary",
-                fontSize: 17.sp,
-                fontWeight: FontWeight.w700,
-              ),
+            title: CustomText(
+              "Payment summary",
+              fontSize: 17.sp,
+              fontWeight: FontWeight.w700,
             ),
           ),
           body: SingleChildScrollView(
@@ -590,22 +361,19 @@ Future<void> makeInstallmentPaymentRequest(
               child: Column(
                 children: [
                   Padding(
-                    padding:
-                        const EdgeInsets.only(left: 30, right: 30, top: 20),
+                    padding: const EdgeInsets.only(left: 30, right: 30, top: 20),
                     child: Container(
                       height: 30.h,
                       decoration: BoxDecoration(
                         image: DecorationImage(
-                          image:
-                              NetworkImage(widget.purchase.product!.images![0]),
+                          image: NetworkImage(widget.purchase.product!.images![0]),
                           fit: BoxFit.cover,
                         ),
                       ),
                     ),
                   ),
                   Padding(
-                    padding:
-                        const EdgeInsets.only(left: 30, right: 30, top: 20),
+                    padding: const EdgeInsets.only(left: 30, right: 30, top: 20),
                     child: Column(
                       children: [
                         Row(
@@ -620,24 +388,14 @@ Future<void> makeInstallmentPaymentRequest(
                         ),
                         Padding(
                           padding: const EdgeInsets.all(8.0),
-                          child: Divider(
-                            color: Colors.grey,
-                          ),
+                          child: Divider(color: Colors.grey),
                         ),
                         if (widget.purchase.totalAmountToPay!.toInt() !=
                             widget.purchase.totalAmountPaid!.toInt())
                           Row(
                             children: [
                               GestureDetector(
-                                onTap: () {
-                                  setState(() {
-                                    PurchaseId = widget.purchase.id;
-                                    productId = widget.purchase.product!.id;
-                                    print(productId);
-                                  });
-
-                                  _showPaymentMethodDialog();
-                                },
+                                onTap: _showPaymentMethodDialog,
                                 child: Container(
                                   decoration: BoxDecoration(
                                     borderRadius: BorderRadius.circular(10),
@@ -645,10 +403,7 @@ Future<void> makeInstallmentPaymentRequest(
                                   ),
                                   child: Padding(
                                     padding: const EdgeInsets.only(
-                                        left: 20,
-                                        right: 20,
-                                        top: 10,
-                                        bottom: 10),
+                                        left: 20, right: 20, top: 10, bottom: 10),
                                     child: CustomText(
                                       "Pay Installments",
                                       fontWeight: FontWeight.w500,
@@ -662,19 +417,13 @@ Future<void> makeInstallmentPaymentRequest(
                           ),
                         Padding(
                           padding: const EdgeInsets.all(8.0),
-                          child: Divider(
-                            color: Colors.grey,
-                          ),
+                          child: Divider(color: Colors.grey),
                         ),
                         LinearCompletionIndicator(
-                          totalAmountToPay:
-                              widget.purchase.totalAmountToPay!.toInt(),
-                          totalAmountPaid:
-                              widget.purchase.totalAmountPaid!.toInt(),
+                          totalAmountToPay: widget.purchase.totalAmountToPay!.toInt(),
+                          totalAmountPaid: widget.purchase.totalAmountPaid!.toInt(),
                         ),
-                        SizedBox(
-                          height: 2.h,
-                        ),
+                        SizedBox(height: 2.h),
                         Row(
                           children: [
                             CustomText(
@@ -706,20 +455,18 @@ Future<void> makeInstallmentPaymentRequest(
                         ),
                         PaymentBreakdownWidget(
                           title: 'Next payment Date:',
-                          amount: getNextPaymentDate(
-                              widget.purchase.payments!.toList()),
-                          index: index,
+                          amount: getNextPaymentDate(widget.purchase.payments!.toList()),
+                          index: 0,
                         ),
                         PaymentBreakdownWidget(
                           title: 'Next payment Amount:',
-                          amount:
-                              getNextPaymentAmount(widget.purchase.payments!),
-                          index: index,
+                          amount: getNextPaymentAmount(widget.purchase.payments!),
+                          index: 0,
                         ),
                         PaymentBreakdownWidget(
                           title: 'Shipping Status:',
                           amount: widget.purchase.deliveryStatus.toString(),
-                          index: index,
+                          index: 0,
                         ),
                       ],
                     ),
@@ -730,36 +477,6 @@ Future<void> makeInstallmentPaymentRequest(
           ),
         );
       },
-    );
-  }
-}
-
-class PaymentOptionsDialog extends StatelessWidget {
-  final Function(String) onOptionSelected;
-
-  const PaymentOptionsDialog({
-    Key? key,
-    required this.onOptionSelected,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: CustomText('Select Payment method'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          ListTile(
-            title: Text('Option 1'),
-            onTap: () => onOptionSelected('Option 1'),
-          ),
-          ListTile(
-            title: Text('Option 2'),
-            onTap: () => onOptionSelected('Option 2'),
-          ),
-          // Add more ListTile widgets for additional payment options
-        ],
-      ),
     );
   }
 }

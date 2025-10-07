@@ -236,7 +236,9 @@ class _DeliveryModalState extends State<DeliveryModal> {
                     labelText: "Enter Delivery Address",
                   ),
                 ),
+
                 SizedBox(height: 16.0),
+                
                 TextFormField(
                   controller: _phoneNumberController,
                   keyboardType: TextInputType.phone,
