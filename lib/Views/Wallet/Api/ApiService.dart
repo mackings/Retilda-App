@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
+
 class WalletApiService {
   static const String baseUrl = 'https://retilda-fintech-3jy7.onrender.com/Api';
   
@@ -45,7 +46,12 @@ class WalletApiService {
     };
 
     try {
-      print("Payload >> ${jsonEncode(requestBody)}");
+      // ✅ Log request
+      print(">>> makeInstallmentPaymentUsingWallet Request");
+      print("Endpoint: $baseUrl/installmentRepaymentUsingWallet");
+      print("Headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer $token' }");
+      print("Body: ${jsonEncode(requestBody)}");
+
       http.Response response = await http.post(
         Uri.parse('$baseUrl/installmentRepaymentUsingWallet'),
         headers: {
@@ -55,9 +61,11 @@ class WalletApiService {
         body: jsonEncode(requestBody),
       );
 
+      // ✅ Log response
+      print("<<< Response Status: ${response.statusCode}");
+      print("Response Body: ${response.body}");
+
       if (response.statusCode == 200) {
-        print('Installment payment request successful');
-        print('Response: ${response.body}');
         return {
           'success': true,
           'message': 'Payment successful!',
@@ -74,9 +82,6 @@ class WalletApiService {
           print('Failed to parse error response: $e');
         }
 
-        print('Response: ${response.body}');
-        print('Failed with status code: ${response.statusCode}');
-        
         return {
           'success': false,
           'message': errorMessage,
@@ -107,6 +112,12 @@ class WalletApiService {
     };
 
     try {
+      // ✅ Log request
+      print(">>> makeInstallmentPaymentUsingCard Request");
+      print("Endpoint: $baseUrl/installmentRepaymentUsingCard");
+      print("Headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer $token' }");
+      print("Body: ${jsonEncode(requestBody)}");
+
       final response = await http.post(
         Uri.parse('$baseUrl/installmentRepaymentUsingCard'),
         headers: {
@@ -115,6 +126,10 @@ class WalletApiService {
         },
         body: jsonEncode(requestBody),
       );
+
+      // ✅ Log response
+      print("<<< Response Status: ${response.statusCode}");
+      print("Response Body: ${response.body}");
 
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
@@ -128,15 +143,12 @@ class WalletApiService {
             'data': responseData,
           };
         } else {
-          print('Invalid response data: ${response.body}');
           return {
             'success': false,
             'message': 'Invalid response from server',
           };
         }
       } else {
-        print('Error: ${response.statusCode}');
-        print('Response Body: ${response.body}');
         return {
           'success': false,
           'message': 'Request failed with status: ${response.statusCode}',
@@ -169,6 +181,12 @@ class WalletApiService {
     };
 
     try {
+      // ✅ Log request
+      print(">>> topUpWalletForDelivery Request");
+      print("Endpoint: $baseUrl/installmentRepaymentUsingWalletByPercentage");
+      print("Headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer $token' }");
+      print("Body: ${jsonEncode(requestBody)}");
+
       final response = await http.post(
         Uri.parse('$baseUrl/installmentRepaymentUsingWalletByPercentage'),
         headers: {
@@ -178,8 +196,9 @@ class WalletApiService {
         body: jsonEncode(requestBody),
       );
 
-      print('Request Body: $requestBody');
-      print('Response: ${response.body}');
+      // ✅ Log response
+      print("<<< Response Status: ${response.statusCode}");
+      print("Response Body: ${response.body}");
 
       final responseData = jsonDecode(response.body);
 
@@ -238,3 +257,4 @@ class WalletApiService {
     };
   }
 }
+

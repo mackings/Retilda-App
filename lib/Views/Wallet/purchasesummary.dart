@@ -51,45 +51,90 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
     }
   }
 
+
   String getNextPaymentDate(List<Payment> payments) {
-    for (int i = 0; i < payments.length; i++) {
-      if (payments[i].paymentDate == null) {
-        final DateTime nextPaymentDateTime =
-            DateTime.parse(payments[i].nextPaymentDate.toString());
-        final DateFormat formatter = DateFormat('dd MMM yy');
-        return formatter.format(nextPaymentDateTime);
+  for (int i = 0; i < payments.length; i++) {
+    if (payments[i].status != 'completed') {
+      final DateTime nextPaymentDateTime =
+          DateTime.parse(payments[i].nextPaymentDate.toString());
+      final DateFormat formatter = DateFormat('dd MMM yy');
+      return formatter.format(nextPaymentDateTime);
+    }
+  }
+  return "Cleared";
+}
+
+String getNextPaymentAmount(List<Payment> payments) {
+  for (int i = 0; i < payments.length; i++) {
+    if (payments[i].status != 'completed') {
+      final amountToPay = payments[i].amountToPay ?? 0;
+      final amountPaid = payments[i].amountPaid ?? 0;
+      final remainingAmount = amountToPay - amountPaid;
+      return 'N${remainingAmount.toStringAsFixed(0)}';
+    }
+  }
+  return "N 0";
+}
+
+String getNextPaymentStatus(List<Payment> payments) {
+  for (int i = 0; i < payments.length; i++) {
+    if (payments[i].status != 'completed') {
+      final amountToPay = payments[i].amountToPay ?? 0;
+      final amountPaid = payments[i].amountPaid ?? 0;
+      
+      if (amountPaid > 0 && amountPaid < amountToPay) {
+        return 'Partially Paid (N${amountPaid.toStringAsFixed(0)} of N${amountToPay.toStringAsFixed(0)})';
+      } else if (amountPaid == 0) {
+        return 'Not Paid';
       }
     }
-    return "Cleared";
   }
+  return "Fully Paid";
+}
 
-  String getNextPaymentAmount(List<Payment> payments) {
-    for (int i = 0; i < payments.length; i++) {
-      if (payments[i].paymentDate == null) {
-        final amountToPay = payments[i].amountToPay ?? 0;
-        final amountPaid = payments[i].amountPaid ?? 0;
-        final remainingAmount = amountToPay - amountPaid;
-        return 'N${remainingAmount.toStringAsFixed(0)}';
-      }
-    }
-    return "N 0";
-  }
 
-  String getNextPaymentStatus(List<Payment> payments) {
-    for (int i = 0; i < payments.length; i++) {
-      if (payments[i].paymentDate == null) {
-        final amountToPay = payments[i].amountToPay ?? 0;
-        final amountPaid = payments[i].amountPaid ?? 0;
+
+  // String getNextPaymentDate(List<Payment> payments) {
+  //   for (int i = 0; i < payments.length; i++) {
+  //     if (payments[i].paymentDate == null) {
+  //       final DateTime nextPaymentDateTime =
+  //           DateTime.parse(payments[i].nextPaymentDate.toString());
+  //       final DateFormat formatter = DateFormat('dd MMM yy');
+  //       return formatter.format(nextPaymentDateTime);
+  //     }
+  //   }
+  //   return "Cleared";
+  // }
+
+  // String getNextPaymentAmount(List<Payment> payments) {
+  //   for (int i = 0; i < payments.length; i++) {
+  //     if (payments[i].paymentDate == null) {
+  //       final amountToPay = payments[i].amountToPay ?? 0;
+  //       final amountPaid = payments[i].amountPaid ?? 0;
+  //       final remainingAmount = amountToPay - amountPaid;
+  //       return 'N${remainingAmount.toStringAsFixed(0)}';
+  //     }
+  //   }
+  //   return "N 0";
+  // }
+
+  // String getNextPaymentStatus(List<Payment> payments) {
+  //   for (int i = 0; i < payments.length; i++) {
+  //     if (payments[i].paymentDate == null) {
+  //       final amountToPay = payments[i].amountToPay ?? 0;
+  //       final amountPaid = payments[i].amountPaid ?? 0;
         
-        if (amountPaid > 0 && amountPaid < amountToPay) {
-          return 'Partially Paid (N${amountPaid.toStringAsFixed(0)} of N${amountToPay.toStringAsFixed(0)})';
-        } else if (amountPaid == 0) {
-          return 'Not Paid';
-        }
-      }
-    }
-    return "Fully Paid";
-  }
+  //       if (amountPaid > 0 && amountPaid < amountToPay) {
+  //         return 'Partially Paid (N${amountPaid.toStringAsFixed(0)} of N${amountToPay.toStringAsFixed(0)})';
+  //       } else if (amountPaid == 0) {
+  //         return 'Not Paid';
+  //       }
+  //     }
+  //   }
+  //   return "Fully Paid";
+  // }
+
+
 
   Future<void> _handleWalletPayment() async {
     if (productId == null) return;
@@ -415,10 +460,12 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
                               ),
                             ],
                           ),
+
                         Padding(
                           padding: const EdgeInsets.all(8.0),
                           child: Divider(color: Colors.grey),
                         ),
+                        
                         LinearCompletionIndicator(
                           totalAmountToPay: widget.purchase.totalAmountToPay!.toInt(),
                           totalAmountPaid: widget.purchase.totalAmountPaid!.toInt(),
