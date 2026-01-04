@@ -149,39 +149,151 @@ class _KYCState extends ConsumerState<KYC> {
 
   @override
   Widget build(BuildContext context) {
+    const Color pageBg = Color(0xFFF6F7FB);
+    const Color deepBlue = Color(0xFF103C57);
+
     return Scaffold(
+      backgroundColor: pageBg,
       appBar: AppBar(
+        backgroundColor: pageBg,
+        elevation: 0,
         title: CustomText(
-          'Kyc',
-          fontSize: 15.sp,
-          fontWeight: FontWeight.w500,
+          'KYC Verification',
+          fontSize: 17.sp,
+          fontWeight: FontWeight.w800,
+          color: deepBlue,
         ),
       ),
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 25),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SizedBox(height: 5.h),
-            CustomTextFormField(
-              controller: _bvnController,
-              hintText: 'BVN',
-             // suffixIcon: Icons.manage_accounts_sharp,
-             // onSuffixIconTap: () {},
+            Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF0C3554), Color(0xFF145E8D)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.08),
+                    blurRadius: 16,
+                    offset: const Offset(0, 12),
+                  )
+                ],
+              ),
+              padding: const EdgeInsets.all(18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.15),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.shield, color: Colors.white, size: 26),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            CustomText(
+                              "Secure your account",
+                              fontSize: 17.sp,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                            ),
+                            const SizedBox(height: 4),
+                            CustomText(
+                              "Provide BVN and date of birth to verify your identity.",
+                              fontSize: 13.sp,
+                              color: Colors.white70,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Icon(Icons.lock_clock, color: Colors.white70, size: 18),
+                      const SizedBox(width: 6),
+                      CustomText(
+                        "Takes less than a minute",
+                        color: Colors.white,
+                        fontSize: 12.sp,
+                      ),
+                    ],
+                  )
+                ],
+              ),
             ),
-            SizedBox(height: 2.h),
-            MyTextFormField(
-              controller: _dobController,
-              hintText: 'Date of Birth',
-              suffixIcon: Icons.date_range,
-              onSuffixIconTap: () {
-                _selectDate(context);
-              },
-            ),
-            SizedBox(height: 5.h),
-            CustomBtn(
-              backgroundColor: RButtoncolor,
-              text: loading ? "Validating BVN..." : "Validate BVN",
-              onPressed: loading ? null : updateKyc,
+            const SizedBox(height: 18),
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.04),
+                    blurRadius: 12,
+                    offset: const Offset(0, 10),
+                  )
+                ],
+              ),
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  CustomText(
+                    "Verification details",
+                    fontSize: 15.sp,
+                    fontWeight: FontWeight.w800,
+                    color: deepBlue,
+                  ),
+                  const SizedBox(height: 12),
+                  CustomText(
+                    "Your BVN is used only for identity verification and is never stored.",
+                    fontSize: 12.sp,
+                    color: Colors.grey[700],
+                  ),
+                  SizedBox(height: 2.h),
+                  CustomTextFormField(
+                    controller: _bvnController,
+                    hintText: 'Enter BVN',
+                  ),
+                  SizedBox(height: 2.h),
+                  MyTextFormField(
+                    controller: _dobController,
+                    hintText: 'Date of Birth',
+                    suffixIcon: Icons.date_range,
+                    onSuffixIconTap: () {
+                      _selectDate(context);
+                    },
+                  ),
+                  SizedBox(height: 3.h),
+                  CustomBtn(
+                    backgroundColor: RButtoncolor,
+                    text: loading ? "Validating BVN..." : "Validate BVN",
+                    onPressed: loading ? null : updateKyc,
+                  ),
+                  const SizedBox(height: 6),
+                  CustomText(
+                    "By continuing, you agree to our terms and data policy.",
+                    fontSize: 11.sp,
+                    color: Colors.grey[600],
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -206,21 +318,30 @@ class MyTextFormField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: MediaQuery.of(context).size.width * 0.9,
+      width: double.infinity,
       decoration: BoxDecoration(
-          border: Border.all(width: 0.5, color: Colors.grey),
-          borderRadius: BorderRadius.circular(10)),
+        color: Colors.white,
+        border: Border.all(width: 0.5, color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 6),
+          )
+        ],
+      ),
       child: TextFormField(
         controller: controller,
         decoration: InputDecoration(
           hintText: hintText,
-          hintStyle: GoogleFonts.poppins(),
+          hintStyle: GoogleFonts.poppins(fontSize: 13.sp, color: Colors.grey[600]),
           border: InputBorder.none,
           contentPadding:
-              EdgeInsets.symmetric(vertical: 13.0, horizontal: 20.0),
+              const EdgeInsets.symmetric(vertical: 14.0, horizontal: 20.0),
           suffixIcon: GestureDetector(
             onTap: onSuffixIconTap,
-            child: Icon(suffixIcon),
+            child: Icon(suffixIcon, color: const Color(0xFF103C57)),
           ),
         ),
       ),

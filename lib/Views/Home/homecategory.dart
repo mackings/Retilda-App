@@ -109,29 +109,24 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
                       crossAxisCount: 2,
                       crossAxisSpacing: 10,
                       mainAxisSpacing: 10,
-                      childAspectRatio: 0.75,
+                      childAspectRatio: 0.9,
                     ),
                     itemCount: products.length,
                     itemBuilder: (context, index) {
                       var product = products[index];
-                      return GestureDetector(
-                        onTap: () {
-                          print(product.categories);
-
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  ProductDetails(product: product),
-                            ),
-                          );
-                        },
-                        child: Padding(
-                          padding: const EdgeInsets.all(15.0),
-                          child: ProductCard(
-                            product: product,
-                            onTap: () {},
-                          ),
+                      return Padding(
+                        padding: const EdgeInsets.all(15.0),
+                        child: ProductCard2(
+                          product: product,
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    ProductDetails(product: product),
+                              ),
+                            );
+                          },
                         ),
                       );
                     },

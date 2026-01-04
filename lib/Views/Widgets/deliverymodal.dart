@@ -124,13 +124,14 @@ class _DeliveryModalState extends State<DeliveryModal> {
           isQuotationFetched = true;
         });
       } else {
-        final error =
-            jsonDecode(response.body)['message'] ?? 'Quotation failed.';
-            
-        print(response.body);
-
+        final error = jsonDecode(response.body)['message'] ?? 'Quotation failed.';
+        final bool tokenExpired = error.toLowerCase().contains('token has expired');
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed: $error')),
+          SnackBar(
+            content: Text(tokenExpired
+                ? 'Session expired. Please log out and sign back in.'
+                : 'Failed: $error'),
+          ),
         );
       }
     } catch (e) {
@@ -183,8 +184,13 @@ class _DeliveryModalState extends State<DeliveryModal> {
         print(response.body);
         Navigator.pop(context);
         final error = jsonDecode(response.body)['message'] ?? 'Request failed.';
+        final bool tokenExpired = error.toLowerCase().contains('token has expired');
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed: $error')),
+          SnackBar(
+            content: Text(tokenExpired
+                ? 'Session expired. Please log out and sign back in.'
+                : 'Failed: $error'),
+          ),
         );
       }
     } catch (e) {
@@ -200,153 +206,206 @@ class _DeliveryModalState extends State<DeliveryModal> {
       physics: BouncingScrollPhysics(),
       child: Padding(
         padding: MediaQuery.of(context).viewInsets,
-        child: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Container(
-            padding: EdgeInsets.all(16.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Align(
-                  alignment: Alignment.topRight,
-                  child: GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: Icon(Icons.close),
-                  ),
+        child: Container(
+          decoration: const BoxDecoration(
+            color: Colors.transparent,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 8),
+              Container(
+                width: 60,
+                height: 5,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                SizedBox(height: 15),
-                Row(
-                  children: [
-                    Text(
-                      "Your Item Delivery",
-                      style: GoogleFonts.poppins(
-                          fontSize: 12.sp, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 12),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(18),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.08),
+                      blurRadius: 14,
+                      offset: const Offset(0, 10),
                     ),
-                    SizedBox(width: 5),
-                    Icon(Icons.location_history),
                   ],
                 ),
-                Text("Your Delivery arrives in 2 weeks from the request date."),
-                SizedBox(height: 25),
-                TextFormField(
-                  controller: _addressController,
-                  maxLines: 2,
-                  decoration: InputDecoration(
-                    border: OutlineInputBorder(),
-                    labelText: "Enter Delivery Address",
-                  ),
-                ),
-
-                SizedBox(height: 16.0),
-                
-                TextFormField(
-                  controller: _phoneNumberController,
-                  keyboardType: TextInputType.phone,
-                  decoration: InputDecoration(
-                    border: OutlineInputBorder(),
-                    labelText: "Enter Phone Number",
-                  ),
-                ),
-                SizedBox(height: 16.0),
-                GestureDetector(
-                  onTap: () => _selectDate(context),
-                  child: AbsorbPointer(
-                    child: TextFormField(
-                      controller: _dateController,
-                      decoration: InputDecoration(
-                        border: OutlineInputBorder(),
-                        labelText: "Select Delivery Date",
-                        suffixIcon: Icon(Icons.calendar_today),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          "Schedule Delivery",
+                          style: GoogleFonts.poppins(
+                            fontSize: 14.sp,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      "Arrives in ~2 weeks after request. Provide delivery details to get a fee estimate.",
+                      style: GoogleFonts.poppins(
+                        fontSize: 11.sp,
+                        color: Colors.grey[700],
                       ),
                     ),
-                  ),
-                ),
-                SizedBox(height: 16.0),
-                DropdownButtonFormField<String>(
-                  decoration: InputDecoration(
-                    border: OutlineInputBorder(),
-                    labelText: "Select Time Slot",
-                  ),
-                  value: _selectedTimeSlot,
-                  items: _timeSlots.map((slot) {
-                    return DropdownMenuItem(
-                      value: slot,
-                      child: Text(slot),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      _selectedTimeSlot = value;
-                    });
-                  },
-                ),
-                SizedBox(height: 16.0),
-                DropdownButtonFormField<String>(
-                  decoration: InputDecoration(
-                    border: OutlineInputBorder(),
-                    labelText: "Select Category",
-                  ),
-                  value: _selectedCategory,
-                  items: _categories.map((category) {
-                    return DropdownMenuItem(
-                      value: category,
-                      child: Text(category),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      _selectedCategory = value;
-                    });
-                  },
-                ),
-                SizedBox(height: 20),
-                if (deliveryFee != null)
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text("Delivery Fee:", style: GoogleFonts.montserrat()),
-                      Text("₦ $deliveryFee",
-                          style: GoogleFonts.montserrat(
-                              fontWeight: FontWeight.w600, fontSize: 12.sp)),
-                    ],
-                  ),
-                SizedBox(height: 16),
-                GestureDetector(
-                  onTap: isLoading
-                      ? null
-                      : () async {
-                          setState(() => isLoading = true);
-                          if (isQuotationFetched) {
-                            // Request Delivery API
-                            await _requestDelivery();
-                          } else {
-                            // Fetch Quotation API
-                            await _fetchQuotation();
-                          }
-                          setState(() => isLoading = false);
-                        },
-                  child: Container(
-                    width: double.infinity,
-                    padding: EdgeInsets.symmetric(vertical: 15.0),
-                    decoration: BoxDecoration(
-                      color: ROrange,
-                      borderRadius: BorderRadius.circular(8),
+                    const SizedBox(height: 14),
+                    TextFormField(
+                      controller: _addressController,
+                      maxLines: 2,
+                      decoration: InputDecoration(
+                        labelText: "Delivery Address",
+                        prefixIcon: const Icon(Icons.home_outlined),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
                     ),
-                    child: Center(
-                      child: isLoading
-                          ? CircularProgressIndicator(color: Colors.white)
-                          : Text(
-                              isQuotationFetched
-                                  ? "Request Delivery"
-                                  : "View Delivery Quotation",
-                              style:
-                                  GoogleFonts.montserrat(color: Colors.white),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: _phoneNumberController,
+                      keyboardType: TextInputType.phone,
+                      decoration: InputDecoration(
+                        labelText: "Phone Number",
+                        prefixIcon: const Icon(Icons.phone_outlined),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    GestureDetector(
+                      onTap: () => _selectDate(context),
+                      child: AbsorbPointer(
+                        child: TextFormField(
+                          controller: _dateController,
+                          decoration: InputDecoration(
+                            labelText: "Delivery Date",
+                            prefixIcon: const Icon(Icons.calendar_today_outlined),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
                             ),
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        labelText: "Time Slot",
+                      ),
+                      value: _selectedTimeSlot,
+                      items: _timeSlots
+                          .map((slot) => DropdownMenuItem(
+                                value: slot,
+                                child: Text(slot),
+                              ))
+                          .toList(),
+                      onChanged: (value) => setState(() => _selectedTimeSlot = value),
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        labelText: "Category",
+                      ),
+                      value: _selectedCategory,
+                      items: _categories
+                          .map((category) => DropdownMenuItem(
+                                value: category,
+                                child: Text(category),
+                              ))
+                          .toList(),
+                      onChanged: (value) => setState(() => _selectedCategory = value),
+                    ),
+                    const SizedBox(height: 12),
+                    if (deliveryFee != null)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: Colors.green.withOpacity(0.07),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text("Estimated Fee",
+                                style: GoogleFonts.montserrat(
+                                    fontWeight: FontWeight.w500)),
+                            Text("₦ $deliveryFee",
+                                style: GoogleFonts.montserrat(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 12.sp)),
+                          ],
+                        ),
+                      ),
+                    const SizedBox(height: 14),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: isLoading
+                            ? null
+                            : () async {
+                                setState(() => isLoading = true);
+                                if (isQuotationFetched) {
+                                  await _requestDelivery();
+                                } else {
+                                  await _fetchQuotation();
+                                }
+                                setState(() => isLoading = false);
+                              },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: ROrange,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        child: isLoading
+                            ? const SizedBox(
+                                height: 22,
+                                width: 22,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : Text(
+                                isQuotationFetched
+                                    ? "Request Delivery"
+                                    : "View Delivery Quotation",
+                                style: GoogleFonts.montserrat(
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),

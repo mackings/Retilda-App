@@ -36,3 +36,16 @@ class _WebViewScreenState extends State<WebViewScreen> {
     );
   }
 }
+
+// Backward-compatible wrapper to match older call sites
+class InAppWebViewPage extends StatelessWidget {
+  final String url;
+  final String title;
+
+  const InAppWebViewPage({super.key, required this.url, required this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    return WebViewScreen(url: url);
+  }
+}

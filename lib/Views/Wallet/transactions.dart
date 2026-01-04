@@ -24,6 +24,7 @@ class _TransactionsState extends ConsumerState<Transactions> {
   String? AccountName;
   List<Content> _transactions = [];
   dynamic _userBalance;
+  String _typeFilter = 'all'; // all, debit, credit
 
   bool _isLoading = true;
 
@@ -119,105 +120,160 @@ class _TransactionsState extends ConsumerState<Transactions> {
         );
   }
 
+  List<Content> get _filteredTransactions {
+    if (_typeFilter == 'all') return _transactions;
+    final bool wantDebit = _typeFilter == 'debit';
+    return _transactions
+        .where((t) => (t.transactionType == "purchase") == wantDebit)
+        .toList();
+  }
+
   void showBankDetailsModal(
       BuildContext context, String bankName, String accountNumber) {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (BuildContext context) {
-        return Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header Row
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        return DraggableScrollableSheet(
+          expand: false,
+          minChildSize: 0.25,
+          initialChildSize: 0.35,
+          maxChildSize: 0.5,
+          builder: (context, scrollController) {
+            return Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.12),
+                    blurRadius: 24,
+                    offset: const Offset(0, 16),
+                  ),
+                ],
+              ),
+              child: ListView(
+                controller: scrollController,
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
                 children: [
-                  Spacer(),
-                  GestureDetector(
-                    onTap: () {
-                      Navigator.pop(context);
-                    },
-                    child: CircleAvatar(
-                      backgroundColor: Colors.grey.shade200,
-                      child: Icon(Icons.close, color: Colors.black),
+                  Center(
+                    child: Container(
+                      width: 50,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                   ),
-                ],
-              ),
-
-              SizedBox(height: 10),
-
-              // Descriptive Text
-              Text(
-                'Make a bank transfer to the bank account below to top up your wallet.',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w400),
-              ),
-              SizedBox(height: 30),
-              Divider(color: Colors.grey.shade300),
-
-              // Bank Name Row
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Bank Name:',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-                  ),
-                  Text(
-                    bankName,
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w400),
-                  ),
-                ],
-              ),
-              SizedBox(height: 10),
-              Divider(color: Colors.grey.shade300),
-
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Account Number:',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-                  ),
+                  const SizedBox(height: 14),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        accountNumber,
-                        style: TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.w400),
+                      CustomText(
+                        "Wallet top-up",
+                        fontWeight: FontWeight.w900,
+                        fontSize: 15.sp,
                       ),
-                      IconButton(
-                        icon: Icon(Icons.copy, size: 16),
-                        onPressed: () {
-                          Clipboard.setData(ClipboardData(text: accountNumber));
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Account Number Copied')),
-                          );
-                        },
+                      GestureDetector(
+                        onTap: () => Navigator.pop(context),
+                        child: CircleAvatar(
+                          radius: 16,
+                          backgroundColor: Colors.grey.shade200,
+                          child: const Icon(Icons.close, color: Colors.black),
+                        ),
                       ),
                     ],
                   ),
+                  const SizedBox(height: 10),
+                  CustomText(
+                    'Send a transfer to fund your wallet.',
+                    fontSize: 13.sp,
+                    color: Colors.grey[700],
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0F4C75).withOpacity(0.06),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    padding: const EdgeInsets.all(14),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            CustomText(
+                              'Bank',
+                              fontSize: 12.sp,
+                              color: Colors.grey[700],
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF0F4C75).withOpacity(0.12),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: CustomText(
+                                bankName,
+                                fontSize: 12.sp,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF0F4C75),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                CustomText(
+                                  'Account Number',
+                                  fontSize: 12.sp,
+                                  color: Colors.grey[700],
+                                ),
+                                const SizedBox(height: 6),
+                                CustomText(
+                                  accountNumber,
+                                  fontSize: 16.sp,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.black,
+                                ),
+                              ],
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.copy, size: 22),
+                              onPressed: () {
+                                Clipboard.setData(ClipboardData(text: accountNumber));
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Account Number Copied')),
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  CustomText(
+                    'Funds reflect automatically once your transfer clears.',
+                    fontSize: 12.sp,
+                    color: Colors.grey[600],
+                  ),
                 ],
               ),
-              SizedBox(height: 10),
-              Divider(color: Colors.grey.shade300), // Bottom Divider
-
-              SizedBox(height: 10),
-              Align(
-                alignment: Alignment.center,
-                child: Text(
-                  'Thank you for choosing Retilda!',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w400),
-                ),
-              ),
-            ],
-          ),
+            );
+          },
         );
       },
     );
@@ -231,210 +287,345 @@ class _TransactionsState extends ConsumerState<Transactions> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        title: CustomText(
-          "Transactions",
-          fontSize: 17.sp,
-          fontWeight: FontWeight.w700,
-        ),
-        actions: [
-          GestureDetector(
-              onTap: () {
-                fetchUserBalance();
-              },
-              child: Icon(Icons.refresh_rounded))
-        ],
-      ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(left: 30, right: 30),
-            child: Container(
-              height: 18.h,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8),
-                image: DecorationImage(
-                  image: AssetImage("assets/bg.jpg"),
-                  fit: BoxFit.cover,
-                ),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(10.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        CustomText(
-                          "Available Balance",
-                          color: Colors.white,
-                          fontSize: 15.sp,
-                        ),
-                        CustomText(
-                          'N${formatBalance(_userBalance)}',
-                          fontSize: 17.sp,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.white,
-                        ),
-                        SizedBox(
-                          height: 10,
-                        ),
-                        CustomText(
-                          "$AccountNumber",
-                          color: Colors.white,
-                          fontSize: 16.sp,
-                        ),
-                        CustomText(
-                          "Wema Bank",
-                          color: Colors.white,
-                          fontSize: 12.sp,
-                        ),
-                      ],
+    const Color pageBg = Color(0xFFF6F7FB);
+    const Color deepBlue = Color(0xFF103C57);
+    const Color accent = Color(0xFFFB9324);
+
+    return Sizer(
+      builder: (context, orientation, deviceType) {
+        return Scaffold(
+          backgroundColor: pageBg,
+          appBar: AppBar(
+            automaticallyImplyLeading: false,
+            backgroundColor: pageBg,
+            title: CustomText(
+              "Transactions",
+              fontSize: 17.sp,
+              fontWeight: FontWeight.w700,
+              color: deepBlue,
+            ),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.refresh_rounded, color: Colors.black87),
+                onPressed: fetchUserBalance,
+              )
+            ],
+          ),
+          body: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Container(
+                  height: 18.h,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(14),
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF0C3554), Color(0xFF145E8D)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
-                    Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 16,
+                        offset: const Offset(0, 12),
+                      )
+                    ],
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(14.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        GestureDetector(
-                          onTap: () {
-                            showBankDetailsModal(
-                                context, "Wema Bank", "$AccountNumber");
-                          },
-                          child: Container(
-                            height: 5.h,
-                            width: 30.w,
-                            decoration: BoxDecoration(
-                                color: Colors.orange,
-                                borderRadius: BorderRadius.circular(8)),
-                            child: Center(
-                              child: Padding(
-                                padding: const EdgeInsets.all(8.0),
+                        Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            CustomText(
+                              "Available Balance",
+                              color: Colors.white70,
+                              fontSize: 12.sp,
+                            ),
+                            CustomText(
+                              'N${formatBalance(_userBalance)}',
+                              fontSize: 18.sp,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
+                            const SizedBox(height: 8),
+                            CustomText(
+                              "$AccountNumber",
+                              color: Colors.white,
+                              fontSize: 12.sp,
+                            ),
+                            CustomText(
+                              "Wema Bank",
+                              color: Colors.white70,
+                              fontSize: 11.sp,
+                            ),
+                          ],
+                        ),
+                        Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            GestureDetector(
+                              onTap: () {
+                                showBankDetailsModal(
+                                    context, "Wema Bank", "$AccountNumber");
+                              },
+                              child: Container(
+                                height: 5.h,
+                                width: 30.w,
+                                decoration: BoxDecoration(
+                                  color: accent,
+                                  borderRadius: BorderRadius.circular(10),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.1),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 8),
+                                    ),
+                                  ],
+                                ),
                                 child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceAround,
+                                  mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
                                     CustomText(
                                       "Top Up",
                                       color: Colors.white,
-                                      fontSize: 14.sp,
+                                      fontSize: 12.sp,
+                                      fontWeight: FontWeight.w700,
                                     ),
-                                    Icon(
-                                      Icons.add,
-                                      color: Colors.white,
-                                      size: 15,
+                                    const SizedBox(width: 6),
+                                    const Icon(Icons.add,
+                                        color: Colors.white, size: 16),
+                                  ],
+                                ),
+                              ),
+                            )
+                          ],
+                        )
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
+                child: Row(
+                  children: [
+                CustomText(
+                  "Transaction History",
+                  fontSize: 17.sp,
+                  fontWeight: FontWeight.w800,
+                  color: deepBlue,
+                ),
+              ],
+            ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Row(
+                  children: [
+                    ChoiceChip(
+                      label: const Text("All"),
+                      selected: _typeFilter == 'all',
+                      onSelected: (_) => setState(() => _typeFilter = 'all'),
+                    ),
+                    const SizedBox(width: 8),
+                    ChoiceChip(
+                      label: const Text("Debit"),
+                      selected: _typeFilter == 'debit',
+                      onSelected: (_) => setState(() => _typeFilter = 'debit'),
+                    ),
+                    const SizedBox(width: 8),
+                    ChoiceChip(
+                      label: const Text("Credit"),
+                      selected: _typeFilter == 'credit',
+                      onSelected: (_) => setState(() => _typeFilter = 'credit'),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: _isLoading
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 40),
+                          child: LinearProgressIndicator(color: accent, minHeight: 4),
+                        ),
+                      )
+                    : _transactions.isEmpty
+                        ? ListView(
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.only(top: 140),
+                                child: Column(
+                                  children: [
+                                    Icon(Icons.receipt_long,
+                                        size: 48, color: Colors.grey[400]),
+                                    const SizedBox(height: 12),
+                                    CustomText(
+                                      "No transactions available",
+                                      fontSize: 18.sp,
+                                      fontWeight: FontWeight.w600,
+                                      color: deepBlue,
+                                    ),
+                                    const SizedBox(height: 6),
+                                    CustomText(
+                                      "Your transactions will appear here once you start paying.",
+                                      fontSize: 13.sp,
+                                      color: Colors.grey[600],
                                     ),
                                   ],
                                 ),
                               ),
-                            ),
-                          ),
-                        )
-                      ],
-                    )
-                  ],
-                ),
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(left: 20, top: 30),
-            child: Row(
-              children: [
-                CustomText(
-                  "Transaction History",
-                  fontSize: 15.sp,
-                  fontWeight: FontWeight.w500,
-                ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: _transactions.isEmpty
-                ? Center(
-                    child: Padding(
-                      padding: const EdgeInsets.only(left: 30, right: 30),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.info_outline,
-                              size: 50, color: Colors.black),
-                          SizedBox(height: 16),
-                          CustomText(
-                            'No transactions available',
-                          ),
-                        ],
-                      ),
-                    ),
-                  )
-                : Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: ListView.builder(
-                      itemCount: _transactions.length,
-                      itemBuilder: (context, index) {
-                        // Reverse the index to display the latest first
-                        final transaction =
-                            _transactions[_transactions.length - 1 - index];
-                        final transactionDateTime =
-                            DateTime.parse(transaction.transactionDate.toString())
-                                .add(Duration(hours: 1));
-                        final formattedDate = DateFormat('MMMM d, yyyy, h:mma')
-                            .format(transactionDateTime);
+                            ],
+                          )
+                        : Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 8),
+                            child: ListView.separated(
+                              itemCount: _filteredTransactions.length,
+                              separatorBuilder: (_, __) =>
+                                  const SizedBox(height: 10),
+                              itemBuilder: (context, index) {
+                                final transaction =
+                                    _filteredTransactions[_filteredTransactions.length - 1 - index];
+                                final transactionDateTime =
+                                    DateTime.parse(transaction.transactionDate.toString())
+                                        .add(const Duration(hours: 1));
+                                final formattedDate =
+                                    DateFormat('MMMM d, yyyy, h:mma')
+                                        .format(transactionDateTime);
+                                final formattedAmount = NumberFormat.currency(
+                                  locale: 'en_NG',
+                                  symbol: 'N',
+                                  decimalDigits: 0,
+                                ).format(transaction.amount);
 
-                        final formattedAmount = NumberFormat.currency(
-                          locale: 'en_NG',
-                          symbol: 'N',
-                          decimalDigits: 0,
-                        ).format(transaction.amount);
+                                final bool isDebit =
+                                    transaction.transactionType == "purchase";
+                                final String titleText =
+                                    transaction.transactionType == "purchase"
+                                        ? (transaction.status == "settlement"
+                                            ? "Product Settlement"
+                                            : "Product Purchase")
+                                        : (transaction.senderName == "Unknown Sender"
+                                            ? "Service charge"
+                                            : transaction.senderName);
 
-// Determine the title based on transaction type
-                        final titleText =
-                            transaction.transactionType == "purchase"
-                                ? (transaction.status == "settlement"
-                                    ? "Product Settlement"
-                                    : "Product Purchase")
-                                : (transaction.senderName == "Unknown Sender"
-                                    ? "Service charge"
-                                    : transaction.senderName);
+                                final bool success =
+                                    (transaction.status).toLowerCase() == 'success';
 
-                        return Padding(
-                          padding: const EdgeInsets.all(15.0),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(8),
-                              border:
-                                  Border.all(width: 0.5, color: Colors.grey),
-                            ),
-                            child: ListTile(
-                              leading: transaction.transactionType == "purchase"
-                                  ? Icon(Icons.arrow_circle_down_sharp,
-                                      color: Colors.red)
-                                  : Icon(Icons.arrow_circle_up_sharp,
-                                      color: Colors.green),
-                              title: CustomText(
-                                  titleText), // Conditionally set title
-                              subtitle: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  CustomText(formattedDate),
+                                return Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(12),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.04),
+                                        blurRadius: 10,
+                                        offset: const Offset(0, 8),
+                                      )
+                                    ],
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.all(10),
+                                            decoration: BoxDecoration(
+                                              color: isDebit
+                                                  ? Colors.red.withOpacity(0.1)
+                                                  : Colors.green.withOpacity(0.1),
+                                              shape: BoxShape.circle,
+                                            ),
+                                            child: Icon(
+                                              isDebit
+                                                  ? Icons.south_east
+                                                  : Icons.north_east,
+                                              color:
+                                                  isDebit ? Colors.red : Colors.green,
+                                              size: 18,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 10),
+                                          Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                      SizedBox(
+                                    width: 170,
+                                    child: CustomText(
+                                      titleText,
+                                      fontSize: 16.sp,
+                                      fontWeight: FontWeight.w800,
+                                      color: deepBlue,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  SizedBox(
+                                    width: 170,
+                                    child: CustomText(
+                                      transaction.description,
+                                      fontSize: 14.sp,
+                                      color: Colors.grey[700],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
                                   CustomText(
-                                    transaction.description, // Description
+                                    formattedDate,
                                     fontSize: 13.sp,
+                                    color: Colors.grey[600],
                                   ),
                                 ],
-                              ),
-                              trailing: CustomText(formattedAmount), // Amount
+                                          ),
+                                        ],
+                                      ),
+                                      Column(
+                                        crossAxisAlignment: CrossAxisAlignment.end,
+                                        children: [
+                                  CustomText(
+                                    formattedAmount,
+                                    fontSize: 16.sp,
+                                    fontWeight: FontWeight.w900,
+                                    color: isDebit ? Colors.red : Colors.green,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Container(
+                                            decoration: BoxDecoration(
+                                              color: success
+                                                  ? Colors.green.withOpacity(0.1)
+                                                  : Colors.orange.withOpacity(0.1),
+                                              borderRadius: BorderRadius.circular(10),
+                                            ),
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 12, vertical: 6),
+                                    child: CustomText(
+                                      transaction.status,
+                                      fontSize: 13.sp,
+                                      color: success
+                                          ? Colors.green
+                                          : Colors.orange,
+                                    ),
+                                  ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
                             ),
                           ),
-                        );
-                      },
-                    ),
-                  ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

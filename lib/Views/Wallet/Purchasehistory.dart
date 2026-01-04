@@ -108,75 +108,94 @@ Future<void> _refreshPurchases() async {
 
   @override
   Widget build(BuildContext context) {
+    const Color pageBg = Color(0xFFF6F7FB);
+    const Color deepBlue = Color(0xFF103C57);
+    const Color accent = Color(0xFFFB9324);
+
     return Sizer(
       builder: (context, orientation, deviceType) {
         return Scaffold(
-          backgroundColor: Colors.white,
+          backgroundColor: pageBg,
           appBar: AppBar(
-            backgroundColor: Colors.white,
+            backgroundColor: pageBg,
             automaticallyImplyLeading: false,
             title: CustomText(
               "Purchase history",
               fontSize: 17.sp,
               fontWeight: FontWeight.w700,
+              color: deepBlue,
             ),
           ),
-body: _isLoading
-    ? Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 40),
-          child: LinearProgressIndicator(),
-        ),
-      )
-    : RefreshIndicator(
-        onRefresh: _refreshPurchases,
-        child: _purchases.isEmpty
-            ? ListView( // Important: Use ListView so RefreshIndicator works even with empty list
-                children: [
-                  Center(
-                    child: Padding(
-                      padding: const EdgeInsets.only(top: 300),
-                      child: CustomText(
-                        "You have no purchases.",
-                        fontSize: 18.sp,
-                        fontWeight: FontWeight.w400,
-                      ),
-                    ),
+          body: _isLoading
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 40),
+                    child: LinearProgressIndicator(color: accent),
                   ),
-                ],
-              )
-            : ListView.builder(
-                itemCount: _purchases.length,
-                itemBuilder: (context, index) {
-                  final purchase = _purchases[index];
-                  final DateTime paymentDate =
-                      purchase.payments!.isNotEmpty
-                          ? DateTime.parse(
-                              purchase.payments!.first.paymentDate.toString())
-                          : DateTime.now();
+                )
+              : RefreshIndicator(
+                  onRefresh: _refreshPurchases,
+                  child: _purchases.isEmpty
+                      ? ListView(
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.only(top: 140),
+                              child: Column(
+                                children: [
+                                  Icon(Icons.receipt_long,
+                                      size: 48, color: Colors.grey[400]),
+                                  const SizedBox(height: 12),
+                                  CustomText(
+                                    "No purchases yet",
+                                    fontSize: 16.sp,
+                                    fontWeight: FontWeight.w600,
+                                    color: deepBlue,
+                                  ),
+                                  const SizedBox(height: 6),
+                                  CustomText(
+                                    "Your purchases will appear here once you start buying.",
+                                    fontSize: 11.sp,
+                                    color: Colors.grey[600],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        )
+                      : ListView.separated(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 12),
+                          itemCount: _purchases.length,
+                          separatorBuilder: (_, __) => const SizedBox(height: 12),
+                          itemBuilder: (context, index) {
+                            final purchase = _purchases[index];
+                            final DateTime paymentDate =
+                                purchase.payments!.isNotEmpty
+                                    ? DateTime.parse(purchase.payments!.first.paymentDate.toString())
+                                    : DateTime.now();
 
-                  return GestureDetector(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              Purchasesummary(purchase: purchase),
+                            return GestureDetector(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        Purchasesummary(purchase: purchase),
+                                  ),
+                                );
+                              },
+                              child: PaymentSummaryCard(
+                                date: paymentDate,
+                                imageUrl: purchase.product!.images![0],
+                                title: purchase.product!.name.toString(),
+                                subtitle: purchase.paymentPlan == "once"
+                                    ? "One time payment of N${NumberFormat('#,##0').format(purchase.payments!.first.amountPaid)}"
+                                    : "N${NumberFormat('#,##0').format(purchase.totalAmountPaid)} out of N${NumberFormat('#,##0').format(purchase.totalAmountToPay)}",
+                              ),
+                            );
+                          },
                         ),
-                      );
-                    },
-                    child: PaymentSummaryCard(
-                      date: paymentDate,
-                      imageUrl: purchase.product!.images![0],
-                      title: purchase.product!.name.toString(),
-                      subtitle: purchase.paymentPlan == "once"
-                          ? "One time payment of N${NumberFormat('#,##0').format(purchase.payments!.first.amountPaid)}"
-                          : "N${NumberFormat('#,##0').format(purchase.totalAmountPaid)} out of N${NumberFormat('#,##0').format(purchase.totalAmountToPay)}",
-                    ),
-                  );
-                },
-              ),
-      ),
+                ),
         );
       },
     );

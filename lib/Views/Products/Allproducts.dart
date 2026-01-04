@@ -403,37 +403,20 @@ class _AllproductsState extends ConsumerState<Allproducts> {
 
   @override
   Widget build(BuildContext context) {
+    final Color pageBg = const Color(0xFFF6F7FB);
+    final Color accent = const Color(0xFFFB9324);
+
+    List<Product> displayedProducts = List.from(_products);
+    if (_selectedSortOption == 'lower_to_highest') {
+      displayedProducts.sort((a, b) => a.price.compareTo(b.price));
+    } else if (_selectedSortOption == 'highest_to_lower') {
+      displayedProducts.sort((a, b) => b.price.compareTo(a.price));
+    }
+
     return Sizer(
       builder: (context, orientation, deviceType) {
         return Scaffold(
-          extendBodyBehindAppBar: true,
-          backgroundColor: Colors.white,
-          appBar: AppBar(
-            backgroundColor: Colors.white,
-            title: CustomText(
-              "Products",
-              fontSize: 17.sp,
-              fontWeight: FontWeight.w700,
-            ),
-            actions: [
-              IconButton(
-                icon: Icon(Icons.search),
-                onPressed: () {
-                //  _showSearchDialog(context);
-                                Navigator.push(context,
-                    MaterialPageRoute(builder: (context) => SearchPage()));
-                },
-              ),
-
-              IconButton(
-                icon: Icon(Icons.sort),
-                onPressed: () {
-                  _showCategoriesDrawer(context);
-                },
-              ),
-
-            ],
-          ),
+          backgroundColor: pageBg,
           body: _isLoading
               ? Center(
                   child: Padding(
@@ -441,59 +424,225 @@ class _AllproductsState extends ConsumerState<Allproducts> {
                     child: LinearProgressIndicator(),
                   ),
                 )
-              : Column(
-                  children: [
-                    Expanded(
+              : CustomScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  slivers: [
+                    SliverAppBar(
+                      pinned: true,
+                      floating: true,
+                      snap: false,
+                      backgroundColor: pageBg,
+                      elevation: 0,
+                      title: CustomText(
+                        "Marketplace",
+                        fontSize: 17.sp,
+                        fontWeight: FontWeight.w700,
+                      ),
+                      actions: [
+                        IconButton(
+                          icon: const Icon(Icons.search),
+                          onPressed: () {
+                            Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) => SearchPage()));
+                          },
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.filter_alt_outlined),
+                          onPressed: () {
+                            _showCategoriesDrawer(context);
+                          },
+                        ),
+                      ],
+                    ),
+                    SliverToBoxAdapter(
                       child: Padding(
-                        padding: const EdgeInsets.all(5.0),
-                        child: GridView.builder(
-                          gridDelegate:
-                              SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            crossAxisSpacing: 8.0,
-                            mainAxisSpacing: 8.0,
-                            childAspectRatio: 0.8,
+                        padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                const Color(0xFF103C57),
+                                const Color(0xFF145E8D),
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(18),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.12),
+                                blurRadius: 18,
+                                offset: const Offset(0, 12),
+                              ),
+                            ],
                           ),
-                          itemCount: _products.length,
-                          itemBuilder: (context, index) {
-                            List<Product> displayedProducts =
-                                List.from(_products);
-                            if (_selectedSortOption == 'lower_to_highest') {
-                              displayedProducts
-                                  .sort((a, b) => a.price.compareTo(b.price));
-                            } else if (_selectedSortOption ==
-                                'highest_to_lower') {
-                              displayedProducts
-                                  .sort((a, b) => b.price.compareTo(a.price));
-                            }
-
-                            return Padding(
-                              padding: const EdgeInsets.all(10.0),
-                              child: GestureDetector(
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => ProductDetails(
-                                        product: displayedProducts[index],
-                                      ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    CustomText(
+                                      "Curated picks",
+                                      fontSize: 13.sp,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.white70,
                                     ),
-                                  );
-                                },
-                                child: ProductCard(
-                                  product: displayedProducts[index],
-                                  onTap: () {},
+                                    const SizedBox(height: 6),
+                                    CustomText(
+                                      "Find your next purchase with secure checkout and rewards.",
+                                      fontSize: 11.sp,
+                                      fontWeight: FontWeight.w500,
+                                      color: Colors.white,
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Row(
+                                      children: [
+                                        _pillStat(
+                                            "${_products.length}", "products"),
+                                        const SizedBox(width: 8),
+                                        _pillStat(
+                                            "${_categories.length}",
+                                            "categories"),
+                                      ],
+                                    ),
+                                  ],
                                 ),
                               ),
+                              const SizedBox(width: 12),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 10),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.swap_vert_rounded,
+                                        color: Color(0xFF103C57)),
+                                    const SizedBox(width: 6),
+                                    CustomText(
+                                      _selectedSortOption ==
+                                              'highest_to_lower'
+                                          ? "High to Low"
+                                          : "Low to High",
+                                      fontSize: 11.sp,
+                                      fontWeight: FontWeight.w700,
+                                      color: const Color(0xFF103C57),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    SliverToBoxAdapter(
+                      child: SizedBox(
+                        height: 48,
+                        child: ListView.separated(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 6),
+                          scrollDirection: Axis.horizontal,
+                          itemCount: _categories.length,
+                          separatorBuilder: (_, __) => const SizedBox(width: 8),
+                          itemBuilder: (context, index) {
+                            final cat = _categories[index];
+                            final bool isSelected = _selectedCategory == cat;
+                            return ChoiceChip(
+                              label: Text(
+                                cat,
+                                style: TextStyle(
+                                  color: isSelected ? Colors.white : Colors.black87,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              selected: isSelected,
+                              selectedColor: accent,
+                              backgroundColor: Colors.white,
+                              onSelected: (selected) {
+                                if (selected) {
+                                  fetchProductsByCategory(cat);
+                                } else {
+                                  _loadUserData();
+                                }
+                              },
                             );
                           },
                         ),
                       ),
                     ),
+                    SliverPadding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
+                      sliver: SliverGrid(
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          mainAxisSpacing: 12,
+                          crossAxisSpacing: 12,
+                          childAspectRatio: 0.9,
+                        ),
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) {
+                            final product = displayedProducts[index];
+                            return ProductCard2(
+                              product: product,
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        ProductDetails(product: product),
+                                  ),
+                                );
+                              },
+                            );
+                          },
+                          childCount: displayedProducts.length,
+                        ),
+                      ),
+                    ),
+                    const SliverToBoxAdapter(child: SizedBox(height: 20)),
                   ],
                 ),
         );
       },
     );
   }
+}
+
+Widget _pillStat(String value, String label) {
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+    decoration: BoxDecoration(
+      color: Colors.white.withOpacity(0.16),
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: Colors.white24),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        CustomText(
+          value,
+          fontSize: 12.sp,
+          fontWeight: FontWeight.w700,
+          color: Colors.white,
+        ),
+        const SizedBox(width: 6),
+        CustomText(
+          label,
+          fontSize: 10.sp,
+          fontWeight: FontWeight.w500,
+          color: Colors.white70,
+        ),
+      ],
+    ),
+  );
 }

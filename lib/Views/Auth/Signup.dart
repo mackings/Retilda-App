@@ -14,7 +14,7 @@ class Signup extends StatefulWidget {
   State<Signup> createState() => _SignupState();
 }
 
-class _SignupState extends State<Signup> {
+class _SignupState extends State<Signup> with SingleTickerProviderStateMixin {
 
 // late FirebaseMessaging _messaging;
 // String _notificationText = "No new notifications";
@@ -60,6 +60,9 @@ class _SignupState extends State<Signup> {
 
   bool _isPasswordVisible = false;
   bool _isLoading = false;
+  late final AnimationController _animCtrl;
+  late final Animation<Offset> _slideIn;
+  late final Animation<double> _fadeIn;
 
   final TextEditingController _email = TextEditingController();
   final TextEditingController _phone = TextEditingController();
@@ -194,6 +197,18 @@ class _SignupState extends State<Signup> {
   void initState() {
    // _initializeFirebaseMessaging();
     super.initState();
+    _animCtrl =
+        AnimationController(vsync: this, duration: const Duration(milliseconds: 520));
+    _slideIn = Tween<Offset>(begin: const Offset(0, 0.08), end: Offset.zero)
+        .animate(CurvedAnimation(parent: _animCtrl, curve: Curves.easeOut));
+    _fadeIn = CurvedAnimation(parent: _animCtrl, curve: Curves.easeOut);
+    _animCtrl.forward();
+  }
+
+  @override
+  void dispose() {
+    _animCtrl.dispose();
+    super.dispose();
   }
 
   @override
@@ -201,133 +216,171 @@ class _SignupState extends State<Signup> {
     return Sizer(
       builder: (context, orientation, deviceType) {
         return Scaffold(
-          body: SingleChildScrollView(
-            physics: BouncingScrollPhysics(),
-            child: Center(
+          backgroundColor: const Color(0xFFF6F7FB),
+          body: SafeArea(
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
               child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      SizedBox(
-                          height: MediaQuery.of(context).size.height * 0.1),
-                      CustomText(
-                        'Retilda',
-                        fontSize: 25.sp,
-                        fontWeight: FontWeight.bold,
-                        color: ROrange,
-                      ),
-                      SizedBox(height: 4.h),
-
-                      CustomText(
-                        'Sign up',
-                        fontSize: 17.sp,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black,
-                      ),
-
-                      SizedBox(height: 4.h),
-CustomTextFormField(
-  controller: _fullname,
-  isPasswordField: false,
-  suffixIcon: Icons.person_2,
-  hintText: 'Full Name',
-  onChanged: (value) {},
-  validator: (value) {
-    if (value == null || value.trim().isEmpty) {
-      return 'Full name is required';
-    }
-
-    final words = value.trim().split(RegExp(r'\s+'));
-    if (words.length < 2) {
-      return 'Please enter your full name';
-    }
-
-    return null;
-  },
-),
-
-
-                      SizedBox(height: 4.h),
-
-                      CustomTextFormField(
-                        controller: _email,
-                        hintText: 'Email',
-                        isPasswordField: false,
-                        suffixIcon: Icons.email,
-                        validator: _validateEmail,
-                        onChanged: (value) {},
-                      ),
-
-                      SizedBox(height: 4.h),
-
-                      CustomTextFormField(
-                        controller: _phone,
-                        hintText: 'Phone Number',
-                        isPasswordField: false,
-                        suffixIcon: Icons.phone,
-                        validator: _validatePhoneNumber,
-                        onChanged: (value) {},
-                      ),
-
-                      SizedBox(height: 4.h),
-
-                      CustomTextFormField(
-                        controller: _password,
-                        hintText: 'Password',
-                        isPasswordField: true,
-                        onChanged: (value) {},
-                      ),
-
-                      SizedBox(height: 4.h),
-                      
-                        CustomTextFormField(
-                        controller: _referralcode,
-                        hintText: 'Refferal Code (Optional)',
-                        isPasswordField: false,
-                        suffixIcon: Icons.accessibility,
-                       // validator: _validatePhoneNumber,
-                        onChanged: (value) {},
-                      ),
-
-                      SizedBox(height: 4.h),
-                      CustomBtn(
-                        text: _isLoading ? "Creating your account.." : "Sign up",
-                        onPressed: () {
-                          if (_formKey.currentState?.validate() ?? false) {
-                            _signup();
-                          }
-                        },
-                        backgroundColor: RButtoncolor,
-                        borderRadius: 20.0,
-                      ),
-                      SizedBox(
-                          height: MediaQuery.of(context).size.height * 0.03),
-                      Row(
+                padding: const EdgeInsets.fromLTRB(18, 24, 18, 24),
+                  child: Form(
+                    key: _formKey,
+                  child: FadeTransition(
+                    opacity: _fadeIn,
+                    child: SlideTransition(
+                      position: _slideIn,
+                      child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          CustomText(
-                            'Already have an account? ',
-                            color: Colors.black,
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: ROrange.withOpacity(0.12),
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                child: const Icon(Icons.person_add_alt_1,
+                                    color: Colors.black87),
+                              ),
+                              const SizedBox(width: 10),
+                              CustomText(
+                                'Retilda',
+                                fontSize: 23.sp,
+                                fontWeight: FontWeight.w800,
+                                color: ROrange,
+                              ),
+                            ],
                           ),
-                          GestureDetector(
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (context) => Signin()),
-                              );
-                            },
-                            child: CustomText(
-                              'Sign in',
-                              color: Colors.blue,
+                          const SizedBox(height: 18),
+                          CustomText(
+                            'Create your account',
+                            fontSize: 19.sp,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.black87,
+                          ),
+                          const SizedBox(height: 6),
+                          CustomText(
+                            'Shop, split payments, and manage deliveries securely.',
+                            fontSize: 12.sp,
+                            color: Colors.grey[700],
+                          ),
+                          const SizedBox(height: 22),
+                          Container(
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.05),
+                                  blurRadius: 14,
+                                  offset: const Offset(0, 10),
+                                )
+                              ],
                             ),
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              children: [
+                                CustomTextFormField(
+                                  controller: _fullname,
+                                  isPasswordField: false,
+                                  suffixIcon: Icons.person_2,
+                                  hintText: 'Full Name',
+                                  onChanged: (value) {},
+                                  validator: (value) {
+                                    if (value == null || value.trim().isEmpty) {
+                                      return 'Full name is required';
+                                    }
+
+                                    final words =
+                                        value.trim().split(RegExp(r'\\s+'));
+                                    if (words.length < 2) {
+                                      return 'Please enter your full name';
+                                    }
+
+                                    return null;
+                                  },
+                                ),
+                                SizedBox(height: 2.5.h),
+                                CustomTextFormField(
+                                  controller: _email,
+                                  hintText: 'Email',
+                                  isPasswordField: false,
+                                  suffixIcon: Icons.email,
+                                  validator: _validateEmail,
+                                  onChanged: (value) {},
+                                ),
+                                SizedBox(height: 2.5.h),
+                                CustomTextFormField(
+                                  controller: _phone,
+                                  hintText: 'Phone Number',
+                                  isPasswordField: false,
+                                  suffixIcon: Icons.phone,
+                                  validator: _validatePhoneNumber,
+                                  onChanged: (value) {},
+                                ),
+                                SizedBox(height: 2.5.h),
+                                CustomTextFormField(
+                                  controller: _password,
+                                  hintText: 'Password',
+                                  isPasswordField: true,
+                                  onChanged: (value) {},
+                                ),
+                                SizedBox(height: 2.5.h),
+                                CustomTextFormField(
+                                  controller: _referralcode,
+                                  hintText: 'Referral Code (Optional)',
+                                  isPasswordField: false,
+                                  suffixIcon: Icons.accessibility,
+                                  onChanged: (value) {},
+                                ),
+                                SizedBox(height: 3.h),
+                                CustomBtn(
+                                  text: _isLoading
+                                      ? "Creating your account.."
+                                      : "Sign up",
+                                  onPressed: () {
+                                    if (_formKey.currentState?.validate() ??
+                                        false) {
+                                      _signup();
+                                    }
+                                  },
+                                  backgroundColor: RButtoncolor,
+                                  borderRadius: 20.0,
+                                ),
+                              ],
+                            ),
+                          ),
+                          SizedBox(
+                              height: MediaQuery.of(context).size.height * 0.03),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              CustomText(
+                                'Already have an account? ',
+                                color: Colors.black87,
+                                fontSize: 12.sp,
+                              ),
+                              GestureDetector(
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (context) => const Signin()),
+                                  );
+                                },
+                                child: CustomText(
+                                  'Sign in',
+                                  color: ROrange,
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 12.sp,
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ),

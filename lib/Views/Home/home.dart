@@ -63,38 +63,79 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
+  Widget _buildNavItem(
+      {required IconData icon, required String label, required int index}) {
+    final bool isSelected = _selectedIndex == index;
+    return InkWell(
+      borderRadius: BorderRadius.circular(14),
+      onTap: () => _onItemTapped(index),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: EdgeInsets.symmetric(
+            horizontal: isSelected ? 14 : 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? ROrange.withOpacity(0.12) : Colors.transparent,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              color: isSelected ? ROrange : Colors.grey[600],
+              size: 22,
+            ),
+            if (isSelected) ...[
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  color: Colors.black87,
+                  fontSize: 13,
+                ),
+              ),
+            ]
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: _pages[_selectedIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        items: const <BottomNavigationBarItem>[
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Home',
+      bottomNavigationBar: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.06),
+                  blurRadius: 18,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _buildNavItem(icon: Icons.home, label: 'Home', index: 0),
+                _buildNavItem(
+                    icon: Icons.shopping_cart, label: 'Cart', index: 1),
+                _buildNavItem(
+                    icon: Icons.history, label: 'History', index: 2),
+                _buildNavItem(
+                    icon: Icons.account_balance, label: 'Transactions', index: 3),
+                _buildNavItem(icon: Icons.person, label: 'Account', index: 4),
+              ],
+            ),
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.shopping_cart),
-            label: 'Cart',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.history),
-            label: 'History',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.account_balance),
-            label: 'Transactions',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: 'Account',
-          ),
-        ],
-        currentIndex: _selectedIndex,
-        selectedItemColor: ROrange,
-        unselectedItemColor: Colors.grey,
-        onTap: _onItemTapped,
-        elevation: 0,
+        ),
       ),
     );
   }

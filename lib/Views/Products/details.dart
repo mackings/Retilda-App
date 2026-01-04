@@ -664,459 +664,624 @@ class _ProductDetailsState extends State<ProductDetails> {
     });
   }
 
+  Widget _buildActionIcon({required IconData icon, required VoidCallback onTap}) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 8),
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 8,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Icon(icon, size: 18, color: const Color(0xFF103C57)),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    const Color pageBg = Color(0xFFF6F7FB);
+    const Color deepBlue = Color(0xFF103C57);
+    const Color accent = Color(0xFFFB9324);
+    final String categoryLabel =
+        widget.product.categories.isNotEmpty ? widget.product.categories.first : 'Marketplace';
+
     return Sizer(builder: (context, orientation, deviceType) {
       return Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: pageBg,
         appBar: AppBar(
-          backgroundColor: Colors.white,
-          shadowColor: Colors.white,
+          backgroundColor: pageBg,
+          elevation: 0,
           title: CustomText(
             "Details",
             fontSize: 17.sp,
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w700,
+            color: deepBlue,
           ),
         ),
         body: SingleChildScrollView(
-          child: Center(
-            child: Column(children: [
-              SizedBox(
-                height: 2.h,
-              ),
-              SizedBox(
-                height: 25.h,
-                child: PageView(
-                  children: widget.product.images.map((image) {
-                    return Container(
-                      margin:
-                          EdgeInsets.symmetric(horizontal: 35.0, vertical: 2),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(10),
-                        color: Colors.transparent,
-                        image: DecorationImage(
-                          image: NetworkImage(image),
-                          fit: BoxFit.cover,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.06),
+                        blurRadius: 16,
+                        offset: const Offset(0, 10),
+                      )
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(
+                        height: 28.h,
+                        child: ClipRRect(
+                          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                          child: PageView(
+                            children: widget.product.images.map((image) {
+                              return Stack(
+                                fit: StackFit.expand,
+                                children: [
+                                  Image.network(image, fit: BoxFit.cover),
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        colors: [
+                                          Colors.black.withOpacity(0.35),
+                                          Colors.transparent,
+                                        ],
+                                        begin: Alignment.bottomCenter,
+                                        end: Alignment.topCenter,
+                                      ),
+                                    ),
+                                  ),
+                                  Positioned(
+                                    top: 12,
+                                    left: 12,
+                                    child: Container(
+                                      padding:
+                                          const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withOpacity(0.9),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          const Icon(Icons.storefront_outlined,
+                                              size: 16, color: Colors.black87),
+                                          const SizedBox(width: 6),
+                                          Text(
+                                            categoryLabel,
+                                            style: GoogleFonts.poppins(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w600,
+                                              color: Colors.black87,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              );
+                            }).toList(),
+                          ),
                         ),
                       ),
-                    );
-                  }).toList(),
-                ),
-              ),
-Padding(
-  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-  child: Row(
-    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-    children: [
-      Expanded(
-        child: CustomText(
-          widget.product.name,
-          fontWeight: FontWeight.w600,
-          fontSize: 15.sp,
-        ),
-      ),
-      Row(
-        children: [
-          _buildActionIcon(
-            icon: Icons.add_shopping_cart_outlined,
-            onTap: addToCart,
-          ),
-          _buildActionIcon(
-            icon: Icons.favorite_border,
-            onTap: () {
-              // TODO: Favorite logic
-            },
-          ),
-          _buildActionIcon(
-            icon: Icons.share_outlined,
-            onTap: () {
-              // TODO: Share logic
-            },
-          ),
-        ],
-      ),
-    ],
-  ),
-),
-
-             const Padding(
-                padding: EdgeInsets.only(left: 25, right: 25, top: 5),
-                child: Divider(
-                  color: Colors.grey,
-                ),
-              ),
-
-
-              Padding(
-                padding: const EdgeInsets.only(left: 25, top: 15),
-                child: Row(
-                  children: [
-                    CustomText(
-                      "Select your payment plan",
-                      fontSize: 16.sp,
-                      fontWeight: FontWeight.w400,
-                    ),
-                  ],
-                ),
-              ),
-
-              SizedBox(
-                height: 2.h,
-              ),
-
-              ToggleButtonsWidget(
-                firstButtonText: 'Weekly',
-                secondButtonText: 'Monthly',
-                onToggle: handleToggle,
-                onChipSelected: handleChipSelected,
-                onActionSelected: handleActionSelected,
-              ),
-
-              if (selectedChipValue != null)
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 1.h),
-                  child: Row(
-                    children: [
-                     const Icon(
-                        Icons.error,
-                        color: Colors.grey,
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  CustomText(
+                                    widget.product.name,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 16.sp,
+                                    color: deepBlue,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Row(
+                                    children: [
+                                      Icon(Icons.verified, size: 16, color: accent),
+                                      const SizedBox(width: 6),
+                                      CustomText(
+                                        "Buyer protection active",
+                                        fontSize: 11.sp,
+                                        color: Colors.grey[700],
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Row(
+                              children: [
+                                _buildActionIcon(
+                                  icon: Icons.add_shopping_cart_outlined,
+                                  onTap: addToCart,
+                                ),
+                                _buildActionIcon(
+                                  icon: Icons.favorite_border,
+                                  onTap: () {},
+                                ),
+                                _buildActionIcon(
+                                  icon: Icons.share_outlined,
+                                  onTap: () {},
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
-                      SizedBox(width: 2.w),
-                      Flexible(
-                        child: CustomText(
-                          'You Selected: The ${isFirstButtonActive ? "Weekly" : "Monthly"} Plan and ${selectedChipValue != null ? selectedChipValue.toString() : "No days selected"} ${isFirstButtonActive ? "Weeks" : "Months"} installments.',
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                CustomText(
+                                  "₦${NumberFormat('#,##0').format(widget.product.price)}",
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 17.sp,
+                                  color: deepBlue,
+                                ),
+                                const SizedBox(height: 4),
+                                CustomText(
+                                  "Fast delivery & wallet checkout",
+                                  fontSize: 11.sp,
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.grey[700],
+                                ),
+                              ],
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: accent,
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.flash_on_rounded, size: 16, color: Colors.white),
+                                  const SizedBox(width: 6),
+                                  CustomText(
+                                    "Limited stock",
+                                    fontSize: 11.sp,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
                 ),
 
-
-
-Padding(
-  padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 15),
-  child: Row(
-    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-    children: [
-      
-      CustomText(
-        "N${NumberFormat('#,##0').format(widget.product.price)}",
-        fontWeight: FontWeight.w700,
-        fontSize: 18.sp,
-      ),
-
-      loading
-          ? const CircularProgressIndicator(strokeWidth: 2)
-          : GestureDetector(
-              onTap: () {
-                if (Activated == false) {
-
-showDialog(
-  context: context,
-  builder: (context) {
-    bool termsAccepted = false;
-
-    return StatefulBuilder(
-      builder: (context, setState) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
-          contentPadding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
-          title: Text(
-            'Connect',
-            style: GoogleFonts.poppins(
-              fontSize: 20,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'To proceed, please consent to connect your bank account and read our privacy policy for more details.',
-                style: GoogleFonts.poppins(
-                  fontSize: 14,
-                  color: Colors.grey[800],
-                ),
-              ),
-              const SizedBox(height: 16),
-              
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Checkbox(
-                    value: termsAccepted,
-                    onChanged: (value) {
-                      setState(() {
-                        termsAccepted = value ?? false;
-                      });
-                    },
+                const SizedBox(height: 16),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(18),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 12,
+                        offset: const Offset(0, 10),
+                      )
+                    ],
                   ),
-
-                  Expanded(
-                    child: Wrap(
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: [
-                        Text(
-                          'I agree to the ',
-                          style: GoogleFonts.poppins(fontSize: 14),
-                        ),
-                        TextButton(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => InAppWebViewPage(
-                                  url:
-                                      'https://docs.google.com/document/d/17afb6dSPPh2RVRodtq-r7v16eEAjZ6SVHOUb6h_edFs/edit?usp=sharing',
-                                  title: 'Terms and Policy',
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      CustomText(
+                        "Select your payment plan",
+                        fontSize: 15.sp,
+                        fontWeight: FontWeight.w600,
+                        color: deepBlue,
+                      ),
+                      const SizedBox(height: 10),
+                      ToggleButtonsWidget(
+                        firstButtonText: 'Weekly',
+                        secondButtonText: 'Monthly',
+                        onToggle: handleToggle,
+                        onChipSelected: handleChipSelected,
+                        onActionSelected: handleActionSelected,
+                      ),
+                      if (selectedChipValue != null)
+                        Padding(
+                          padding: EdgeInsets.only(top: 10, left: 4, right: 4),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.info_outline,
+                                color: Colors.grey,
+                              ),
+                              const SizedBox(width: 8),
+                              Flexible(
+                                child: CustomText(
+                                  'You Selected: The ${isFirstButtonActive ? "Weekly" : "Monthly"} Plan and ${selectedChipValue != null ? selectedChipValue.toString() : "No days selected"} ${isFirstButtonActive ? "Weeks" : "Months"} installments.',
+                                  fontSize: 11.sp,
+                                  color: Colors.grey[700],
                                 ),
                               ),
-                            );
-                          },
-                          style: TextButton.styleFrom(padding: EdgeInsets.zero),
-                          child: Text(
-                            'Terms and Policy',
-                            style: GoogleFonts.poppins(
-                              fontSize: 14,
-                              color: Colors.blue,
-                              fontWeight: FontWeight.w500,
-                            ),
+                            ],
                           ),
                         ),
-                      ],
-                    ),
+                    ],
                   ),
-                ],
-              ),
-            ],
-          ),
-          actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(
-                'Cancel',
-                style: GoogleFonts.poppins(),
-              ),
-            ),
-            ElevatedButton(
-              onPressed: termsAccepted
-                  ? () {
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => ConnectAccount(),
+                ),
+
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Expanded(
+                      flex: 1,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 12,
+                              offset: const Offset(0, 10),
+                            )
+                          ],
                         ),
-                      );
-                      debugPrint("Bank account connected");
-                    }
-                  : null,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
-                disabledBackgroundColor: Colors.grey.shade400,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            CustomText(
+                              "Wallet checkout",
+                              fontSize: 13.sp,
+                              fontWeight: FontWeight.w700,
+                              color: deepBlue,
+                            ),
+                            const SizedBox(height: 6),
+                            CustomText(
+                              "Secure, instant payment from your Retilda wallet.",
+                              fontSize: 11.sp,
+                              color: Colors.grey[700],
+                            ),
+                            const SizedBox(height: 10),
+                            loading
+                                ? const Center(
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: accent,
+                                    ),
+                                  )
+                                : ElevatedButton(
+                                    onPressed: () {
+                                      if (Activated == false) {
+                                        _showConnectDialog(context);
+                                      } else {
+                                        purchaseProduct();
+                                      }
+                                    },
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.white,
+                                      foregroundColor: accent,
+                                      elevation: 0,
+                                      side: const BorderSide(color: accent, width: 1),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      padding: const EdgeInsets.symmetric(vertical: 12),
+                                    ),
+                                    child: CustomText(
+                                      "Pay Now",
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 12.sp,
+                                      color: accent,
+                                    ),
+                                  ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 2,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                        decoration: BoxDecoration(
+                          color: deepBlue,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 12,
+                              offset: const Offset(0, 10),
+                            )
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            CustomText(
+                              "One-time card",
+                              fontSize: 13.sp,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
+                            const SizedBox(height: 6),
+                            CustomText(
+                              "Quick card payment with instant confirmation.",
+                              fontSize: 11.sp,
+                              color: Colors.white70,
+                            ),
+                            const SizedBox(height: 12),
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton(
+                                onPressed: () => initializePayment(context),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.white,
+                                  foregroundColor: deepBlue,
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                ),
+                                child: CustomText(
+                                  "One Time Pay",
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 12.sp,
+                                  color: deepBlue,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-              child: Text(
-                'Connect',
-                style: GoogleFonts.poppins(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  },
-);
 
-
-
-                } else {
-                  purchaseProduct();
-                }
-              },
-              child: Container(
-                height: 6.h,
-                width: 50.w,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  border: Border.all(width: 0.5,color: Colors.orange),
-                  borderRadius: BorderRadius.circular(15),
-                ),
-                child: const Center(
-                  child: CustomText(
-                    "Pay Now",
-                    color: Colors.orange,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-            ),
-    ],
-  ),
-),
-
-              SizedBox(
-                height: 2.h,
-              ),
-              Text("OR "),
-              SizedBox(
-                height: 2.h,
-              ),
-              GestureDetector(
-                onTap: () => initializePayment(context),
-                child: Container(
-                  height: 6.h,
-                  width: MediaQuery.of(context).size.width - 10.w,
+                const SizedBox(height: 16),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
                   decoration: BoxDecoration(
-                   // border: Border.all(width: 0.5,color: Colors.orange,),
-                   color: Colors.black,
-                    borderRadius: BorderRadius.circular(15),
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.04),
+                        blurRadius: 10,
+                        offset: const Offset(0, 8),
+                      )
+                    ],
                   ),
-                  child: Center(
-                    child: CustomText("One Time Pay",color: Colors.white,)
-                  ),
-                ),
-              ),
-
-
-              Padding(
-                padding: const EdgeInsets.only(left: 25, top: 20),
-                child: Row(
-                  children: [
-                    CustomText(
-                      "Product Description :",
-                      fontSize: 16.sp,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.grey,
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(
-                height: 2.h,
-              ),
-              Padding(
-                padding: const EdgeInsets.only(left: 10, top: 1),
-                child: ListTile(
-                  title: CustomText(
-                    widget.product.description.toString(),
-                    fontSize: 14.sp,
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.only(left: 25, top: 20),
-                child: Row(
-                  children: [
-                    CustomText(
-                      "Product Specifications :",
-                      fontSize: 16.sp,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.grey,
-                    ),
-                  ],
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.only(left: 10, top: 1),
-                child: ListTile(
-                  title: CustomText(
-                    widget.product.specification ?? "No Product Specifications",
-                    fontSize: 14.sp,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      CustomText(
+                        "Product Description",
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.w700,
+                        color: deepBlue,
+                      ),
+                      const SizedBox(height: 8),
+                      _buildExpandableText(
+                        widget.product.description?.toString() ?? "",
+                        expanded: _showFullDescription,
+                        onToggle: () => setState(() => _showFullDescription = !_showFullDescription),
+                      ),
+                      const SizedBox(height: 14),
+                      CustomText(
+                        "Product Specifications",
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.w700,
+                        color: deepBlue,
+                      ),
+                      const SizedBox(height: 8),
+                      _buildExpandableText(
+                        widget.product.specification ?? "No Product Specifications",
+                        expanded: _showFullSpecs,
+                        onToggle: () => setState(() => _showFullSpecs = !_showFullSpecs),
+                      ),
+                    ],
                   ),
                 ),
-              ),
-            ]),
-          ),
-        ),
-        bottomNavigationBar: BottomAppBar(
-          color: Colors.orange,
-          height: 50,
-          child: GestureDetector(
-            onTap: () {
-              _showDeliveryModal(context);
-            },
-            child: const Center(
-                child: CustomText(
-              "Calculate Delivery",
-              fontWeight: FontWeight.w600,
-              color: Colors.white,
-            )),
+              ],
+            ),
           ),
         ),
       );
     });
   }
-}
 
+  void _showConnectDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        bool termsAccepted = false;
 
-Widget _buildActionIcon({required IconData icon, required VoidCallback onTap}) {
-  return Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 4),
-    child: InkWell(
-      borderRadius: BorderRadius.circular(8),
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: Colors.grey.shade100,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Icon(
-          icon,
-          size: 20,
-          color: Colors.black87,
-        ),
-      ),
-    ),
-  );
-}
-
-
-class InAppWebViewPage extends StatefulWidget {
-  final String url;
-  final String title;
-
-  const InAppWebViewPage({required this.url, required this.title, Key? key})
-      : super(key: key);
-
-  @override
-  State<InAppWebViewPage> createState() => _InAppWebViewPageState();
-}
-
-class _InAppWebViewPageState extends State<InAppWebViewPage> {
-  late final WebViewController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-
-    _controller = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..loadRequest(Uri.parse(widget.url));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.title),
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
-      body: WebViewWidget(controller: _controller),
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+              contentPadding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
+              title: Text(
+                'Connect',
+                style: GoogleFonts.poppins(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'To proceed, please consent to connect your bank account and read our privacy policy for more details.',
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      color: Colors.grey[800],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Checkbox(
+                        value: termsAccepted,
+                        onChanged: (value) {
+                          setState(() {
+                            termsAccepted = value ?? false;
+                          });
+                        },
+                      ),
+                      Expanded(
+                        child: Wrap(
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            Text(
+                              'I agree to the ',
+                              style: GoogleFonts.poppins(fontSize: 14),
+                            ),
+                            TextButton(
+                              onPressed: () {
+                                // Navigator.push(
+                                //   context,
+                                //   MaterialPageRoute(
+                                //     builder: (_) => InAppWebViewPage(
+                                //       url:
+                                //           'https://docs.google.com/document/d/17afb6dSPPh2RVRodtq-r7v16eEAjZ6SVHOUb6h_edFs/edit?usp=sharing',
+                                //       title: 'Terms and Policy',
+                                //     ),
+                                //   ),
+                                // );
+                              },
+                              style: TextButton.styleFrom(padding: EdgeInsets.zero),
+                              child: Text(
+                                'Terms and Policy',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 14,
+                                  color: Colors.blue,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text(
+                    'Cancel',
+                    style: GoogleFonts.poppins(),
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: termsAccepted
+                      ? () {
+                          Navigator.pop(context);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => ConnectAccount(),
+                            ),
+                          );
+                          debugPrint("Bank account connected");
+                        }
+                      : null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    disabledBackgroundColor: Colors.grey.shade400,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: Text(
+                    'Connect',
+                    style: GoogleFonts.poppins(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
+
+  bool _showFullDescription = false;
+  bool _showFullSpecs = false;
+
+  Widget _buildExpandableText(String text,
+      {required bool expanded, required VoidCallback onToggle}) {
+    final bool shouldTrim = text.length > 160;
+    final String displayText =
+        expanded || !shouldTrim ? text : text.substring(0, 160) + '...';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        CustomText(
+          displayText,
+          fontSize: 14.sp,
+          color: Colors.grey[800],
+        ),
+        if (shouldTrim)
+          TextButton(
+            onPressed: onToggle,
+            style: TextButton.styleFrom(padding: EdgeInsets.zero),
+            child: CustomText(
+              expanded ? "Show less" : "Read more",
+              fontSize: 11.sp,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF103C57),
+            ),
+          ),
+      ],
+    );
+  }
+
 }

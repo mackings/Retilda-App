@@ -25,14 +25,33 @@ class Signin extends StatefulWidget {
   State<Signin> createState() => _SigninState();
 }
 
-class _SigninState extends State<Signin> {
+class _SigninState extends State<Signin> with SingleTickerProviderStateMixin {
 
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _isLoading = false;
   bool _isObscured = true;
 
+  late final AnimationController _animCtrl;
+  late final Animation<Offset> _slideIn;
+  late final Animation<double> _fadeIn;
 
+  @override
+  void initState() {
+    super.initState();
+    _animCtrl =
+        AnimationController(vsync: this, duration: const Duration(milliseconds: 500));
+    _slideIn = Tween<Offset>(begin: const Offset(0, 0.08), end: Offset.zero)
+        .animate(CurvedAnimation(parent: _animCtrl, curve: Curves.easeOut));
+    _fadeIn = CurvedAnimation(parent: _animCtrl, curve: Curves.easeOut);
+    _animCtrl.forward();
+  }
+
+  @override
+  void dispose() {
+    _animCtrl.dispose();
+    super.dispose();
+  }
 
   Future<void> _login() async {
     setState(() {
@@ -114,114 +133,156 @@ class _SigninState extends State<Signin> {
 
   @override
   Widget build(BuildContext context) {
+    const Color pageBg = Color(0xFFF6F7FB);
     return Scaffold(
-      body: SingleChildScrollView(
-        physics: BouncingScrollPhysics(),
-        child: Center(
+      backgroundColor: pageBg,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
           child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: 20),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                SizedBox(height: MediaQuery.of(context).size.height * 0.1),
-                CustomText(
-                  'Retilda',
-                  fontSize: 25.sp,
-                  fontWeight: FontWeight.bold,
-                  color: ROrange,
-                ),
-                SizedBox(height: 4.h),
-                CustomText(
-                  'Sign in',
-                  fontSize: 17.sp,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
-                ),
-                SizedBox(height: 4.h),
-                CustomTextFormField(
-                  controller: _emailController,
-                  hintText: 'Email',
-                  isPasswordField: false,
-                  suffixIcon: Icons.email,
-                  onChanged: (value) {},
-                ),
-
-                SizedBox(height: 4.h),
-
-                CustomTextFormField(
-                  controller: _passwordController,
-                  hintText: 'Password',
-                  isPasswordField: true,
-                  onChanged: (value) {},
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter your password';
-                    }
-                    return null;
-                  },
-                ),
-
-                
-                SizedBox(height: 2.h),
-                GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (context) => ResetPassword()));
-                  },
-                  child: Align(
-                    alignment: Alignment.centerRight,
-                    child: CustomText(
-                      'Forgot password',
-                      color: ROrange,
-                    ),
-                  ),
-                ),
-                SizedBox(height: MediaQuery.of(context).size.height * 0.05),
-                _isLoading
-                    ? CircleAvatar(
-                        radius: 25, 
-                        backgroundColor:
-                            Colors.grey.shade200, 
-                        child: CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                              Colors.blue), 
-                          strokeWidth: 3.0,
+            padding: const EdgeInsets.fromLTRB(18, 24, 18, 24),
+            child: FadeTransition(
+              opacity: _fadeIn,
+              child: SlideTransition(
+                position: _slideIn,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: ROrange.withOpacity(0.12),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: const Icon(Icons.lock_open_rounded,
+                              color: Colors.black87),
                         ),
-                      )
-                    : CustomBtn(
-                        text: 'Sign in',
-                        onPressed: _login,
-                        backgroundColor: RButtoncolor,
-                        borderRadius: 20.0,
-                      ),
-                SizedBox(height: MediaQuery.of(context).size.height * 0.03),
-                Padding(
-                  padding: const EdgeInsets.only(left: 10),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    children: [
-                      CustomText(
-                        'New user? ',
-                        color: Colors.black,
-                      ),
-                      GestureDetector(
-                        onTap: () {
-                          Navigator.pushReplacement(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (context) => Signup()));
-                        },
-                        child: CustomText(
-                          'Sign up',
+                        const SizedBox(width: 10),
+                        CustomText(
+                          'Retilda',
+                          fontSize: 23.sp,
+                          fontWeight: FontWeight.w800,
                           color: ROrange,
                         ),
+                      ],
+                    ),
+                    const SizedBox(height: 18),
+                    CustomText(
+                      'Welcome back',
+                      fontSize: 19.sp,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.black87,
+                    ),
+                    const SizedBox(height: 6),
+                    CustomText(
+                      'Access your marketplace and wallet.',
+                      fontSize: 12.sp,
+                      color: Colors.grey[700],
+                    ),
+                    const SizedBox(height: 22),
+                    Container(
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 14,
+                            offset: const Offset(0, 10),
+                          )
+                        ],
                       ),
-                    ],
-                  ),
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        children: [
+                          CustomTextFormField(
+                            controller: _emailController,
+                            hintText: 'Email',
+                            isPasswordField: false,
+                            suffixIcon: Icons.email,
+                            onChanged: (value) {},
+                          ),
+                          SizedBox(height: 2.5.h),
+                          CustomTextFormField(
+                            controller: _passwordController,
+                            hintText: 'Password',
+                            isPasswordField: true,
+                            onChanged: (value) {},
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter your password';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 12),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: GestureDetector(
+                              onTap: () {
+                                Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (context) => ResetPassword()));
+                              },
+                              child: CustomText(
+                                'Forgot password?',
+                                color: ROrange,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: 3.h),
+                          _isLoading
+                              ? CircleAvatar(
+                                  radius: 26,
+                                  backgroundColor: Colors.grey.shade200,
+                                  child: const CircularProgressIndicator(
+                                    valueColor:
+                                        AlwaysStoppedAnimation<Color>(Colors.blue),
+                                    strokeWidth: 3.0,
+                                  ),
+                                )
+                              : CustomBtn(
+                                  text: 'Sign in',
+                                  onPressed: _login,
+                                  backgroundColor: RButtoncolor,
+                                  borderRadius: 20.0,
+                                ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(height: 3.h),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        CustomText(
+                          'New user? ',
+                          color: Colors.black87,
+                          fontSize: 12.sp,
+                        ),
+                        GestureDetector(
+                          onTap: () {
+                            Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) => Signup()));
+                          },
+                          child: CustomText(
+                            'Create account',
+                            color: ROrange,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 12.sp,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         ),
