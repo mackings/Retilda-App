@@ -293,7 +293,7 @@ class _SignupState extends State<Signup> with SingleTickerProviderStateMixin {
                                     }
 
                                     final words =
-                                        value.trim().split(RegExp(r'\\s+'));
+                                        value.trim().split(RegExp(r'\s+'));
                                     if (words.length < 2) {
                                       return 'Please enter your full name';
                                     }

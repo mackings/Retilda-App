@@ -12,7 +12,8 @@ class ConnectAccount extends StatefulWidget {
   State<ConnectAccount> createState() => _ConnectAccountState();
 }
 
-class _ConnectAccountState extends State<ConnectAccount> {
+class _ConnectAccountState extends State<ConnectAccount>
+    with SingleTickerProviderStateMixin {
   String? token;
 
   final TextEditingController _accountNumberController =
@@ -24,6 +25,9 @@ class _ConnectAccountState extends State<ConnectAccount> {
   String? _selectedBank;
   String? _selectedBankCode;
   bool _isLoading = false;
+  late final AnimationController _animCtrl;
+  late final Animation<Offset> _slideIn;
+  late final Animation<double> _fadeIn;
 
   // Map of bank names and codes
   final Map<String, String> bankCodes = {
@@ -195,90 +199,232 @@ class _ConnectAccountState extends State<ConnectAccount> {
   @override
   void initState() {
     _loadUserData();
+    _animCtrl =
+        AnimationController(vsync: this, duration: const Duration(milliseconds: 520));
+    _slideIn = Tween<Offset>(begin: const Offset(0, 0.08), end: Offset.zero)
+        .animate(CurvedAnimation(parent: _animCtrl, curve: Curves.easeOut));
+    _fadeIn = CurvedAnimation(parent: _animCtrl, curve: Curves.easeOut);
+    _animCtrl.forward();
     super.initState();
   }
 
   @override
+  void dispose() {
+    _animCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    const Color pageBg = Color(0xFFF6F7FB);
+    const Color deepBlue = Color(0xFF103C57);
+
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: pageBg,
       appBar: AppBar(
-          title: Text(
-        'Connect',
-        style: GoogleFonts.poppins(),
-      )),
+        backgroundColor: pageBg,
+        elevation: 0,
+        title: Text(
+          'Connect Account',
+          style: GoogleFonts.poppins(
+              fontSize: 18, fontWeight: FontWeight.w800, color: deepBlue),
+        ),
+      ),
       body: SingleChildScrollView(
-        physics: BouncingScrollPhysics(),
+        physics: const BouncingScrollPhysics(),
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            children: [
-              TextFormField(
-                controller: _accountNumberController,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  labelText: 'Bank Account Number',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 20),
-              DropdownButtonFormField<String>(
-                value: _selectedBank,
-                items: bankCodes.keys.map((bankName) {
-                  return DropdownMenuItem<String>(
-                    value: bankName,
-                    child: Text(
-                      bankName,
-                      style: GoogleFonts.poppins(),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+          child: FadeTransition(
+            opacity: _fadeIn,
+            child: SlideTransition(
+              position: _slideIn,
+              child: Column(
+                children: [
+                  Container(
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF0C3554), Color(0xFF145E8D)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.08),
+                          blurRadius: 16,
+                          offset: const Offset(0, 12),
+                        )
+                      ],
                     ),
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  setState(() {
-                    _selectedBank = value;
-                    _selectedBankCode = bankCodes[value!];
-                  });
-                },
-                decoration: InputDecoration(
-                  labelText: 'Select Bank',
-                  border: OutlineInputBorder(),
-                ),
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.16),
+                                shape: BoxShape.circle,
+                                border:
+                                    Border.all(color: Colors.white24, width: 1),
+                              ),
+                              child: const Icon(Icons.link_rounded,
+                                  color: Colors.white, size: 22),
+                            ),
+                            const SizedBox(width: 10),
+                            Text(
+                              "Direct Debit",
+                              style: GoogleFonts.poppins(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 17),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          "Securely connect your bank to automate repayments and payouts.",
+                          style: GoogleFonts.poppins(
+                              color: Colors.white70, fontSize: 13, height: 1.4),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Icon(Icons.lock_outline,
+                                color: Colors.white70, size: 18),
+                            const SizedBox(width: 6),
+                            Text(
+                              "256-bit encrypted | No hidden fees",
+                              style: GoogleFonts.poppins(
+                                  color: Colors.white, fontSize: 12),
+                            ),
+                          ],
+                        )
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  Container(
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 14,
+                          offset: const Offset(0, 10),
+                        )
+                      ],
+                    ),
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      children: [
+                        TextField(
+                          controller: _accountNumberController,
+                          keyboardType: TextInputType.number,
+                          decoration: InputDecoration(
+                            labelText: 'Bank Account Number',
+                            labelStyle: GoogleFonts.poppins(fontSize: 14),
+                            border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12)),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        DropdownButtonFormField<String>(
+                          value: _selectedBank,
+                          items: bankCodes.keys.map((bankName) {
+                            return DropdownMenuItem<String>(
+                              value: bankName,
+                              child: Text(
+                                bankName,
+                                style: GoogleFonts.poppins(fontSize: 14),
+                              ),
+                            );
+                          }).toList(),
+                          onChanged: (value) {
+                            setState(() {
+                              _selectedBank = value;
+                              _selectedBankCode = bankCodes[value!];
+                            });
+                          },
+                          decoration: InputDecoration(
+                            labelText: 'Select Bank',
+                            labelStyle: GoogleFonts.poppins(fontSize: 14),
+                            border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12)),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        TextField(
+                          controller: _stateController,
+                          decoration: InputDecoration(
+                            labelText: 'State',
+                            labelStyle: GoogleFonts.poppins(fontSize: 14),
+                            border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12)),
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        TextField(
+                          controller: _cityController,
+                          decoration: InputDecoration(
+                            labelText: 'City',
+                            labelStyle: GoogleFonts.poppins(fontSize: 14),
+                            border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12)),
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        TextField(
+                          controller: _streetController,
+                          decoration: InputDecoration(
+                            labelText: 'Street Address',
+                            labelStyle: GoogleFonts.poppins(fontSize: 14),
+                            border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12)),
+                          ),
+                        ),
+                        const SizedBox(height: 18),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            icon: _isLoading
+                                ? const SizedBox(
+                                    height: 20,
+                                    width: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : const Icon(Icons.check_circle_rounded),
+                            label: Text(
+                              _isLoading ? "Connecting..." : "Connect account",
+                              style: GoogleFonts.poppins(
+                                  fontWeight: FontWeight.w700, fontSize: 15),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFFB9324),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                  vertical: 14, horizontal: 12),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12)),
+                              elevation: 0,
+                            ),
+                            onPressed: _isLoading ? null : _submitForm,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 20),
-              TextFormField(
-                controller: _stateController,
-                decoration: InputDecoration(
-                  labelText: 'State',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 20),
-              TextFormField(
-                controller: _cityController,
-                decoration: InputDecoration(
-                  labelText: 'City',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 20),
-              TextFormField(
-                controller: _streetController,
-                decoration: InputDecoration(
-                  labelText: 'Street Address',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: _isLoading ? null : _submitForm,
-                child: _isLoading
-                    ? Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: CircularProgressIndicator(),
-                      )
-                    : Text('Connect'),
-              ),
-            ],
+            ),
           ),
         ),
       ),
@@ -316,5 +462,4 @@ class _WebViewPageState extends State<WebViewPage> {
     );
   }
 }
-
 
