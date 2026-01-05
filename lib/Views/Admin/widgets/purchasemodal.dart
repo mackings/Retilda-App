@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:retilda/Views/Admin/model/model.dart';
+import 'package:retilda/Views/Widgets/components.dart';
+import 'package:retilda/Views/Widgets/widgets.dart';
+import 'package:sizer/sizer.dart';
 
 
 
@@ -36,199 +39,255 @@ class PurchaseDetailsModal extends StatelessWidget {
       expand: false,
       builder: (_, controller) => Container(
         decoration: BoxDecoration(
-          color: Colors.grey[100],
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Column(
-          children: [
-            // Header
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  '${user.fullName} ', // ✅ show user's name in header
-                  style: GoogleFonts.poppins(
-                      fontSize: 18, fontWeight: FontWeight.w600),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close, size: 22),
-                  onPressed: () => Navigator.pop(context),
-                ),
-              ],
-            ),
-            Divider(color: Colors.grey[400]),
-
-            // Purchases list
-            Expanded(
-              child: purchases.isEmpty
-                  ? Center(
-                      child: Text(
-                        'No purchases found',
-                        style: GoogleFonts.poppins(fontSize: 15),
-                      ),
-                    )
-                  : ListView.builder(
-                      controller: controller,
-                      itemCount: purchases.length,
-                      itemBuilder: (context, index) {
-                        final purchase = purchases[index];
-                        return Container(
-                          margin: const EdgeInsets.symmetric(vertical: 10),
-                          padding: const EdgeInsets.all(18),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(14),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black12,
-                                blurRadius: 6,
-                                offset: const Offset(0, 3),
-                              ),
-                            ],
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Product name & delivery status
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    purchase.product.name,
-                                    style: GoogleFonts.poppins(
-                                        fontSize: 17,
-                                        fontWeight: FontWeight.w600),
-                                  ),
-                                  Icon(
-                                    purchase.deliveryStatus == "pending"
-                                        ? Icons.pending
-                                        : Icons.check_circle,
-                                    color: purchase.deliveryStatus == "pending"
-                                        ? Colors.orange
-                                        : Colors.green,
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 10),
-                              Divider(color: Colors.grey[300]),
-                              const SizedBox(height: 8),
-
-                              // Payment Plan
-                              Row(
-                                children: [
-                                  const Icon(Icons.schedule,
-                                      color: Colors.blue, size: 20),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'Payment Plan: ${purchase.paymentPlan}',
-                                    style: GoogleFonts.poppins(fontSize: 14),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 14),
-
-                              // Payments
-                              if (purchase.payments.isEmpty)
-                                Text(
-                                  'No payments yet',
-                                  style: GoogleFonts.poppins(
-                                      fontSize: 14, color: Colors.grey[600]),
-                                )
-                              else
-                                ...purchase.payments.map((p) {
-                                  return Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 10),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Row(
-                                          children: [
-                                            Icon(
-                                              p.status == "completed"
-                                                  ? Icons.check_circle
-                                                  : Icons.pending,
-                                              color: p.status == "completed"
-                                                  ? Colors.green
-                                                  : Colors.orange,
-                                              size: 20,
-                                            ),
-                                            const SizedBox(width: 8),
-                                            Text(
-                                              p.status.toUpperCase(),
-                                              style: GoogleFonts.poppins(
-                                                  fontWeight: FontWeight.w600,
-                                                  fontSize: 14),
-                                            ),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 6),
-                                        Row(
-                                          children: [
-                                            const Icon(Icons.attach_money,
-                                                size: 18, color: Colors.green),
-                                            const SizedBox(width: 6),
-                                            Text(
-                                              'Paid: ${formatAmount(p.amountPaid)}',
-                                              style: GoogleFonts.poppins(
-                                                  fontSize: 14),
-                                            ),
-                                          ],
-                                        ),
-                                        Row(
-                                          children: [
-                                            const Icon(Icons.money_off,
-                                                size: 18, color: Colors.red),
-                                            const SizedBox(width: 6),
-                                            Text(
-                                              'To Pay: ${formatAmount(p.amountToPay)}',
-                                              style: GoogleFonts.poppins(
-                                                  fontSize: 14),
-                                            ),
-                                          ],
-                                        ),
-                                        Row(
-                                          children: [
-                                            const Icon(Icons.payment,
-                                                size: 18, color: Colors.blue),
-                                            const SizedBox(width: 6),
-                                            Text(
-                                              'Payment Date: ${formatDate(p.paymentDate)}',
-                                              style: GoogleFonts.poppins(
-                                                  fontSize: 14),
-                                            ),
-                                          ],
-                                        ),
-                                        Row(
-                                          children: [
-                                            const Icon(Icons.next_plan,
-                                                size: 18, color: Colors.orange),
-                                            const SizedBox(width: 6),
-                                            Text(
-                                              'Next Payment: ${formatDate(p.nextPaymentDate)}',
-                                              style: GoogleFonts.poppins(
-                                                  fontSize: 14),
-                                            ),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 10),
-                                        Divider(color: Colors.grey[300]),
-                                      ],
-                                    ),
-                                  );
-                                }).toList(),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-            ),
+          color: Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.12),
+              blurRadius: 16,
+              offset: const Offset(0, -6),
+            )
           ],
         ),
-      ),
+        child: SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            child: Column(
+              children: [
+                Container(
+                  width: 42,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                Row(
+                  children: [
+                    CircleAvatar(
+                      backgroundColor: RButtoncolor.withOpacity(0.1),
+                      child: const Icon(Icons.person, color: Colors.black87),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          CustomText(
+                            user.fullName,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 12.sp,
+                          ),
+                          CustomText(
+                            user.email,
+                            color: Colors.grey[700],
+                           // maxLines: 1,
+                            //overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, size: 22),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Divider(color: Colors.grey.shade300),
+                const SizedBox(height: 6),
+                Expanded(
+                  child: purchases.isEmpty
+                      ? Center(
+                          child: CustomText(
+                            'No purchases found',
+                            color: Colors.grey[700],
+                          ),
+                        )
+                      : ListView.builder(
+                          controller: controller,
+                          itemCount: purchases.length,
+                          itemBuilder: (context, index) {
+                            final purchase = purchases[index];
+                            final int totalPaid = purchase.payments
+                                .fold(0, (sum, p) => sum + p.amountPaid);
+                            final int price = purchase.product.price;
+                            final bool isComplete = totalPaid >= price;
+
+                            return Container(
+                              margin: const EdgeInsets.symmetric(vertical: 10),
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(14),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.05),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 6),
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Expanded(
+                                        child: CustomText(
+                                          purchase.product.name,
+                                          fontWeight: FontWeight.w800,
+                                         // maxLines: 1,
+                                          //overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 10, vertical: 6),
+                                        decoration: BoxDecoration(
+                                          color: isComplete
+                                              ? Colors.green.withOpacity(0.12)
+                                              : ROrange.withOpacity(0.14),
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                        ),
+                                        child: CustomText(
+                                          isComplete ? 'COMPLETED' : 'PENDING',
+                                          fontWeight: FontWeight.w800,
+                                          color: isComplete
+                                              ? Colors.green
+                                              : ROrange,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Row(
+                                    children: [
+                                      Icon(Icons.local_shipping_outlined,
+                                          size: 16,
+                                          color: purchase.deliveryStatus ==
+                                                  "pending"
+                                              ? ROrange
+                                              : Colors.green),
+                                      const SizedBox(width: 6),
+                                      CustomText(
+                                        'Delivery: ${purchase.deliveryStatus}',
+                                        color: Colors.grey[700],
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey.shade100,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    padding: const EdgeInsets.all(10),
+                                    child: Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.all(10),
+                                          decoration: BoxDecoration(
+                                            color: RButtoncolor.withOpacity(0.1),
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: const Icon(
+                                              Icons.payments_outlined),
+                                        ),
+                                        const SizedBox(width: 10),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              CustomText(
+                                                'Plan: ${purchase.paymentPlan}',
+                                                fontWeight: FontWeight.w700,
+                                              ),
+                                              CustomText(
+                                                'Price: ${formatAmount(price)} · Paid: ${formatAmount(totalPaid)}',
+                                                color: Colors.grey[700],
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  if (purchase.payments.isEmpty)
+                                    CustomText(
+                                      'No payments yet',
+                                      color: Colors.grey[700],
+                                    )
+                                  else
+                                    ...purchase.payments.map((p) {
+                                      return Container(
+                                        margin:
+                                            const EdgeInsets.only(bottom: 10),
+                                        padding: const EdgeInsets.all(12),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                          border: Border.all(
+                                              color: Colors.grey.shade200),
+                                        ),
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Row(
+                                              children: [
+                                                Icon(
+                                                  p.status == "completed"
+                                                      ? Icons.check_circle
+                                                      : Icons.pending,
+                                                  color: p.status == "completed"
+                                                      ? Colors.green
+                                                      : ROrange,
+                                                  size: 18,
+                                                ),
+                                                const SizedBox(width: 8),
+                                                CustomText(
+                                                  p.status.toUpperCase(),
+                                                  fontWeight: FontWeight.w700,
+                                                ),
+                                              ],
+                                            ),
+                                            const SizedBox(height: 6),
+                                            CustomText(
+                                              'Paid: ${formatAmount(p.amountPaid)} · To pay: ${formatAmount(p.amountToPay)}',
+                                              color: Colors.grey[700],
+                                            ),
+                                            CustomText(
+                                              'Payment Date: ${formatDate(p.paymentDate)}',
+                                              color: Colors.grey[700],
+                                            ),
+                                            CustomText(
+                                              'Next Payment: ${formatDate(p.nextPaymentDate)}',
+                                              color: Colors.grey[700],
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    }).toList(),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                )
+                ],
+              ),
+            ),
+          ),
+        ),
     );
   }
 }

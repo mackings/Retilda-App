@@ -262,7 +262,7 @@ class _SigninState extends State<Signin> with SingleTickerProviderStateMixin {
                         CustomText(
                           'New user? ',
                           color: Colors.black87,
-                          fontSize: 12.sp,
+                          fontSize: 15.sp,
                         ),
                         GestureDetector(
                           onTap: () {
@@ -275,7 +275,7 @@ class _SigninState extends State<Signin> with SingleTickerProviderStateMixin {
                             'Create account',
                             color: ROrange,
                             fontWeight: FontWeight.w800,
-                            fontSize: 12.sp,
+                            fontSize: 15.sp,
                           ),
                         ),
                       ],

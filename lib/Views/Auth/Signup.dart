@@ -359,7 +359,7 @@ class _SignupState extends State<Signup> with SingleTickerProviderStateMixin {
                               CustomText(
                                 'Already have an account? ',
                                 color: Colors.black87,
-                                fontSize: 12.sp,
+                                fontSize: 15.sp,
                               ),
                               GestureDetector(
                                 onTap: () {
@@ -373,7 +373,7 @@ class _SignupState extends State<Signup> with SingleTickerProviderStateMixin {
                                   'Sign in',
                                   color: ROrange,
                                   fontWeight: FontWeight.w800,
-                                  fontSize: 12.sp,
+                                  fontSize: 15.sp,
                                 ),
                               ),
                             ],

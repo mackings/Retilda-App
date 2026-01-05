@@ -5,6 +5,9 @@ import 'package:retilda/Views/Admin/Api/service.dart';
 import 'package:retilda/Views/Admin/model/model.dart';
 import 'package:retilda/Views/Admin/views/pending.dart';
 import 'package:retilda/Views/Admin/widgets/purchasemodal.dart';
+import 'package:retilda/Views/Widgets/components.dart';
+import 'package:retilda/Views/Widgets/widgets.dart';
+import 'package:sizer/sizer.dart';
 
 
 class Glace extends StatefulWidget {
@@ -24,6 +27,8 @@ class _GlaceState extends State<Glace> {
   List<GlanceUser> _filteredUsers = [];
   TextEditingController _searchController = TextEditingController();
   double _totalPaid = 0;
+  Map<String, double> _userTotals = {};
+  String _filterMode = 'all';
 
   @override
   void initState() {
@@ -87,6 +92,10 @@ class _GlaceState extends State<Glace> {
 
       setState(() {
         _totalPaid = total;
+        _userTotals = Map.fromIterables(
+          users.map((u) => u.id),
+          totals,
+        );
       });
     } catch (e) {
       print('Error calculating total paid: $e');
@@ -95,140 +104,296 @@ class _GlaceState extends State<Glace> {
 
   @override
   Widget build(BuildContext context) {
+    const Color pageBg = Color(0xFFF6F7FB);
     return FutureBuilder(
       future: _initFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Scaffold(
+            backgroundColor: pageBg,
             appBar: AppBar(
-              title: Text(
+              backgroundColor: pageBg,
+              elevation: 0,
+              title: CustomText(
                 'Sales Dashboard',
-                style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                fontWeight: FontWeight.w800,
+                color: RButtoncolor,
               ),
             ),
-            body: Center(child: CircularProgressIndicator()),
+            body: const Center(child: CircularProgressIndicator()),
           );
         }
 
-        return Scaffold(
-          appBar: AppBar(
-            title: Column(
-             // crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Sales ',
-                  style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-                ),
-Text(
-  'N${NumberFormat("#,##0.00", "en_NG").format(_totalPaid)}',
-  style: GoogleFonts.poppins(fontSize: 15),
-),
+        final currencyTotal =
+            'N${NumberFormat("#,##0.00", "en_NG").format(_totalPaid)}';
 
+        final List<GlanceUser> displayedUsers = _filteredUsers.where((user) {
+          if (_filterMode == 'all') return true;
+          final total = _userTotals[user.id] ?? 0;
+          if (_filterMode == 'high') return total >= 100000; // threshold
+          if (_filterMode == 'zero') return total == 0;
+          return true;
+        }).toList();
+
+        return Sizer(builder: (context, orientation, deviceType) {
+          return Scaffold(
+            backgroundColor: pageBg,
+            appBar: AppBar(
+              backgroundColor: pageBg,
+              elevation: 0,
+              title: CustomText(
+                'Sales',
+                fontWeight: FontWeight.w800,
+                fontSize: 14.sp,
+                color: RButtoncolor,
+              ),
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.pending_actions),
+                  color: RButtoncolor,
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => PendingPaymentsPage(users: _allUsers),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(width: 6),
               ],
             ),
-            actions: [
-IconButton(
-  icon: Icon(Icons.pending_actions),
-  onPressed: () {
-    // No fetching here — page will handle loading
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => PendingPaymentsPage(users: _allUsers),
-      ),
-    );
-  },
-),
-
-
-  ],
-          ),
-          body: Padding(
-            padding: const EdgeInsets.only(left: 20,right: 20,top: 30),
-            child: Column(
-              children: [
-                // Search bar
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: 15),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[200],
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(width: 0.5,color: Colors.black)
-                  ),
-                  child: TextField(
-                    controller: _searchController,
-                    decoration: InputDecoration(
-                      hintText: 'Search users...',
-                      border: InputBorder.none,
-                      icon: Icon(Icons.search),
+            body: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                  Container(
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [RButtoncolor, const Color(0xFF145E8D)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(18),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.08),
+                          blurRadius: 18,
+                          offset: const Offset(0, 10),
+                        )
+                      ],
                     ),
-                    style: GoogleFonts.poppins(),
-                  ),
-                ),
-                SizedBox(height: 12),
-                Expanded(
-                  child: _filteredUsers.isEmpty
-                      ? Center(
-                          child: Text(
-                            'No users found',
-                            style: GoogleFonts.poppins(),
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.16),
+                            shape: BoxShape.circle,
+                            border:
+                                Border.all(color: Colors.white24, width: 1),
+                          ),
+                          child: const Icon(Icons.show_chart_rounded,
+                              color: Colors.white),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              CustomText(
+                                currencyTotal,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 13.sp,
+                                color: Colors.white,
+                              ),
+                              const SizedBox(height: 4),
+                              CustomText(
+                                '${_allUsers.length} customers',
+                                color: Colors.white70,
+                              ),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.12),
+                            borderRadius: BorderRadius.circular(12),
+                            border:
+                                Border.all(color: Colors.white.withOpacity(0.2)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.filter_alt_rounded,
+                                  color: Colors.white, size: 18),
+                              const SizedBox(width: 6),
+                              CustomText(
+                                _filterMode == 'all'
+                                    ? 'All'
+                                    : _filterMode == 'high'
+                                        ? 'Top spenders'
+                                        : 'No spend',
+                                color: Colors.white,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ],
                           ),
                         )
-                      : ListView.builder(
-                          itemCount: _filteredUsers.length,
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _FilterPill(
+                          label: 'All',
+                          selected: _filterMode == 'all',
+                          onTap: () {
+                            setState(() => _filterMode = 'all');
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _FilterPill(
+                          label: 'Spenders',
+                          selected: _filterMode == 'high',
+                          onTap: () {
+                            setState(() => _filterMode = 'high');
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _FilterPill(
+                          label: 'No spend',
+                          selected: _filterMode == 'zero',
+                          onTap: () {
+                            setState(() => _filterMode = 'zero');
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: Colors.grey.shade300),
+                    ),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                    child: TextField(
+                      controller: _searchController,
+                      decoration: const InputDecoration(
+                        hintText: 'Search name or email',
+                        border: InputBorder.none,
+                        icon: Icon(Icons.search),
+                      ),
+                      style: GoogleFonts.poppins(),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  displayedUsers.isEmpty
+                      ? Center(
+                          child: Padding(
+                            padding: const EdgeInsets.only(top: 60),
+                            child: CustomText(
+                              'No users found',
+                              color: Colors.grey[700],
+                            ),
+                          ),
+                        )
+                      : ListView.separated(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: displayedUsers.length,
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: 10),
                           itemBuilder: (context, index) {
-                            final user = _filteredUsers[index];
+                            final user = displayedUsers[index];
+                            final userTotal = _userTotals[user.id] ?? 0;
                             return Container(
-                              margin: EdgeInsets.symmetric(vertical: 6),
-                              padding: EdgeInsets.all(14),
                               decoration: BoxDecoration(
                                 color: Colors.white,
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(14),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.black12,
-                                    blurRadius: 4,
-                                    offset: Offset(0, 2),
-                                  ),
+                                    color: Colors.black.withOpacity(0.05),
+                                    blurRadius: 12,
+                                    offset: const Offset(0, 8),
+                                  )
                                 ],
                               ),
+                              padding: const EdgeInsets.all(12),
                               child: ListTile(
                                 leading: CircleAvatar(
-                                  backgroundColor: Colors.blue.shade100,
-                                  child: Icon(
-                                    Icons.person,
-                                    color: Colors.blue,
-                                  ),
+                                  backgroundColor:
+                                      RButtoncolor.withOpacity(0.12),
+                                  child: const Icon(Icons.person,
+                                      color: Colors.black87),
                                 ),
-                                title: Text(
+                                title: CustomText(
                                   user.fullName,
-                                  style: GoogleFonts.poppins(
-                                      fontWeight: FontWeight.w600, fontSize: 15),
+                                  fontWeight: FontWeight.w700,
+                                 // maxLines: 1,
+                                 // overflow: TextOverflow.ellipsis,
                                 ),
                                 subtitle: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(
+                                    CustomText(
                                       user.email,
-                                      style: GoogleFonts.poppins(fontSize: 13),
+                                      color: Colors.grey[700],
+                                      fontSize: 12.sp,
+                                    //  maxLines: 1,
+                                    //  overflow: TextOverflow.ellipsis,
                                     ),
-                                    Text(
+                                    CustomText(
                                       user.phone,
-                                      style: GoogleFonts.poppins(fontSize: 13),
+                                      color: Colors.grey[700],
                                     ),
                                   ],
                                 ),
-                                trailing: Icon(Icons.arrow_forward_ios),
+                                trailing: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    CustomText(
+                                      'N${NumberFormat("#,##0").format(userTotal)}',
+                                      fontWeight: FontWeight.w800,
+                                      color: RButtoncolor,
+                                      fontSize: 15.sp,
+                                    ),
+                                    CustomText(
+                                      'tap to view',
+                                      color: Colors.grey[600],
+                                      fontSize: 10.sp,
+                                    ),
+                                  ],
+                                ),
                                 onTap: () async {
                                   try {
                                     final userPurchases =
-                                        await ApiService.fetchUserPurchases(user.id);
+                                        await ApiService.fetchUserPurchases(
+                                            user.id);
 
                                     if (userPurchases.isEmpty) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
                                         SnackBar(
-                                            content: Text(
-                                                '${user.fullName} has no purchases')),
+                                          content: Text(
+                                              '${user.fullName} has no purchases'),
+                                        ),
                                       );
                                       return;
                                     }
@@ -237,13 +402,15 @@ IconButton(
                                       context: context,
                                       isScrollControlled: true,
                                       backgroundColor: Colors.transparent,
-                                      builder: (context) => PurchaseDetailsModal(
+                                      builder: (context) =>
+                                          PurchaseDetailsModal(
                                         purchases: userPurchases,
                                         user: user,
                                       ),
                                     );
                                   } catch (e) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
+                                    ScaffoldMessenger.of(context)
+                                        .showSnackBar(
                                       SnackBar(content: Text('$e')),
                                     );
                                   }
@@ -252,13 +419,61 @@ IconButton(
                             );
                           },
                         ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        );
+            )
+          );
+        });
       },
     );
   }
 }
 
+class _FilterPill extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _FilterPill(
+      {required this.label, required this.selected, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: selected ? ROrange.withOpacity(0.14) : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+              color: selected ? ROrange : Colors.grey.shade300, width: 1),
+          boxShadow: selected
+              ? [
+                  BoxShadow(
+                    color: ROrange.withOpacity(0.16),
+                    blurRadius: 12,
+                    offset: const Offset(0, 8),
+                  )
+                ]
+              : [],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.filter_alt_outlined,
+                size: 16, color: selected ? ROrange : Colors.grey[700]),
+            const SizedBox(width: 6),
+            CustomText(
+              label,
+              fontWeight: FontWeight.w700,
+              color: selected ? ROrange : Colors.grey[800],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
