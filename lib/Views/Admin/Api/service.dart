@@ -1,5 +1,6 @@
 // services/api_service.dart
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:retilda/Views/Admin/model/model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -7,7 +8,42 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 
 class ApiService {
-  static const String baseUrl = 'https://retilda-fintech-3jy7.onrender.com/Api';
+  static const String baseUrl = 'https://retildaserver.vercel.app/Api';
+
+  static void _logApi({
+    required String label,
+    required Uri url,
+    Map<String, String>? headers,
+    Object? payload,
+    http.Response? response,
+    Object? error,
+  }) {
+    final safeHeaders = headers == null
+        ? null
+        : {
+            ...headers,
+            if (headers.containsKey('Authorization'))
+              'Authorization': 'Bearer ***',
+          };
+
+    final buffer = StringBuffer()
+      ..writeln('[$label]')
+      ..writeln('URL: $url')
+      ..writeln('Headers: ${safeHeaders ?? "<none>"}')
+      ..writeln('Payload: ${payload ?? "<none>"}');
+
+    if (response != null) {
+      buffer
+        ..writeln('Status: ${response.statusCode}')
+        ..writeln('Response: ${response.body}');
+    }
+
+    if (error != null) {
+      buffer.writeln('Error: $error');
+    }
+
+    debugPrint(buffer.toString());
+  }
 
   // Get token from SharedPreferences
   static Future<String?> _getToken() async {
@@ -23,15 +59,26 @@ class ApiService {
   // Get all users
   static Future<List<GlanceUser>> fetchUsers() async {
     final token = await _getToken();
-    if (token == null) throw Exception('Token not found');
+    if (token == null) {
+      _logApi(
+        label: 'GET Sales Users',
+        url: Uri.parse('$baseUrl/users'),
+        error: 'Token not found',
+      );
+      throw Exception('Token not found');
+    }
 
-    final response = await http.get(
-      Uri.parse('$baseUrl/users'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-    );
+    final url = Uri.parse('$baseUrl/users');
+    final headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
+
+    _logApi(label: 'GET Sales Users', url: url, headers: headers);
+
+    final response = await http.get(url, headers: headers);
+
+    _logApi(label: 'GET Sales Users', url: url, headers: headers, response: response);
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
@@ -48,15 +95,26 @@ class ApiService {
 // Get purchases of a specific user
 static Future<List<GlancePurchase>> fetchUserPurchases(String userId) async {
   final token = await _getToken();
-  if (token == null) throw Exception('Token not found');
+  if (token == null) {
+    _logApi(
+      label: 'GET Sales User Purchases',
+      url: Uri.parse('$baseUrl/getUserPurchases?userId=$userId'),
+      error: 'Token not found',
+    );
+    throw Exception('Token not found');
+  }
 
-  final response = await http.get(
-    Uri.parse('$baseUrl/getUserPurchases?userId=$userId'),
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer $token',
-    },
-  );
+  final url = Uri.parse('$baseUrl/getUserPurchases?userId=$userId');
+  final headers = {
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer $token',
+  };
+
+  _logApi(label: 'GET Sales User Purchases', url: url, headers: headers);
+
+  final response = await http.get(url, headers: headers);
+
+  _logApi(label: 'GET Sales User Purchases', url: url, headers: headers, response: response);
 
   final responseData = jsonDecode(response.body);
 
@@ -83,4 +141,3 @@ static Future<List<GlancePurchase>> fetchUserPurchases(String userId) async {
 
 
 }
-

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -27,6 +28,46 @@ class _TransactionsState extends ConsumerState<Transactions> {
   String _typeFilter = 'all'; // all, debit, credit
 
   bool _isLoading = true;
+
+  Map<String, String>? _redactHeaders(Map<String, String>? headers) {
+    if (headers == null) return null;
+    final redacted = Map<String, String>.from(headers);
+    if (redacted.containsKey('Authorization')) {
+      redacted['Authorization'] = 'Bearer ***';
+    }
+    return redacted;
+  }
+
+  void _logApi({
+    required String label,
+    required Uri url,
+    Map<String, String>? headers,
+    Object? payload,
+    http.Response? response,
+    Object? error,
+  }) {
+    final safeHeaders = _redactHeaders(headers);
+    final buffer = StringBuffer()
+      ..writeln('[$label]')
+      ..writeln('URL: $url');
+    if (payload != null) {
+      buffer.writeln('Payload: $payload');
+    } else {
+      buffer.writeln('Payload: <none>');
+    }
+    if (safeHeaders != null) {
+      buffer.writeln('Headers: $safeHeaders');
+    }
+    if (response != null) {
+      buffer
+        ..writeln('Status: ${response.statusCode}')
+        ..writeln('Response: ${response.body}');
+    }
+    if (error != null) {
+      buffer.writeln('Error: $error');
+    }
+    debugPrint(buffer.toString());
+  }
 
   Future<void> _loadUserData() async {
     SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
@@ -56,17 +97,32 @@ class _TransactionsState extends ConsumerState<Transactions> {
 
   Future<void> fetchTransactions() async {
     final url = Uri.parse(
-        'https://retilda-fintech-3jy7.onrender.com/Api/viewTransactionHistory');
+        'https://retildaserver.vercel.app/Api/viewTransactionHistory');
 
-    final response = await http.get(url, headers: {
+    final headers = {
       'Content-Type': 'application/json',
       'Authorization': 'Bearer $_token',
-    });
+    };
+
+    _logApi(
+      label: 'GET viewTransactionHistory',
+      url: url,
+      headers: headers,
+    );
+
+    final response = await http.get(url, headers: headers);
+
+    _logApi(
+      label: 'GET viewTransactionHistory',
+      url: url,
+      headers: headers,
+      response: response,
+    );
 
     if (response.statusCode == 200) {
       final responseData = jsonDecode(response.body);
       final List<dynamic> transactionsData = responseData['transactions'];
-      print(transactionsData);
+      debugPrint('Transactions count: ${transactionsData.length}');
 
       setState(() {
         _transactions = transactionsData
@@ -81,13 +137,28 @@ class _TransactionsState extends ConsumerState<Transactions> {
 
   Future<void> fetchUserBalance() async {
     final url =
-        Uri.parse('https://retilda-fintech-3jy7.onrender.com/Api/balance');
+        Uri.parse('https://retildaserver.vercel.app/Api/userBalance');
 
     try {
-      final response = await http.get(url, headers: {
+      final headers = {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $_token',
-      });
+      };
+
+      _logApi(
+        label: 'GET userBalance',
+        url: url,
+        headers: headers,
+      );
+
+      final response = await http.get(url, headers: headers);
+
+      _logApi(
+        label: 'GET userBalance',
+        url: url,
+        headers: headers,
+        response: response,
+      );
 
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
@@ -99,16 +170,19 @@ class _TransactionsState extends ConsumerState<Transactions> {
             _userBalance = userBalance;
             _isLoading = false;
           });
-          print(_userBalance);
+          debugPrint('User balance: $_userBalance');
         } else {
           throw Exception(responseData['message']);
         }
       } else {
-        print(response.body);
         throw Exception('Failed to load user balance');
       }
     } catch (error) {
-      print('Error fetching user balance: $error');
+      _logApi(
+        label: 'GET userBalance',
+        url: url,
+        error: error,
+      );
     }
   }
 

@@ -10,6 +10,17 @@ import 'package:retilda/Views/Merchant/upload.dart';
 import 'package:retilda/Views/Products/Update/ProducUpdate.dart';
 import 'package:retilda/Views/Products/terms.dart';
 import 'package:retilda/Views/Profile/support.dart';
+import 'package:retilda/Views/OrderTracking/views/order_tracking_list_screen.dart';
+import 'package:retilda/Views/Invoices/views/invoices_screen.dart';
+import 'package:retilda/Views/Notifications/views/notification_settings_screen.dart';
+import 'package:retilda/Views/Chat/views/chat_threads_screen.dart';
+import 'package:retilda/Views/Staff/views/staff_login_screen.dart';
+import 'package:retilda/Views/Staff/views/active_staff_screen.dart';
+import 'package:retilda/Views/Admin/views/admin_order_update_screen.dart';
+import 'package:retilda/Views/Admin/views/admin_invoices_screen.dart';
+import 'package:retilda/Views/Admin/views/admin_create_invoice_screen.dart';
+import 'package:retilda/Views/Admin/views/admin_create_staff_screen.dart';
+import 'package:retilda/Views/Geo/views/geo_admin_states_screen.dart';
 import 'package:retilda/Views/Widgets/components.dart';
 import 'package:retilda/Views/Widgets/profiletile.dart';
 import 'package:retilda/Views/Widgets/widgets.dart';
@@ -33,29 +44,74 @@ class _ProfileState extends ConsumerState<Profile> {
   String? refferalCode;
   int? refferalBonus;
 
+  String? _extractRole(dynamic rawRoles) {
+    if (rawRoles == null) return null;
+    if (rawRoles is String) {
+      final value = rawRoles.trim().toLowerCase();
+      return value.isEmpty ? null : value;
+    }
+    if (rawRoles is List) {
+      final roles = rawRoles
+          .whereType<String>()
+          .map((value) => value.trim().toLowerCase())
+          .where((value) => value.isNotEmpty)
+          .toList();
+      if (roles.contains('admin')) return 'admin';
+      if (roles.contains('staff')) return 'staff';
+      if (roles.contains('user')) return 'user';
+      return roles.isNotEmpty ? roles.first : null;
+    }
+    return null;
+  }
+
+  int? _readInt(dynamic value) {
+    if (value is int) return value;
+    if (value is String) return int.tryParse(value);
+    return null;
+  }
+
   Future<void> _loadUserData() async {
     SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
     String? userDataString = sharedPreferences.getString('userData');
+    final storedUserRole = sharedPreferences.getString('userRole');
+    final storedStaffRole = sharedPreferences.getString('staffRole');
+    final storedStaffData = sharedPreferences.getString('staffData');
+    final staffToken = sharedPreferences.getString('staffToken');
     if (userDataString != null) {
       Map<String, dynamic> userData = jsonDecode(userDataString);
-      String token = userData['data']['token'];
-      String username = userData['data']['user']['fullName'];
-      String accttype = userData['data']['user']['accountType'];
-      int credit = userData['data']['user']['creditScore'];
-      String myrole = userData['data']['user']['roles'];
-      String? mycode = userData['data']['user']['referralCode'];
-      int mybonus = userData['data']['user']['referralBonus'];
+      final token = userData['data']?['token'] as String?;
+      final user = userData['data']?['user'] as Map<String, dynamic>?;
+      final username = user?['fullName'] as String?;
+      final accttype = user?['accountType'] as String?;
+      final credit = _readInt(user?['creditScore']);
+      final myrole = _extractRole(user?['roles']);
+      final mycode = user?['referralCode'] as String?;
+      final mybonus = _readInt(user?['referralBonus']);
 
       setState(() {
         Token = token;
         Username = username;
         Credit = credit;
         Acctype = accttype;
-        role = myrole;
+        role = myrole ?? storedUserRole;
         refferalCode = mycode;
         refferalBonus = mybonus;
       });
+      return;
     }
+
+    if (storedStaffData != null) {
+      final staff = jsonDecode(storedStaffData) as Map<String, dynamic>;
+      setState(() {
+        Username = staff['fullName'] as String?;
+        role = storedStaffRole ?? 'staff';
+      });
+      return;
+    }
+
+    setState(() {
+      role = storedStaffRole ?? (staffToken != null ? 'staff' : 'user');
+    });
   }
 
   @override
@@ -68,6 +124,9 @@ class _ProfileState extends ConsumerState<Profile> {
   Widget build(BuildContext context) {
     const Color pageBg = Color(0xFFF6F7FB);
     const Color deepBlue = Color(0xFF103C57);
+    final isAdmin = role == 'admin';
+    final isStaff = role == 'staff';
+    final isPrivileged = isAdmin || isStaff;
 
     return Scaffold(
       backgroundColor: pageBg,
@@ -123,7 +182,7 @@ class _ProfileState extends ConsumerState<Profile> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             CustomText(
-                              Username ?? "Admin",
+                              Username ?? (isPrivileged ? "Staff" : "User"),
                               fontSize: 16.sp,
                               fontWeight: FontWeight.w800,
                               color: Colors.white,
@@ -281,7 +340,7 @@ class _ProfileState extends ConsumerState<Profile> {
                             try {
                               final response = await http.put(
                                 Uri.parse(
-                                    'https://retilda-fintech-3jy7.onrender.com/Api/moveReferralBonus'),
+                                    'https://retildaserver.vercel.app/Api/moveReferralBonus'),
                                 headers: {
                                   'Content-Type': 'application/json',
                                   'Authorization': 'Bearer ${Token ?? ""}',
@@ -393,7 +452,140 @@ class _ProfileState extends ConsumerState<Profile> {
                               builder: (context) => const Support()));
                     },
                   ),
-                  if (role != 'user')
+                  if (!isPrivileged)
+                    ProfileListItem(
+                      icon: Icons.track_changes,
+                      title: 'Order tracking',
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                const OrderTrackingListScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                  ProfileListItem(
+                    icon: Icons.receipt_long,
+                    title: 'Invoices',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const InvoicesScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  ProfileListItem(
+                    icon: Icons.notifications_active_outlined,
+                    title: 'Notifications',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              const NotificationSettingsScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  ProfileListItem(
+                    icon: Icons.chat_bubble_outline,
+                    title: 'Chat',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const ChatThreadsScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  if (isPrivileged)
+                    ProfileListItem(
+                      icon: Icons.people_outline,
+                      title: 'Active staff',
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const ActiveStaffScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                  if (isPrivileged)
+                    ProfileListItem(
+                      icon: Icons.track_changes,
+                      title: 'Update tracking',
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                const AdminOrderUpdateScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                  if (isAdmin)
+                    ProfileListItem(
+                      icon: Icons.receipt_long,
+                      title: 'Admin invoices',
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const AdminInvoicesScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                  if (isPrivileged)
+                    ProfileListItem(
+                      icon: Icons.post_add,
+                      title: 'Create invoice',
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                const AdminCreateInvoiceScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                  if (isAdmin)
+                    ProfileListItem(
+                      icon: Icons.person_add_alt_1,
+                      title: 'Create staff',
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                const AdminCreateStaffScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                  if (isAdmin)
+                    ProfileListItem(
+                      icon: Icons.location_city,
+                      title: 'Manage states',
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                const GeoAdminStatesScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                  if (isAdmin)
                     ProfileListItem(
                       icon: Icons.space_dashboard_outlined,
                       title: 'Merchant',
@@ -406,7 +598,7 @@ class _ProfileState extends ConsumerState<Profile> {
                         print('Merchant tapped');
                       },
                     ),
-                  if (role != 'user')
+                  if (isAdmin)
                     ProfileListItem(
                       icon: Icons.system_update_alt,
                       title: 'Update Product',
@@ -419,7 +611,7 @@ class _ProfileState extends ConsumerState<Profile> {
                         print('Merchant tapped');
                       },
                     ),
-                  if (role != 'user')
+                  if (isAdmin)
                     ProfileListItem(
                       icon: Icons.bike_scooter,
                       title: 'Delivery Center',
@@ -433,7 +625,7 @@ class _ProfileState extends ConsumerState<Profile> {
                         print('Merchant tapped');
                       },
                     ),
-                  if (role != 'user')
+                  if (isAdmin)
                     ProfileListItem(
                       icon: Icons.dashboard,
                       title: 'At a Glance',
@@ -445,6 +637,17 @@ class _ProfileState extends ConsumerState<Profile> {
                         print('Merchant tapped');
                       },
                     ),
+                  // if (isPrivileged)
+                  //   ProfileListItem(
+                  //     icon: Icons.show_chart_rounded,
+                  //     title: 'Sales',
+                  //     onTap: () {
+                  //       Navigator.push(
+                  //         context,
+                  //         MaterialPageRoute(builder: (context) => Glace()),
+                  //       );
+                  //     },
+                  //   ),
                 ],
               ),
             ),

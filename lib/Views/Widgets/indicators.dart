@@ -19,26 +19,22 @@ class _CarouselPageViewState extends State<CarouselPageView> {
     _Slide(
       asset: "assets/dr1.png",
       title: "Shop smarter",
-      subtitle: "Split payments with flexible fintech options.",
-      cta: "See offers",
+      subtitle: "Split payments with flexible options.",
     ),
     _Slide(
       asset: "assets/dr2.png",
       title: "Fast delivery",
       subtitle: "Express shipping on top electronics & lifestyle.",
-      cta: "Track deals",
     ),
     _Slide(
       asset: "assets/dr3.png",
       title: "Secure checkout",
       subtitle: "Encrypted payments and instant notifications.",
-      cta: "Review cart",
     ),
     _Slide(
       asset: "assets/dr4.png",
       title: "Earn rewards",
       subtitle: "Cashback on every checkout, no hidden fees.",
-      cta: "View rewards",
     ),
   ];
 
@@ -149,7 +145,7 @@ class _CarouselPageViewState extends State<CarouselPageView> {
                                           Icon(Icons.shield_rounded, color: Colors.white, size: 14.sp),
                                           const SizedBox(width: 6),
                                           CustomText(
-                                            "Fintech secure",
+                                            "Secure",
                                             fontSize: 9.sp,
                                             fontWeight: FontWeight.w600,
                                             color: Colors.white,
@@ -170,27 +166,6 @@ class _CarouselPageViewState extends State<CarouselPageView> {
                                       fontSize: 10.sp,
                                       fontWeight: FontWeight.w500,
                                       color: Colors.white70,
-                                    ),
-                                    const SizedBox(height: 10),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          CustomText(
-                                            slide.cta,
-                                            fontSize: 10.sp,
-                                            fontWeight: FontWeight.w700,
-                                            color: RButtoncolor,
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Icon(Icons.arrow_forward_rounded, color: RButtoncolor, size: 13.sp),
-                                        ],
-                                      ),
                                     ),
                                   ],
                                 ),
@@ -230,12 +205,10 @@ class _Slide {
   final String asset;
   final String title;
   final String subtitle;
-  final String cta;
 
   const _Slide({
     required this.asset,
     required this.title,
     required this.subtitle,
-    required this.cta,
   });
 }

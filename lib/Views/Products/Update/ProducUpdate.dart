@@ -45,7 +45,7 @@ class _ProducupdateState extends ConsumerState<Producupdate> {
   Future<ApiCategoryResponse<List<String>>> fetchCategories(
       String token) async {
     final String url =
-        'https://retilda-fintech-3jy7.onrender.com/Api/products/allcategory';
+        'https://retildaserver.vercel.app/Api/products/allcategory';
 
     try {
       final response = await http.get(
@@ -75,7 +75,7 @@ class _ProducupdateState extends ConsumerState<Producupdate> {
   }
 
   Future<ApiResponse> fetchData(String token) async {
-    final String url = 'https://retilda-fintech-3jy7.onrender.com/Api/products';
+    final String url = 'https://retildaserver.vercel.app/Api/products';
 
     try {
       final response = await http.get(
@@ -139,7 +139,7 @@ class _ProducupdateState extends ConsumerState<Producupdate> {
 
   Future<void> fetchProductsByCategory(String category) async {
     final String url =
-        'https://retilda-fintech-3jy7.onrender.com/Api/products/category/$category';
+        'https://retildaserver.vercel.app/Api/products/category/$category';
     try {
       final response = await http.get(
         Uri.parse(url),
@@ -522,7 +522,7 @@ class _ProducupdateState extends ConsumerState<Producupdate> {
     try {
       final response = await http.get(
         Uri.parse(
-          'https://retilda-fintech-3jy7.onrender.com/api/products/search?q=$query',
+          'https://retildaserver.vercel.app/api/products/search?q=$query',
         ),
         headers: {
           'Content-Type': 'application/json',

@@ -1,10 +1,44 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 
 class WalletApiService {
-  static const String baseUrl = 'https://retilda-fintech-3jy7.onrender.com/Api';
+  static const String baseUrl = 'https://retildaserver.vercel.app/Api';
+
+  Map<String, String> _redactHeaders(Map<String, String> headers) {
+    final redacted = Map<String, String>.from(headers);
+    if (redacted.containsKey('Authorization')) {
+      redacted['Authorization'] = 'Bearer ***';
+    }
+    return redacted;
+  }
+
+  void _logApi({
+    required String label,
+    required Uri url,
+    required Map<String, String> headers,
+    Object? payload,
+    http.Response? response,
+    Object? error,
+  }) {
+    final safeHeaders = _redactHeaders(headers);
+    final buffer = StringBuffer()
+      ..writeln('[$label]')
+      ..writeln('URL: $url')
+      ..writeln('Headers: $safeHeaders')
+      ..writeln('Payload: ${payload ?? "<none>"}');
+    if (response != null) {
+      buffer
+        ..writeln('Status: ${response.statusCode}')
+        ..writeln('Response: ${response.body}');
+    }
+    if (error != null) {
+      buffer.writeln('Error: $error');
+    }
+    debugPrint(buffer.toString());
+  }
   
   Future<String?> _getToken() async {
     SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
@@ -46,24 +80,33 @@ class WalletApiService {
     };
 
     try {
-      // ✅ Log request
-      print(">>> makeInstallmentPaymentUsingWallet Request");
-      print("Endpoint: $baseUrl/installmentRepaymentUsingWallet");
-      print("Headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer $token' }");
-      print("Body: ${jsonEncode(requestBody)}");
+      final url = Uri.parse('$baseUrl/installmentRepaymentUsingWallet');
+      final headers = {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      };
+      final payload = jsonEncode(requestBody);
 
-      http.Response response = await http.post(
-        Uri.parse('$baseUrl/installmentRepaymentUsingWallet'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode(requestBody),
+      _logApi(
+        label: 'POST installmentRepaymentUsingWallet',
+        url: url,
+        headers: headers,
+        payload: payload,
       );
 
-      // ✅ Log response
-      print("<<< Response Status: ${response.statusCode}");
-      print("Response Body: ${response.body}");
+      http.Response response = await http.post(
+        url,
+        headers: headers,
+        body: payload,
+      );
+
+      _logApi(
+        label: 'POST installmentRepaymentUsingWallet',
+        url: url,
+        headers: headers,
+        payload: payload,
+        response: response,
+      );
 
       if (response.statusCode == 200) {
         return {
@@ -79,7 +122,7 @@ class WalletApiService {
             errorMessage = responseData['message'];
           }
         } catch (e) {
-          print('Failed to parse error response: $e');
+          debugPrint('Failed to parse error response: $e');
         }
 
         return {
@@ -88,7 +131,17 @@ class WalletApiService {
         };
       }
     } catch (error) {
-      print('Error making installment payment request: $error');
+      final url = Uri.parse('$baseUrl/installmentRepaymentUsingWallet');
+      _logApi(
+        label: 'POST installmentRepaymentUsingWallet',
+        url: url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        payload: jsonEncode(requestBody),
+        error: error,
+      );
       return {
         'success': false,
         'message': 'Network error: ${error.toString()}',
@@ -112,24 +165,33 @@ class WalletApiService {
     };
 
     try {
-      // ✅ Log request
-      print(">>> makeInstallmentPaymentUsingCard Request");
-      print("Endpoint: $baseUrl/installmentRepaymentUsingCard");
-      print("Headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer $token' }");
-      print("Body: ${jsonEncode(requestBody)}");
+      final url = Uri.parse('$baseUrl/installmentRepaymentUsingCard');
+      final headers = {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      };
+      final payload = jsonEncode(requestBody);
 
-      final response = await http.post(
-        Uri.parse('$baseUrl/installmentRepaymentUsingCard'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode(requestBody),
+      _logApi(
+        label: 'POST installmentRepaymentUsingCard',
+        url: url,
+        headers: headers,
+        payload: payload,
       );
 
-      // ✅ Log response
-      print("<<< Response Status: ${response.statusCode}");
-      print("Response Body: ${response.body}");
+      final response = await http.post(
+        url,
+        headers: headers,
+        body: payload,
+      );
+
+      _logApi(
+        label: 'POST installmentRepaymentUsingCard',
+        url: url,
+        headers: headers,
+        payload: payload,
+        response: response,
+      );
 
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
@@ -155,7 +217,17 @@ class WalletApiService {
         };
       }
     } catch (error) {
-      print('Exception occurred: $error');
+      final url = Uri.parse('$baseUrl/installmentRepaymentUsingCard');
+      _logApi(
+        label: 'POST installmentRepaymentUsingCard',
+        url: url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        payload: jsonEncode(requestBody),
+        error: error,
+      );
       return {
         'success': false,
         'message': 'Network error: ${error.toString()}',
@@ -181,24 +253,34 @@ class WalletApiService {
     };
 
     try {
-      // ✅ Log request
-      print(">>> topUpWalletForDelivery Request");
-      print("Endpoint: $baseUrl/installmentRepaymentUsingWalletByPercentage");
-      print("Headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer $token' }");
-      print("Body: ${jsonEncode(requestBody)}");
+      final url =
+          Uri.parse('$baseUrl/installmentRepaymentUsingWalletByPercentage');
+      final headers = {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      };
+      final payload = jsonEncode(requestBody);
 
-      final response = await http.post(
-        Uri.parse('$baseUrl/installmentRepaymentUsingWalletByPercentage'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode(requestBody),
+      _logApi(
+        label: 'POST installmentRepaymentUsingWalletByPercentage',
+        url: url,
+        headers: headers,
+        payload: payload,
       );
 
-      // ✅ Log response
-      print("<<< Response Status: ${response.statusCode}");
-      print("Response Body: ${response.body}");
+      final response = await http.post(
+        url,
+        headers: headers,
+        body: payload,
+      );
+
+      _logApi(
+        label: 'POST installmentRepaymentUsingWalletByPercentage',
+        url: url,
+        headers: headers,
+        payload: payload,
+        response: response,
+      );
 
       final responseData = jsonDecode(response.body);
 
@@ -216,7 +298,18 @@ class WalletApiService {
         };
       }
     } catch (error) {
-      print("Exception: $error");
+      final url =
+          Uri.parse('$baseUrl/installmentRepaymentUsingWalletByPercentage');
+      _logApi(
+        label: 'POST installmentRepaymentUsingWalletByPercentage',
+        url: url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        payload: jsonEncode(requestBody),
+        error: error,
+      );
       return {
         'success': false,
         'message': 'Network error: ${error.toString()}',
@@ -257,4 +350,3 @@ class WalletApiService {
     };
   }
 }
-

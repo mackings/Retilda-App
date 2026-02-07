@@ -10,6 +10,7 @@ class PaymentSummaryCard extends StatelessWidget {
   final String title;
   final String subtitle;
   final DateTime date;
+  final Widget? trailing;
 
   const PaymentSummaryCard({
     Key? key,
@@ -17,6 +18,7 @@ class PaymentSummaryCard extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.date, 
+    this.trailing,
   }) : super(key: key);
 
   @override
@@ -49,9 +51,16 @@ class PaymentSummaryCard extends StatelessWidget {
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: CircleAvatar(
-                backgroundImage: NetworkImage(imageUrl),
+                backgroundImage:
+                    imageUrl.isNotEmpty ? NetworkImage(imageUrl) : null,
                 radius: 30.0,
+                backgroundColor:
+                    imageUrl.isNotEmpty ? Colors.transparent : Colors.grey[200],
+                child: imageUrl.isNotEmpty
+                    ? null
+                    : const Icon(Icons.image, color: Colors.grey),
               ),
+              trailing: trailing,
               title: CustomText(
                 title,
                 fontSize: 14.sp,

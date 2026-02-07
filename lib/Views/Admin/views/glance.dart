@@ -250,36 +250,30 @@ class _GlaceState extends State<Glace> {
                     ),
                   ),
                   const SizedBox(height: 14),
-                  Row(
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
                     children: [
-                      Expanded(
-                        child: _FilterPill(
-                          label: 'All',
-                          selected: _filterMode == 'all',
-                          onTap: () {
-                            setState(() => _filterMode = 'all');
-                          },
-                        ),
+                      _FilterPill(
+                        label: 'All',
+                        selected: _filterMode == 'all',
+                        onTap: () {
+                          setState(() => _filterMode = 'all');
+                        },
                       ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: _FilterPill(
-                          label: 'Spenders',
-                          selected: _filterMode == 'high',
-                          onTap: () {
-                            setState(() => _filterMode = 'high');
-                          },
-                        ),
+                      _FilterPill(
+                        label: 'Spenders',
+                        selected: _filterMode == 'high',
+                        onTap: () {
+                          setState(() => _filterMode = 'high');
+                        },
                       ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: _FilterPill(
-                          label: 'No spend',
-                          selected: _filterMode == 'zero',
-                          onTap: () {
-                            setState(() => _filterMode = 'zero');
-                          },
-                        ),
+                      _FilterPill(
+                        label: 'No spend',
+                        selected: _filterMode == 'zero',
+                        onTap: () {
+                          setState(() => _filterMode = 'zero');
+                        },
                       ),
                     ],
                   ),

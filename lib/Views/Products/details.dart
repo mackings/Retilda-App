@@ -9,7 +9,6 @@ import 'package:retilda/Views/Products/cartpage.dart';
 import 'package:retilda/Views/Products/terms.dart';
 import 'package:retilda/Views/Widgets/components.dart';
 import 'package:retilda/Views/Widgets/paymentoption.dart';
-import 'package:retilda/Views/Widgets/togglebtn.dart';
 import 'package:retilda/Views/Widgets/webview.dart';
 import 'package:retilda/Views/Widgets/widgets.dart';
 import 'package:retilda/model/cartmodel.dart';
@@ -43,7 +42,7 @@ class _ProductDetailsState extends State<ProductDetails> {
   // API Call Function
   Future<void> _calculateDeliveryFee(BuildContext context) async {
     final url =
-        "https://retilda-fintech-3jy7.onrender.com/Api/deliveryFeeCalculation/$productId";
+        "https://retildaserver.vercel.app/Api/deliveryFeeCalculation/$productId";
     final data = {
       "deliveryAddress": _addressController.text,
       "phoneNumber": _phoneController.text,
@@ -301,8 +300,9 @@ class _ProductDetailsState extends State<ProductDetails> {
     );
   }
 
-  bool isFirstButtonActive = true;
-  int? selectedChipValue;
+  String? selectedPurchaseType;
+  String? selectedRepaymentFrequency;
+  int? selectedDurationMonths;
 
   String? Insurance;
   bool loading = false;
@@ -329,7 +329,7 @@ class _ProductDetailsState extends State<ProductDetails> {
 
   Future<void> initializePayment(BuildContext context) async {
     const String apiUrl =
-        "https://retilda-fintech-3jy7.onrender.com/Api/buyproductonsales/onetimepaymentusingcard";
+        "https://retildaserver.vercel.app/Api/buyproductonsales/onetimepaymentusingcard";
 
     try {
       // Make the API call
@@ -449,7 +449,7 @@ class _ProductDetailsState extends State<ProductDetails> {
 
   Future<void> getWalletBalance(String walletAccountNumber) async {
     final Uri url =
-        Uri.parse('https://retilda-fintech-3jy7.onrender.com/Api/balance');
+        Uri.parse('https://retildaserver.vercel.app/Api/balance');
 
     Map<String, String> requestBody = {
       'walletAccountNumber': wallet,
@@ -514,61 +514,31 @@ class _ProductDetailsState extends State<ProductDetails> {
 
   String? productId;
   String? userId;
-  int? instCount;
   String? token;
   String? userOptions;
   dynamic wallet;
   String? balance;
-  String? plan;
 
-  void handleActionSelected(
-      String action, int chipValue, bool isFirstButtonActive) {
-    setState(() {
-      if (isFirstButtonActive == true) {
-        plan = 'weekly';
-      } else if (isFirstButtonActive == false) {
-        plan = 'monthly';
-      }
-      instCount = chipValue;
-    });
-
-    print('Action: $action, Chip: $chipValue, Plan: $plan');
-    print('Data Tapped >>> $action, Installments: $chipValue, Plan: $plan');
-  }
-
-  void handleToggle(bool isFirstButtonActive) {
-    setState(() {
-      this.isFirstButtonActive =
-          isFirstButtonActive; // Make sure this updates correctly
-      plan = isFirstButtonActive ? 'weekly' : 'monthly';
-      selectedChipValue = null; // Reset selected chip value on toggle
-    });
-    print('Toggle Updated: ${isFirstButtonActive ? "Weekly" : "Monthly"}');
-  }
-
-  void handleChipSelected(int chipValue, bool isFirstButtonActive) {
-    setState(() {
-      selectedChipValue = chipValue;
-    });
-    print(
-        'Selected Chip: $chipValue, Is First Button Active: $isFirstButtonActive');
-  }
-
-  Future<void> makeBuyProductRequest(String token, String userId,
-      String productId, String plan, int numberOfInstallments) async {
+  Future<void> makeBuyProductRequest(
+    String token,
+    String productId,
+    String purchaseType,
+    int durationMonths,
+    String repaymentFrequency,
+  ) async {
     try {
       Map<String, dynamic> requestBody = {
-        "userid": userId,
         "productId": productId,
-        "paymentPlan": plan,
-        "numberOfInstallments": numberOfInstallments,
+        "purchaseType": purchaseType,
+        "durationMonths": durationMonths,
+        "repaymentFrequency": repaymentFrequency,
       };
 
       String requestBodyJson = jsonEncode(requestBody);
       print("Payload >> $requestBodyJson");
       final response = await http.post(
         Uri.parse(
-            'https://retilda-fintech-3jy7.onrender.com/Api/buyProductOnInstallment'),
+            'https://retildaserver.vercel.app/Api/buyProductOnInstallment'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -640,28 +610,105 @@ class _ProductDetailsState extends State<ProductDetails> {
     });
 
     await _loadUserData();
+    if (selectedPurchaseType == "outright") {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: CustomText('Use One Time Pay for outright purchases'),
+      ));
+      setState(() {
+        loading = false;
+      });
+      return;
+    }
+
     if (token != null &&
-        userId != null &&
         productId != null &&
-        plan != null &&
-        selectedChipValue != null) {
+        selectedPurchaseType != null &&
+        selectedDurationMonths != null &&
+        selectedRepaymentFrequency != null) {
       await makeBuyProductRequest(
-          token!, userId!, productId!, plan!, selectedChipValue!);
+        token!,
+        productId!,
+        selectedPurchaseType!,
+        selectedDurationMonths!,
+        selectedRepaymentFrequency!,
+      );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: CustomText('Please complete purchase requirements'),
       ));
 
       print(token);
-      print(userId);
       print(productId);
-      print(plan);
-      print(instCount);
+      print(selectedPurchaseType);
+      print(selectedDurationMonths);
+      print(selectedRepaymentFrequency);
     }
 
     setState(() {
       loading = false;
     });
+  }
+
+  Future<void> initializeInstallmentCardPayment(BuildContext context) async {
+    if (selectedPurchaseType == "outright") {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: CustomText('Use One Time Pay for outright purchases'),
+      ));
+      return;
+    }
+
+    if (token == null ||
+        productId == null ||
+        selectedPurchaseType == null ||
+        selectedDurationMonths == null ||
+        selectedRepaymentFrequency == null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: CustomText('Please complete purchase requirements'),
+      ));
+      return;
+    }
+
+    try {
+      final response = await http.post(
+        Uri.parse(
+            'https://retildaserver.vercel.app/Api/buyProductOnInstallmentUsingCard'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: json.encode({
+          "productId": productId,
+          "purchaseType": selectedPurchaseType,
+          "durationMonths": selectedDurationMonths,
+          "repaymentFrequency": selectedRepaymentFrequency,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final responseData = json.decode(response.body);
+        if (responseData['success'] == true &&
+            responseData['data'] != null &&
+            responseData['data']['paymentUrl'] != null) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) =>
+                  WebViewScreen(url: responseData['data']['paymentUrl']),
+            ),
+          );
+        } else {
+          _showErrorDialog(
+              context, responseData['message'] ?? 'Payment link not available');
+        }
+      } else {
+        _showErrorDialog(
+            context, "Failed to initialize payment. Please try again.");
+        print(response.body);
+      }
+    } catch (e) {
+      print(e);
+      _showErrorDialog(context, "An error occurred: $e");
+    }
   }
 
   Widget _buildActionIcon({required IconData icon, required VoidCallback onTap}) {
@@ -910,16 +957,97 @@ class _ProductDetailsState extends State<ProductDetails> {
                         color: deepBlue,
                       ),
                       const SizedBox(height: 10),
-                      ToggleButtonsWidget(
-                        firstButtonText: 'Weekly',
-                        secondButtonText: 'Monthly',
-                        onToggle: handleToggle,
-                        onChipSelected: handleChipSelected,
-                        onActionSelected: handleActionSelected,
+                      DropdownButtonFormField<String>(
+                        value: selectedPurchaseType,
+                        decoration: InputDecoration(
+                          labelText: "Purchase type",
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        items: const [
+                          DropdownMenuItem(
+                            value: "outright",
+                            child: Text("Outright (100% upfront)"),
+                          ),
+                          DropdownMenuItem(
+                            value: "down_50",
+                            child: Text("Down 50% upfront"),
+                          ),
+                          DropdownMenuItem(
+                            value: "down_40",
+                            child: Text("Down 40% upfront"),
+                          ),
+                        ],
+                        onChanged: (value) {
+                          setState(() {
+                            selectedPurchaseType = value;
+                            if (value == "outright") {
+                              selectedDurationMonths = null;
+                              selectedRepaymentFrequency = null;
+                            }
+                          });
+                        },
                       ),
-                      if (selectedChipValue != null)
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField<int>(
+                        value: selectedDurationMonths,
+                        decoration: InputDecoration(
+                          labelText: "Duration (months)",
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        items: const [
+                          DropdownMenuItem(value: 2, child: Text("2 months")),
+                          DropdownMenuItem(value: 4, child: Text("4 months")),
+                          DropdownMenuItem(value: 6, child: Text("6 months")),
+                        ],
+                        onChanged: selectedPurchaseType == "outright"
+                            ? null
+                            : (value) {
+                          setState(() {
+                            selectedDurationMonths = value;
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField<String>(
+                        value: selectedRepaymentFrequency,
+                        decoration: InputDecoration(
+                          labelText: "Repayment frequency",
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        items: const [
+                          DropdownMenuItem(
+                            value: "weekly",
+                            child: Text("Weekly"),
+                          ),
+                          DropdownMenuItem(
+                            value: "biweekly",
+                            child: Text("Biweekly"),
+                          ),
+                          DropdownMenuItem(
+                            value: "monthly",
+                            child: Text("Monthly"),
+                          ),
+                        ],
+                        onChanged: selectedPurchaseType == "outright"
+                            ? null
+                            : (value) {
+                          setState(() {
+                            selectedRepaymentFrequency = value;
+                          });
+                        },
+                      ),
+                      if (selectedPurchaseType != null ||
+                          selectedDurationMonths != null ||
+                          selectedRepaymentFrequency != null)
                         Padding(
-                          padding: EdgeInsets.only(top: 10, left: 4, right: 4),
+                          padding: const EdgeInsets.only(
+                              top: 10, left: 4, right: 4),
                           child: Row(
                             children: [
                               const Icon(
@@ -929,7 +1057,9 @@ class _ProductDetailsState extends State<ProductDetails> {
                               const SizedBox(width: 8),
                               Flexible(
                                 child: CustomText(
-                                  'You Selected: The ${isFirstButtonActive ? "Weekly" : "Monthly"} Plan and ${selectedChipValue != null ? selectedChipValue.toString() : "No days selected"} ${isFirstButtonActive ? "Weeks" : "Months"} installments.',
+                                  'Selection: ${selectedPurchaseType ?? "Select purchase type"}, '
+                                  '${selectedDurationMonths != null ? "${selectedDurationMonths} months" : "Select duration"}, '
+                                  '${selectedRepaymentFrequency ?? "Select frequency"}.',
                                   fontSize: 11.sp,
                                   color: Colors.grey[700],
                                 ),
@@ -1061,6 +1191,32 @@ class _ProductDetailsState extends State<ProductDetails> {
                                   fontWeight: FontWeight.w700,
                                   fontSize: 12.sp,
                                   color: deepBlue,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton(
+                                onPressed: () =>
+                                    initializeInstallmentCardPayment(context),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.transparent,
+                                  foregroundColor: Colors.white,
+                                  elevation: 0,
+                                  side: const BorderSide(
+                                      color: Colors.white, width: 1),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 12),
+                                ),
+                                child: CustomText(
+                                  "Installment Card",
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 12.sp,
+                                  color: Colors.white,
                                 ),
                               ),
                             ),

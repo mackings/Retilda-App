@@ -36,6 +36,26 @@ class _SigninState extends State<Signin> with SingleTickerProviderStateMixin {
   late final Animation<Offset> _slideIn;
   late final Animation<double> _fadeIn;
 
+  String? _extractRole(dynamic rawRoles) {
+    if (rawRoles == null) return null;
+    if (rawRoles is String) {
+      final role = rawRoles.trim().toLowerCase();
+      return role.isEmpty ? null : role;
+    }
+    if (rawRoles is List) {
+      final roles = rawRoles
+          .whereType<String>()
+          .map((role) => role.trim().toLowerCase())
+          .where((role) => role.isNotEmpty)
+          .toList();
+      if (roles.contains('admin')) return 'admin';
+      if (roles.contains('staff')) return 'staff';
+      if (roles.contains('user')) return 'user';
+      return roles.isNotEmpty ? roles.first : null;
+    }
+    return null;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -68,7 +88,7 @@ class _SigninState extends State<Signin> with SingleTickerProviderStateMixin {
 
       print('Request Payload: $payloadJson');
 
-      final url = Uri.parse('https://retilda-fintech-3jy7.onrender.com/Api/login');
+      final url = Uri.parse('https://retildaserver.vercel.app/Api/login');
       final response = await http.post(
         url,
         body: payloadJson,
@@ -82,6 +102,12 @@ class _SigninState extends State<Signin> with SingleTickerProviderStateMixin {
         final responseData = jsonDecode(response.body);
         final sharedPreferences = await SharedPreferences.getInstance();
         await sharedPreferences.setString('userData', jsonEncode(responseData));
+        final role = _extractRole(
+          responseData['data']?['user']?['roles'],
+        );
+        if (role != null) {
+          await sharedPreferences.setString('userRole', role);
+        }
         Navigator.push(
             context, MaterialPageRoute(builder: (context) => HomePage()));
       } else {
@@ -177,7 +203,7 @@ class _SigninState extends State<Signin> with SingleTickerProviderStateMixin {
                     ),
                     const SizedBox(height: 6),
                     CustomText(
-                      'Access your marketplace and wallet.',
+                      'Access your marketplace.',
                       fontSize: 12.sp,
                       color: Colors.grey[700],
                     ),

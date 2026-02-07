@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:retilda/Views/Wallet/purchasesummary.dart';
+import 'package:retilda/Views/Reviews/views/reviews_screen.dart';
 import 'package:retilda/Views/Widgets/paymentscard.dart';
 import 'package:retilda/Views/Widgets/widgets.dart';
 import 'package:retilda/model/purchases.dart';
@@ -29,7 +30,7 @@ class _PurchaseHistoryState extends ConsumerState<PurchaseHistory> {
   bool _isLoading = true;
 
   Future<PurchaseResponse> fetchPurchases(String userId, String token) async {
-    final url = 'https://retilda-fintech-3jy7.onrender.com/Api/getAllPendingPurchases';
+    final url = 'https://retildaserver.vercel.app/Api/getAllPendingPurchases';
     final response = await http.get(
       Uri.parse(url),
       headers: {
@@ -169,10 +170,19 @@ Future<void> _refreshPurchases() async {
                           separatorBuilder: (_, __) => const SizedBox(height: 12),
                           itemBuilder: (context, index) {
                             final purchase = _purchases[index];
-                            final DateTime paymentDate =
-                                purchase.payments!.isNotEmpty
-                                    ? DateTime.parse(purchase.payments!.first.paymentDate.toString())
-                                    : DateTime.now();
+                            final DateTime paymentDate;
+                            if (purchase.payments != null &&
+                                purchase.payments!.isNotEmpty) {
+                              final firstPayment = purchase.payments!.first;
+                              final String? dateValue =
+                                  firstPayment.paymentDate ??
+                                      firstPayment.nextPaymentDate;
+                              paymentDate = dateValue != null
+                                  ? DateTime.parse(dateValue)
+                                  : DateTime.now();
+                            } else {
+                              paymentDate = DateTime.now();
+                            }
 
                             return GestureDetector(
                               onTap: () {
@@ -184,13 +194,35 @@ Future<void> _refreshPurchases() async {
                                   ),
                                 );
                               },
-                              child: PaymentSummaryCard(
+                                      child: PaymentSummaryCard(
                                 date: paymentDate,
                                 imageUrl: purchase.product!.images![0],
                                 title: purchase.product!.name.toString(),
                                 subtitle: purchase.paymentPlan == "once"
-                                    ? "One time payment of N${NumberFormat('#,##0').format(purchase.payments!.first.amountPaid)}"
-                                    : "N${NumberFormat('#,##0').format(purchase.totalAmountPaid)} out of N${NumberFormat('#,##0').format(purchase.totalAmountToPay)}",
+                                    ? "One time payment of N${NumberFormat('#,##0').format(purchase.payments?.first.amountPaid ?? 0)}"
+                                    : "N${NumberFormat('#,##0').format(purchase.totalAmountPaid ?? 0)} out of N${NumberFormat('#,##0').format(purchase.totalAmountToPay ?? 0)}",
+                                trailing: TextButton(
+                                  onPressed: purchase.hasPaidDownPayment
+                                      ? () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (_) => ReviewsScreen(
+                                                productId:
+                                                    purchase.product?.id ?? '',
+                                                productName:
+                                                    purchase.product?.name,
+                                              ),
+                                            ),
+                                          );
+                                        }
+                                      : null,
+                                  child: Text(
+                                    purchase.hasPaidDownPayment
+                                        ? 'Review'
+                                        : 'Pay deposit',
+                                  ),
+                                ),
                               ),
                             );
                           },

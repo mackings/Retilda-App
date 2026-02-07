@@ -54,16 +54,22 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
 
 
   String getNextPaymentDate(List<Payment> payments) {
-  for (int i = 0; i < payments.length; i++) {
-    if (payments[i].status != 'completed') {
-      final DateTime nextPaymentDateTime =
-          DateTime.parse(payments[i].nextPaymentDate.toString());
-      final DateFormat formatter = DateFormat('dd MMM yy');
-      return formatter.format(nextPaymentDateTime);
+    for (int i = 0; i < payments.length; i++) {
+      if (payments[i].status != 'completed') {
+        final String? dateValue =
+            payments[i].nextPaymentDate ?? payments[i].paymentDate;
+        if (dateValue == null) return "Pending";
+        try {
+          final DateTime nextPaymentDateTime = DateTime.parse(dateValue);
+          final DateFormat formatter = DateFormat('dd MMM yy');
+          return formatter.format(nextPaymentDateTime);
+        } catch (_) {
+          return "Pending";
+        }
+      }
     }
+    return "Cleared";
   }
-  return "Cleared";
-}
 
 String getNextPaymentAmount(List<Payment> payments) {
   for (int i = 0; i < payments.length; i++) {
@@ -77,7 +83,7 @@ String getNextPaymentAmount(List<Payment> payments) {
   return "N 0";
 }
 
-String getNextPaymentStatus(List<Payment> payments) {
+  String getNextPaymentStatus(List<Payment> payments) {
   for (int i = 0; i < payments.length; i++) {
     if (payments[i].status != 'completed') {
       final amountToPay = payments[i].amountToPay ?? 0;
@@ -336,6 +342,11 @@ String getNextPaymentStatus(List<Payment> payments) {
 
   @override
   Widget build(BuildContext context) {
+    final payments = widget.purchase.payments ?? const <Payment>[];
+    final durationLabel = widget.purchase.durationMonths != null
+        ? '${widget.purchase.durationMonths} ${widget.purchase.repaymentFrequency ?? 'months'}'
+        : '${payments.length} ${widget.purchase.paymentPlan == "monthly" ? 'Months' : "weeks"}';
+
     final formattedAmount = NumberFormat.currency(
       locale: 'en_NG',
       symbol: 'N',
@@ -546,7 +557,7 @@ String getNextPaymentStatus(List<Payment> payments) {
                                       size: 14, color: deepBlue),
                                   const SizedBox(width: 6),
                                   CustomText(
-                                    "Next: ${getNextPaymentDate(widget.purchase.payments!.toList())}",
+                                    "Next: ${getNextPaymentDate(payments)}",
                                     fontSize: 11.sp,
                                     color: deepBlue,
                                     fontWeight: FontWeight.w600,
@@ -558,8 +569,10 @@ String getNextPaymentStatus(List<Payment> payments) {
                         ),
                         const SizedBox(height: 10),
                         LinearCompletionIndicator(
-                          totalAmountToPay: widget.purchase.totalAmountToPay!.toInt(),
-                          totalAmountPaid: widget.purchase.totalAmountPaid!.toInt(),
+                          totalAmountToPay:
+                              (widget.purchase.totalAmountToPay ?? 0).toInt(),
+                          totalAmountPaid:
+                              (widget.purchase.totalAmountPaid ?? 0).toInt(),
                         ),
                         const SizedBox(height: 12),
                         Container(
@@ -679,19 +692,29 @@ String getNextPaymentStatus(List<Payment> payments) {
                           index: null,
                         ),
                         PaymentBreakdownWidget(
-                          title: 'Payment Duration:',
+                          title: 'Purchase Type:',
+                          amount: '${widget.purchase.purchaseType ?? "N/A"}',
+                          index: null,
+                        ),
+                        PaymentBreakdownWidget(
+                          title: 'Down Payment:',
                           amount:
-                              '${widget.purchase.payments!.length} ${widget.purchase.paymentPlan == "monthly" ? 'Months' : "weeks"}',
+                              'N${NumberFormat('#,##0').format(widget.purchase.downPaymentAmount ?? 0)}',
+                          index: null,
+                        ),
+                        PaymentBreakdownWidget(
+                          title: 'Payment Duration:',
+                          amount: durationLabel,
                           index: null,
                         ),
                         PaymentBreakdownWidget(
                           title: 'Next payment Date:',
-                          amount: getNextPaymentDate(widget.purchase.payments!.toList()),
+                          amount: getNextPaymentDate(payments),
                           index: 0,
                         ),
                         PaymentBreakdownWidget(
                           title: 'Next payment Amount:',
-                          amount: getNextPaymentAmount(widget.purchase.payments!),
+                          amount: getNextPaymentAmount(payments),
                           index: 0,
                         ),
                         PaymentBreakdownWidget(

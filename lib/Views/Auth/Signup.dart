@@ -102,7 +102,7 @@ class _SignupState extends State<Signup> with SingleTickerProviderStateMixin {
       _isLoading = true;
     });
 
-    final url = 'https://retilda-fintech-3jy7.onrender.com/Api/signUp';
+    final url = 'https://retildaserver.vercel.app/Api/signUp';
 
     final payload = {
       "fullName": _fullname.text.trim(),

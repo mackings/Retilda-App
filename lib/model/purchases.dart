@@ -31,17 +31,21 @@ class PurchaseResponse {
 
 class PurchaseData {
   final List<Purchase>? purchasesData;
+  final int? totalPurchases;
 
   PurchaseData({
     this.purchasesData,
+    this.totalPurchases,
   });
 
   factory PurchaseData.fromJson(Map<String, dynamic> json) {
+    final rawList = json['purchasesData'] ?? json['purchases'];
     return PurchaseData(
-      purchasesData: json['purchasesData'] != null
+      purchasesData: rawList != null
           ? List<Purchase>.from(
-              json['purchasesData'].map((item) => Purchase.fromJson(item)))
+              (rawList as List).map((item) => Purchase.fromJson(item)))
           : null,
+      totalPurchases: json['totalPurchases'] ?? json['count'],
     );
   }
 
@@ -50,6 +54,7 @@ class PurchaseData {
       'purchasesData': purchasesData != null
           ? List<dynamic>.from(purchasesData!.map((item) => item.toJson()))
           : null,
+      'totalPurchases': totalPurchases,
     };
   }
 }
@@ -58,6 +63,18 @@ class Purchase {
   final String? id;
   final Product? product;
   final String? paymentPlan;
+  final String? userId;
+  final String? userName;
+  final String? userEmail;
+  final String? userPhone;
+  final String? orderStatus;
+  final String? purchaseType;
+  final num? downPaymentPercent;
+  final num? downPaymentAmount;
+  final int? durationMonths;
+  final String? repaymentFrequency;
+  final num? totalRepaymentAmount;
+  final num? basePrice;
   final String? deliveryStatus;
   final num? totalAmountToPay;
   final num? totalAmountPaid;
@@ -67,17 +84,95 @@ class Purchase {
     this.id,
     this.product,
     this.paymentPlan,
+    this.userId,
+    this.userName,
+    this.userEmail,
+    this.userPhone,
+    this.orderStatus,
+    this.purchaseType,
+    this.downPaymentPercent,
+    this.downPaymentAmount,
+    this.durationMonths,
+    this.repaymentFrequency,
+    this.totalRepaymentAmount,
+    this.basePrice,
     this.deliveryStatus,
     this.totalAmountToPay,
     this.totalAmountPaid,
     this.payments,
   });
 
+  num get resolvedDownPaymentAmount {
+    if (downPaymentAmount != null) return downPaymentAmount!;
+    final price = basePrice ?? product?.price;
+    if (downPaymentPercent != null && price != null) {
+      return (downPaymentPercent! * price);
+    }
+    if (purchaseType == 'down_40' && price != null) {
+      return price * 0.4;
+    }
+    if (purchaseType == 'down_50' && price != null) {
+      return price * 0.5;
+    }
+    return 0;
+  }
+
+  num get totalPaidComputed {
+    if (totalAmountPaid != null) return totalAmountPaid!;
+    if (payments == null || payments!.isEmpty) return 0;
+    return payments!
+        .map((payment) => payment.amountPaid ?? 0)
+        .fold<num>(0, (sum, value) => sum + value);
+  }
+
+  num get totalToPayComputed {
+    if (totalAmountToPay != null) return totalAmountToPay!;
+    if (totalRepaymentAmount != null) return totalRepaymentAmount!;
+    if (basePrice != null) return basePrice!;
+    if (product?.price != null) return product!.price!;
+    return 0;
+  }
+
+  bool get hasPaidDownPayment {
+    final required = resolvedDownPaymentAmount;
+    if (required <= 0) return false;
+    final paid = totalPaidComputed;
+    return paid >= required;
+  }
+
   factory Purchase.fromJson(Map<String, dynamic> json) {
+    final rawUser = json['userId'] ?? json['user'];
+    String? resolvedUserId;
+    String? resolvedUserName;
+    String? resolvedUserEmail;
+    String? resolvedUserPhone;
+    if (rawUser is String) {
+      resolvedUserId = rawUser;
+    } else if (rawUser is Map) {
+      resolvedUserId = rawUser['_id'] ?? rawUser['id'];
+      resolvedUserName = rawUser['fullName'];
+      resolvedUserEmail = rawUser['email'];
+      resolvedUserPhone = rawUser['phone'];
+    }
+
     return Purchase(
-      id: json['id'],
-      product: json['product'] != null ? Product.fromJson(json['product']) : null,
+      id: json['id'] ?? json['_id'],
+      product: json['product'] != null
+          ? Product.fromJson(json['product'])
+          : null,
       paymentPlan: json['paymentPlan'],
+      userId: resolvedUserId,
+      userName: resolvedUserName,
+      userEmail: resolvedUserEmail,
+      userPhone: resolvedUserPhone,
+      orderStatus: json['orderStatus'],
+      purchaseType: json['purchaseType'],
+      downPaymentPercent: json['downPaymentPercent'],
+      downPaymentAmount: json['downPaymentAmount'],
+      durationMonths: json['durationMonths'],
+      repaymentFrequency: json['repaymentFrequency'],
+      totalRepaymentAmount: json['totalRepaymentAmount'],
+      basePrice: json['basePrice'],
       deliveryStatus: json['deliveryStatus'],
       totalAmountToPay: json['totalAmountToPay'],
       totalAmountPaid: json['totalAmountPaid'],
@@ -90,9 +185,21 @@ class Purchase {
 
   Map<String, dynamic> toJson() {
     return {
-      '_id': id,
+      'id': id,
       'product': product?.toJson(),
       'paymentPlan': paymentPlan,
+      'userId': userId,
+      'userName': userName,
+      'userEmail': userEmail,
+      'userPhone': userPhone,
+      'orderStatus': orderStatus,
+      'purchaseType': purchaseType,
+      'downPaymentPercent': downPaymentPercent,
+      'downPaymentAmount': downPaymentAmount,
+      'durationMonths': durationMonths,
+      'repaymentFrequency': repaymentFrequency,
+      'totalRepaymentAmount': totalRepaymentAmount,
+      'basePrice': basePrice,
       'deliveryStatus': deliveryStatus,
       'totalAmountToPay': totalAmountToPay,
       'totalAmountPaid': totalAmountPaid,
@@ -120,9 +227,9 @@ class Product {
 
   factory Product.fromJson(Map<String, dynamic> json) {
     return Product(
-      id: json['id'],
+      id: json['id'] ?? json['_id'],
       name: json['name'],
-      price: json['price'],
+      price: json['price'] is num ? (json['price'] as num).toInt() : json['price'],
       description: json['description'],
       images: json['images'] != null
           ? List<String>.from(json['images'])
