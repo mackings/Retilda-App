@@ -43,7 +43,7 @@ class _ProductDetailsState extends State<ProductDetails> {
   // API Call Function
   Future<void> _calculateDeliveryFee(BuildContext context) async {
     final url =
-        "https://retilda-fintech-3jy7.onrender.com/Api/deliveryFeeCalculation/$productId";
+        "https://retildaserver.vercel.app/Api/deliveryFeeCalculation/$productId";
     final data = {
       "deliveryAddress": _addressController.text,
       "phoneNumber": _phoneController.text,
@@ -329,7 +329,7 @@ class _ProductDetailsState extends State<ProductDetails> {
 
   Future<void> initializePayment(BuildContext context) async {
     const String apiUrl =
-        "https://retilda-fintech-3jy7.onrender.com/Api/buyproductonsales/onetimepaymentusingcard";
+        "https://retildaserver.vercel.app/Api/buyproductonsales/onetimepaymentusingcard";
 
     try {
       // Make the API call
@@ -449,7 +449,7 @@ class _ProductDetailsState extends State<ProductDetails> {
 
   Future<void> getWalletBalance(String walletAccountNumber) async {
     final Uri url =
-        Uri.parse('https://retilda-fintech-3jy7.onrender.com/Api/balance');
+        Uri.parse('https://retildaserver.vercel.app/Api/balance');
 
     Map<String, String> requestBody = {
       'walletAccountNumber': wallet,
@@ -568,7 +568,7 @@ class _ProductDetailsState extends State<ProductDetails> {
       print("Payload >> $requestBodyJson");
       final response = await http.post(
         Uri.parse(
-            'https://retilda-fintech-3jy7.onrender.com/Api/buyProductOnInstallment'),
+            'https://retildaserver.vercel.app/Api/buyProductOnInstallment'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',

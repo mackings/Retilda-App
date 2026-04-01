@@ -27,6 +27,37 @@ class _TransactionsState extends ConsumerState<Transactions> {
 
   bool _isLoading = true;
 
+  double? _parseBalanceValue(dynamic value) {
+    if (value == null) return null;
+    if (value is num) return value.toDouble();
+
+    final cleanedValue = value.toString().replaceAll(RegExp(r'[^0-9.-]'), '');
+
+    return double.tryParse(cleanedValue);
+  }
+
+  double? _extractBalance(Map<String, dynamic> responseData) {
+    final candidates = [
+      responseData['data']?['responseBody']?['availableBalance'],
+      responseData['data']?['providerResponse']?['availableBalance'],
+      responseData['data']?['providerResponse']?['responseBody']
+          ?['availableBalance'],
+      responseData['data']?['availableBalance'],
+      responseData['data']?['balance'],
+      responseData['availableBalance'],
+      responseData['balance'],
+    ];
+
+    for (final candidate in candidates) {
+      final parsedValue = _parseBalanceValue(candidate);
+      if (parsedValue != null) {
+        return parsedValue;
+      }
+    }
+
+    return null;
+  }
+
   Future<void> _loadUserData() async {
     SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
     String? userDataString = sharedPreferences.getString('userData');
@@ -46,6 +77,7 @@ class _TransactionsState extends ConsumerState<Transactions> {
         AccountNumber = account;
         AccountName = name;
         WalletBalance = balance;
+        _userBalance = balance.toDouble();
       });
 
       await fetchTransactions();
@@ -55,7 +87,7 @@ class _TransactionsState extends ConsumerState<Transactions> {
 
   Future<void> fetchTransactions() async {
     final url = Uri.parse(
-        'https://retilda-fintech-3jy7.onrender.com/Api/viewTransactionHistory');
+        'https://retildaserver.vercel.app/Api/viewTransactionHistory');
 
     final response = await http.get(url, headers: {
       'Content-Type': 'application/json',
@@ -79,27 +111,50 @@ class _TransactionsState extends ConsumerState<Transactions> {
   }
 
   Future<void> fetchUserBalance() async {
-    final url =
-        Uri.parse('https://retilda-fintech-3jy7.onrender.com/Api/balance');
+    if (_token == null || AccountNumber == null || AccountNumber!.isEmpty) {
+      print('Missing token or wallet account number for balance request');
+      return;
+    }
 
     try {
-      final response = await http.get(url, headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $_token',
+      final getUrl = Uri.parse(
+        'https://retildaserver.vercel.app/Api/balance',
+      ).replace(queryParameters: {
+        'walletAccountNumber': AccountNumber!,
       });
+
+      http.Response response = await http.get(
+        getUrl,
+        headers: {
+          'Authorization': 'Bearer $_token',
+        },
+      );
+
+      if (response.statusCode != 200) {
+        response = await http.post(
+          Uri.parse('https://retildaserver.vercel.app/Api/balance'),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $_token',
+          },
+          body: jsonEncode({
+            'walletAccountNumber': AccountNumber,
+          }),
+        );
+      }
 
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
+        final double? userBalance = _extractBalance(responseData);
 
-        if (responseData['success'] == true) {
-          final double userBalance = responseData['data'].toDouble();
-
+        if (responseData['success'] == true && userBalance != null) {
           setState(() {
             _userBalance = userBalance;
             _isLoading = false;
           });
           print(_userBalance);
         } else {
+          print('Balance response body: ${response.body}');
           throw Exception(responseData['message']);
         }
       } else {
@@ -377,9 +432,9 @@ class _TransactionsState extends ConsumerState<Transactions> {
                         // Reverse the index to display the latest first
                         final transaction =
                             _transactions[_transactions.length - 1 - index];
-                        final transactionDateTime =
-                            DateTime.parse(transaction.transactionDate.toString())
-                                .add(Duration(hours: 1));
+                        final transactionDateTime = DateTime.parse(
+                                transaction.transactionDate.toString())
+                            .add(Duration(hours: 1));
                         final formattedDate = DateFormat('MMMM d, yyyy, h:mma')
                             .format(transactionDateTime);
 

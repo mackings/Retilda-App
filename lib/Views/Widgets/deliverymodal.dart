@@ -91,7 +91,7 @@ class _DeliveryModalState extends State<DeliveryModal> {
     setState(() => isLoading = true);
 
     final url =
-        'https://retilda-fintech-3jy7.onrender.com/Api/requestForGoodsDeliveryCalculation/${widget.purchaseId}';
+        'https://retildaserver.vercel.app/Api/requestForGoodsDeliveryCalculation/${widget.purchaseId}';
 
     final body = {
       "deliveryAddress": _addressController.text,
@@ -151,7 +151,7 @@ class _DeliveryModalState extends State<DeliveryModal> {
     }
 
     final url =
-        'https://retilda-fintech-3jy7.onrender.com/Api/requestForGoodsDelivery/${widget.purchaseId}';
+        'https://retildaserver.vercel.app/Api/requestForGoodsDelivery/${widget.purchaseId}';
 
     final body = {
       "deliveryAddress": _addressController.text,

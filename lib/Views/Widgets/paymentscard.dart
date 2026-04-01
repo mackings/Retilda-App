@@ -5,8 +5,7 @@ import 'package:retilda/Views/Widgets/widgets.dart';
 import 'package:sizer/sizer.dart';
 
 class PaymentSummaryCard extends StatelessWidget {
-  
-  final String imageUrl;
+  final String? imageUrl;
   final String title;
   final String subtitle;
   final DateTime date;
@@ -16,7 +15,7 @@ class PaymentSummaryCard extends StatelessWidget {
     required this.imageUrl,
     required this.title,
     required this.subtitle,
-    required this.date, 
+    required this.date,
   }) : super(key: key);
 
   @override
@@ -43,21 +42,33 @@ class PaymentSummaryCard extends StatelessWidget {
           children: [
             Align(
               alignment: Alignment.topRight,
-              child: CustomText(formattedDate,fontWeight: FontWeight.w600,),
+              child: CustomText(
+                formattedDate,
+                fontWeight: FontWeight.w600,
+              ),
             ),
             SizedBox(height: 8.0),
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: CircleAvatar(
-                backgroundImage: NetworkImage(imageUrl),
+                backgroundColor: Colors.grey.shade200,
+                backgroundImage: imageUrl != null && imageUrl!.isNotEmpty
+                    ? NetworkImage(imageUrl!)
+                    : null,
                 radius: 30.0,
+                child: imageUrl == null || imageUrl!.isEmpty
+                    ? const Icon(Icons.image_not_supported_outlined)
+                    : null,
               ),
               title: CustomText(
                 title,
                 fontSize: 14.sp,
                 fontWeight: FontWeight.w700,
               ),
-              subtitle: CustomText(subtitle,color: ROrange,),
+              subtitle: CustomText(
+                subtitle,
+                color: ROrange,
+              ),
             ),
           ],
         ),

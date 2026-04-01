@@ -4,7 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 
 class WalletApiService {
-  static const String baseUrl = 'https://retilda-fintech-3jy7.onrender.com/Api';
+  static const String baseUrl = 'https://retildaserver.vercel.app/Api';
   
   Future<String?> _getToken() async {
     SharedPreferences sharedPreferences = await SharedPreferences.getInstance();

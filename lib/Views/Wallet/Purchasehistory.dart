@@ -11,8 +11,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sizer/sizer.dart';
 import 'package:http/http.dart' as http;
 
-
-
 class PurchaseHistory extends ConsumerStatefulWidget {
   const PurchaseHistory({Key? key}) : super(key: key);
 
@@ -28,8 +26,46 @@ class _PurchaseHistoryState extends ConsumerState<PurchaseHistory> {
   String? _userId;
   bool _isLoading = true;
 
+  DateTime _resolvePurchaseDate(Purchase purchase) {
+    final payments = purchase.payments ?? const <Payment>[];
+
+    for (final payment in payments) {
+      final rawDate = payment.paymentDate ?? payment.nextPaymentDate;
+      if (rawDate != null && rawDate.isNotEmpty) {
+        return DateTime.tryParse(rawDate) ?? DateTime.now();
+      }
+    }
+
+    return DateTime.now();
+  }
+
+  String _resolvePurchaseImage(Purchase purchase) {
+    final images = purchase.product?.images ?? const <String>[];
+    return images.isNotEmpty ? images.first : '';
+  }
+
+  String _resolvePurchaseTitle(Purchase purchase) {
+    final title = purchase.product?.name;
+    if (title == null || title.trim().isEmpty) {
+      return 'Product unavailable';
+    }
+    return title;
+  }
+
+  String _resolvePurchaseSubtitle(Purchase purchase) {
+    final payments = purchase.payments ?? const <Payment>[];
+    final firstAmountPaid =
+        payments.isNotEmpty ? payments.first.amountPaid ?? 0 : 0;
+
+    if (purchase.paymentPlan == "once") {
+      return "One time payment of N${NumberFormat('#,##0').format(firstAmountPaid)}";
+    }
+
+    return "N${NumberFormat('#,##0').format(purchase.totalAmountPaid ?? 0)} out of N${NumberFormat('#,##0').format(purchase.totalAmountToPay ?? 0)}";
+  }
+
   Future<PurchaseResponse> fetchPurchases(String userId, String token) async {
-    final url = 'https://retilda-fintech-3jy7.onrender.com/Api/getAllPendingPurchases';
+    final url = 'https://retildaserver.vercel.app/Api/getAllPendingPurchases';
     final response = await http.get(
       Uri.parse(url),
       headers: {
@@ -47,20 +83,18 @@ class _PurchaseHistoryState extends ConsumerState<PurchaseHistory> {
     }
   }
 
-
-Future<void> _refreshPurchases() async {
-  if (_token != null && _userId != null) {
-    try {
-      final apiResponse = await fetchPurchases(_userId!, _token!);
-      setState(() {
-        _purchases = apiResponse.data!.purchasesData!;
-      });
-    } catch (error) {
-      print('Error refreshing purchases: $error');
-    }  
+  Future<void> _refreshPurchases() async {
+    if (_token != null && _userId != null) {
+      try {
+        final apiResponse = await fetchPurchases(_userId!, _token!);
+        setState(() {
+          _purchases = apiResponse.data!.purchasesData!;
+        });
+      } catch (error) {
+        print('Error refreshing purchases: $error');
+      }
+    }
   }
-}
-
 
   Future<void> _loadUserData() async {
     SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
@@ -86,19 +120,13 @@ Future<void> _refreshPurchases() async {
         });
       });
 
-
       print("User >>> $userData");
-
     } else {
       setState(() {
         _isLoading = false;
       });
     }
-
   }
-
-
-  
 
   @override
   void initState() {
@@ -121,62 +149,58 @@ Future<void> _refreshPurchases() async {
               fontWeight: FontWeight.w700,
             ),
           ),
-body: _isLoading
-    ? Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 40),
-          child: LinearProgressIndicator(),
-        ),
-      )
-    : RefreshIndicator(
-        onRefresh: _refreshPurchases,
-        child: _purchases.isEmpty
-            ? ListView( // Important: Use ListView so RefreshIndicator works even with empty list
-                children: [
-                  Center(
-                    child: Padding(
-                      padding: const EdgeInsets.only(top: 300),
-                      child: CustomText(
-                        "You have no purchases.",
-                        fontSize: 18.sp,
-                        fontWeight: FontWeight.w400,
-                      ),
-                    ),
+          body: _isLoading
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 40),
+                    child: LinearProgressIndicator(),
                   ),
-                ],
-              )
-            : ListView.builder(
-                itemCount: _purchases.length,
-                itemBuilder: (context, index) {
-                  final purchase = _purchases[index];
-                  final DateTime paymentDate =
-                      purchase.payments!.isNotEmpty
-                          ? DateTime.parse(
-                              purchase.payments!.first.paymentDate.toString())
-                          : DateTime.now();
+                )
+              : RefreshIndicator(
+                  onRefresh: _refreshPurchases,
+                  child: _purchases.isEmpty
+                      ? ListView(
+                          // Important: Use ListView so RefreshIndicator works even with empty list
+                          children: [
+                            Center(
+                              child: Padding(
+                                padding: const EdgeInsets.only(top: 300),
+                                child: CustomText(
+                                  "You have no purchases.",
+                                  fontSize: 18.sp,
+                                  fontWeight: FontWeight.w400,
+                                ),
+                              ),
+                            ),
+                          ],
+                        )
+                      : ListView.builder(
+                          itemCount: _purchases.length,
+                          itemBuilder: (context, index) {
+                            final purchase = _purchases[index];
+                            final DateTime paymentDate =
+                                _resolvePurchaseDate(purchase);
 
-                  return GestureDetector(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              Purchasesummary(purchase: purchase),
+                            return GestureDetector(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        Purchasesummary(purchase: purchase),
+                                  ),
+                                );
+                              },
+                              child: PaymentSummaryCard(
+                                date: paymentDate,
+                                imageUrl: _resolvePurchaseImage(purchase),
+                                title: _resolvePurchaseTitle(purchase),
+                                subtitle: _resolvePurchaseSubtitle(purchase),
+                              ),
+                            );
+                          },
                         ),
-                      );
-                    },
-                    child: PaymentSummaryCard(
-                      date: paymentDate,
-                      imageUrl: purchase.product!.images![0],
-                      title: purchase.product!.name.toString(),
-                      subtitle: purchase.paymentPlan == "once"
-                          ? "One time payment of N${NumberFormat('#,##0').format(purchase.payments!.first.amountPaid)}"
-                          : "N${NumberFormat('#,##0').format(purchase.totalAmountPaid)} out of N${NumberFormat('#,##0').format(purchase.totalAmountToPay)}",
-                    ),
-                  );
-                },
-              ),
-      ),
+                ),
         );
       },
     );

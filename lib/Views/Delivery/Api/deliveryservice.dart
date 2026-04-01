@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
   
-  final String baseUrl = "https://retilda-fintech-3jy7.onrender.com";
+  final String baseUrl = "https://retildaserver.vercel.app";
 
   Future<String?> _getToken() async {
     SharedPreferences sharedPreferences = await SharedPreferences.getInstance();

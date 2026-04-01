@@ -13,9 +13,6 @@ import 'package:retilda/Views/Widgets/widgets.dart';
 import 'package:retilda/model/purchases.dart';
 import 'package:sizer/sizer.dart';
 
-
-
-
 class Purchasesummary extends ConsumerStatefulWidget {
   final Purchase purchase;
   const Purchasesummary({super.key, required this.purchase});
@@ -35,6 +32,23 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
   dynamic Wallet;
   bool _isLoading = false;
 
+  List<Payment> get _payments => widget.purchase.payments ?? const <Payment>[];
+
+  String? get _productImage {
+    final images = widget.purchase.product?.images ?? const <String>[];
+    return images.isNotEmpty ? images.first : null;
+  }
+
+  String get _productName {
+    final name = widget.purchase.product?.name;
+    if (name == null || name.trim().isEmpty) {
+      return 'Product unavailable';
+    }
+    return name;
+  }
+
+  bool get _canMakeProductPayments => productId != null;
+
   Future<void> _loadUserData() async {
     final userData = await _walletService.getUserData();
     if (userData != null) {
@@ -42,7 +56,7 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
         Token = userData['token'];
         UserId = userData['userId'];
         PurchaseId = widget.purchase.id;
-        productId = widget.purchase.product!.id;
+        productId = widget.purchase.product?.id;
         Wallet = userData['wallet'];
       });
 
@@ -51,48 +65,46 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
     }
   }
 
-
   String getNextPaymentDate(List<Payment> payments) {
-  for (int i = 0; i < payments.length; i++) {
-    if (payments[i].status != 'completed') {
-      final DateTime nextPaymentDateTime =
-          DateTime.parse(payments[i].nextPaymentDate.toString());
-      final DateFormat formatter = DateFormat('dd MMM yy');
-      return formatter.format(nextPaymentDateTime);
-    }
-  }
-  return "Cleared";
-}
-
-String getNextPaymentAmount(List<Payment> payments) {
-  for (int i = 0; i < payments.length; i++) {
-    if (payments[i].status != 'completed') {
-      final amountToPay = payments[i].amountToPay ?? 0;
-      final amountPaid = payments[i].amountPaid ?? 0;
-      final remainingAmount = amountToPay - amountPaid;
-      return 'N${remainingAmount.toStringAsFixed(0)}';
-    }
-  }
-  return "N 0";
-}
-
-String getNextPaymentStatus(List<Payment> payments) {
-  for (int i = 0; i < payments.length; i++) {
-    if (payments[i].status != 'completed') {
-      final amountToPay = payments[i].amountToPay ?? 0;
-      final amountPaid = payments[i].amountPaid ?? 0;
-      
-      if (amountPaid > 0 && amountPaid < amountToPay) {
-        return 'Partially Paid (N${amountPaid.toStringAsFixed(0)} of N${amountToPay.toStringAsFixed(0)})';
-      } else if (amountPaid == 0) {
-        return 'Not Paid';
+    for (int i = 0; i < payments.length; i++) {
+      if (payments[i].status != 'completed' &&
+          payments[i].nextPaymentDate != null) {
+        final DateTime nextPaymentDateTime =
+            DateTime.parse(payments[i].nextPaymentDate.toString());
+        final DateFormat formatter = DateFormat('dd MMM yy');
+        return formatter.format(nextPaymentDateTime);
       }
     }
+    return "Cleared";
   }
-  return "Fully Paid";
-}
 
+  String getNextPaymentAmount(List<Payment> payments) {
+    for (int i = 0; i < payments.length; i++) {
+      if (payments[i].status != 'completed') {
+        final amountToPay = payments[i].amountToPay ?? 0;
+        final amountPaid = payments[i].amountPaid ?? 0;
+        final remainingAmount = amountToPay - amountPaid;
+        return 'N${remainingAmount.toStringAsFixed(0)}';
+      }
+    }
+    return "N 0";
+  }
 
+  String getNextPaymentStatus(List<Payment> payments) {
+    for (int i = 0; i < payments.length; i++) {
+      if (payments[i].status != 'completed') {
+        final amountToPay = payments[i].amountToPay ?? 0;
+        final amountPaid = payments[i].amountPaid ?? 0;
+
+        if (amountPaid > 0 && amountPaid < amountToPay) {
+          return 'Partially Paid (N${amountPaid.toStringAsFixed(0)} of N${amountToPay.toStringAsFixed(0)})';
+        } else if (amountPaid == 0) {
+          return 'Not Paid';
+        }
+      }
+    }
+    return "Fully Paid";
+  }
 
   // String getNextPaymentDate(List<Payment> payments) {
   //   for (int i = 0; i < payments.length; i++) {
@@ -123,7 +135,7 @@ String getNextPaymentStatus(List<Payment> payments) {
   //     if (payments[i].paymentDate == null) {
   //       final amountToPay = payments[i].amountToPay ?? 0;
   //       final amountPaid = payments[i].amountPaid ?? 0;
-        
+
   //       if (amountPaid > 0 && amountPaid < amountToPay) {
   //         return 'Partially Paid (N${amountPaid.toStringAsFixed(0)} of N${amountToPay.toStringAsFixed(0)})';
   //       } else if (amountPaid == 0) {
@@ -134,14 +146,13 @@ String getNextPaymentStatus(List<Payment> payments) {
   //   return "Fully Paid";
   // }
 
-
-
   Future<void> _handleWalletPayment() async {
     if (productId == null) return;
 
     setState(() => _isLoading = true);
 
-    final result = await _walletService.makeInstallmentPaymentUsingWallet(productId!);
+    final result =
+        await _walletService.makeInstallmentPaymentUsingWallet(productId!);
 
     setState(() => _isLoading = false);
 
@@ -190,7 +201,8 @@ String getNextPaymentStatus(List<Payment> payments) {
 
     setState(() => _isLoading = true);
 
-    final result = await _walletService.makeInstallmentPaymentUsingCard(productId!);
+    final result =
+        await _walletService.makeInstallmentPaymentUsingCard(productId!);
 
     setState(() => _isLoading = false);
 
@@ -341,7 +353,7 @@ String getNextPaymentStatus(List<Payment> payments) {
   void initState() {
     super.initState();
     _loadUserData();
-    
+
     Timer(Duration(seconds: 1), () {
       if (widget.purchase.totalAmountPaid! >=
           widget.purchase.totalAmountToPay! * 0.6) {
@@ -406,26 +418,38 @@ String getNextPaymentStatus(List<Payment> payments) {
               child: Column(
                 children: [
                   Padding(
-                    padding: const EdgeInsets.only(left: 30, right: 30, top: 20),
+                    padding:
+                        const EdgeInsets.only(left: 30, right: 30, top: 20),
                     child: Container(
                       height: 30.h,
                       decoration: BoxDecoration(
-                        image: DecorationImage(
-                          image: NetworkImage(widget.purchase.product!.images![0]),
-                          fit: BoxFit.cover,
-                        ),
+                        color: Colors.grey.shade100,
+                        image: _productImage != null
+                            ? DecorationImage(
+                                image: NetworkImage(_productImage!),
+                                fit: BoxFit.cover,
+                              )
+                            : null,
                       ),
+                      child: _productImage == null
+                          ? Icon(
+                              Icons.image_not_supported_outlined,
+                              size: 48,
+                              color: Colors.grey.shade500,
+                            )
+                          : null,
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.only(left: 30, right: 30, top: 20),
+                    padding:
+                        const EdgeInsets.only(left: 30, right: 30, top: 20),
                     child: Column(
                       children: [
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             CustomText(
-                              widget.purchase.product!.name.toString(),
+                              _productName,
                               fontWeight: FontWeight.w600,
                               fontSize: 15.sp,
                             ),
@@ -435,8 +459,9 @@ String getNextPaymentStatus(List<Payment> payments) {
                           padding: const EdgeInsets.all(8.0),
                           child: Divider(color: Colors.grey),
                         ),
-                        if (widget.purchase.totalAmountToPay!.toInt() !=
-                            widget.purchase.totalAmountPaid!.toInt())
+                        if (_canMakeProductPayments &&
+                            widget.purchase.totalAmountToPay!.toInt() !=
+                                widget.purchase.totalAmountPaid!.toInt())
                           Row(
                             children: [
                               GestureDetector(
@@ -448,7 +473,10 @@ String getNextPaymentStatus(List<Payment> payments) {
                                   ),
                                   child: Padding(
                                     padding: const EdgeInsets.only(
-                                        left: 20, right: 20, top: 10, bottom: 10),
+                                        left: 20,
+                                        right: 20,
+                                        top: 10,
+                                        bottom: 10),
                                     child: CustomText(
                                       "Pay Installments",
                                       fontWeight: FontWeight.w500,
@@ -460,15 +488,15 @@ String getNextPaymentStatus(List<Payment> payments) {
                               ),
                             ],
                           ),
-
                         Padding(
                           padding: const EdgeInsets.all(8.0),
                           child: Divider(color: Colors.grey),
                         ),
-                        
                         LinearCompletionIndicator(
-                          totalAmountToPay: widget.purchase.totalAmountToPay!.toInt(),
-                          totalAmountPaid: widget.purchase.totalAmountPaid!.toInt(),
+                          totalAmountToPay:
+                              widget.purchase.totalAmountToPay!.toInt(),
+                          totalAmountPaid:
+                              widget.purchase.totalAmountPaid!.toInt(),
                         ),
                         SizedBox(height: 2.h),
                         Row(
@@ -497,17 +525,17 @@ String getNextPaymentStatus(List<Payment> payments) {
                         PaymentBreakdownWidget(
                           title: 'Payment Duration:',
                           amount:
-                              '${widget.purchase.payments!.length} ${widget.purchase.paymentPlan == "monthly" ? 'Months' : "weeks"}',
+                              '${_payments.length} ${widget.purchase.paymentPlan == "monthly" ? 'Months' : "weeks"}',
                           index: null,
                         ),
                         PaymentBreakdownWidget(
                           title: 'Next payment Date:',
-                          amount: getNextPaymentDate(widget.purchase.payments!.toList()),
+                          amount: getNextPaymentDate(_payments),
                           index: 0,
                         ),
                         PaymentBreakdownWidget(
                           title: 'Next payment Amount:',
-                          amount: getNextPaymentAmount(widget.purchase.payments!),
+                          amount: getNextPaymentAmount(_payments),
                           index: 0,
                         ),
                         PaymentBreakdownWidget(
