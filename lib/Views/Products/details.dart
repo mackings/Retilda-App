@@ -34,6 +34,7 @@ class _ProductDetailsState extends State<ProductDetails> {
   final TextEditingController _addressController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _timeController = TextEditingController();
+  Timer? _kycGuardTimer;
   DateTime? _selectedDate;
   String? _selectedCategory;
 
@@ -303,6 +304,7 @@ class _ProductDetailsState extends State<ProductDetails> {
   String? selectedPurchaseType;
   String? selectedRepaymentFrequency;
   int? selectedDurationMonths;
+  String? _lastPreviewSignature;
 
   String? Insurance;
   bool loading = false;
@@ -313,23 +315,41 @@ class _ProductDetailsState extends State<ProductDetails> {
 
   @override
   void initState() {
+    super.initState();
     _loadUserData();
-    Timer(Duration(seconds: 20), () {
+    _kycGuardTimer = Timer(const Duration(seconds: 20), () {
+      if (!mounted) return;
       if (wallet == null) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: CustomText('Please complete KYC on profile page'),
         ));
-        Navigator.pop(context);
-        Navigator.pop(context);
+        final navigator = Navigator.of(context);
+        if (navigator.canPop()) navigator.pop();
+        if (navigator.canPop()) navigator.pop();
       } else {}
     });
-    super.initState();
     _loadCartItems();
+  }
+
+  @override
+  void dispose() {
+    _kycGuardTimer?.cancel();
+    _addressController.dispose();
+    _phoneController.dispose();
+    _timeController.dispose();
+    super.dispose();
   }
 
   Future<void> initializePayment(BuildContext context) async {
     const String apiUrl =
         "https://retildaserver.vercel.app/Api/buyproductonsales/onetimepaymentusingcard";
+    await _loadUserData();
+    if (token == null || productId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: CustomText('Unable to start payment. Please sign in again.')),
+      );
+      return;
+    }
 
     try {
       // Make the API call
@@ -346,7 +366,9 @@ class _ProductDetailsState extends State<ProductDetails> {
         // Parse the response
         final responseData = json.decode(response.body);
 
-        if (responseData['success'] == true) {
+        if (responseData['success'] == true &&
+            responseData['data'] != null &&
+            responseData['data']['authorizationUrl'] != null) {
           final String paymentUrl = responseData['data']['authorizationUrl'];
 
           // Navigate to the WebViewScreen
@@ -429,6 +451,7 @@ class _ProductDetailsState extends State<ProductDetails> {
   Future<void> _loadCartItems() async {
     final prefs = await SharedPreferences.getInstance();
     final cartItemsJson = prefs.getStringList('cartItems');
+    if (!mounted) return;
     if (cartItemsJson != null) {
       setState(() {
         cartItems = cartItemsJson
@@ -492,16 +515,21 @@ class _ProductDetailsState extends State<ProductDetails> {
     String? userDataString = sharedPreferences.getString('userData');
     if (userDataString != null) {
       Map<String, dynamic> userData = jsonDecode(userDataString);
-      String Token = userData['data']['token'];
-      String UserId = userData['data']['user']['_id'];
-      String Wallet = userData['data']['user']['wallet']['accountNumber'];
-      bool userDirectdebit = userData['data']['user']['isDirectDebit'];
+      final data = userData['data'] as Map<String, dynamic>?;
+      final user = data?['user'] as Map<String, dynamic>?;
+      final userWallet = user?['wallet'] as Map<String, dynamic>?;
 
+      final String? loadedToken = data?['token'] as String?;
+      final String? loadedUserId = user?['_id'] as String?;
+      final String? loadedWallet = userWallet?['accountNumber'] as String?;
+      final bool? userDirectdebit = user?['isDirectDebit'] as bool?;
+
+      if (!mounted) return;
       setState(() {
-        token = Token;
-        userId = UserId;
+        token = loadedToken;
+        userId = loadedUserId;
         productId = widget.product.id;
-        wallet = Wallet;
+        wallet = loadedWallet;
         Activated = userDirectdebit;
       });
 
@@ -518,6 +546,220 @@ class _ProductDetailsState extends State<ProductDetails> {
   String? userOptions;
   dynamic wallet;
   String? balance;
+
+  String _formatMoney(num amount) {
+    return '₦${NumberFormat('#,##0.00').format(amount)}';
+  }
+
+  double _downPaymentPercent(String purchaseType) {
+    switch (purchaseType) {
+      case 'down_50':
+        return 0.50;
+      case 'down_40':
+        return 0.40;
+      case 'outright':
+      default:
+        return 1.0;
+    }
+  }
+
+  int _installmentCount(int months, String frequency) {
+    switch (frequency) {
+      case 'weekly':
+        return months * 4;
+      case 'biweekly':
+        return months * 2;
+      case 'monthly':
+      default:
+        return months;
+    }
+  }
+
+  void _onPlanSelectionUpdated() {
+    final purchaseType = selectedPurchaseType;
+    final readyForPreview = purchaseType == 'outright' ||
+        (purchaseType != null &&
+            selectedDurationMonths != null &&
+            selectedRepaymentFrequency != null);
+
+    if (!readyForPreview) return;
+
+    final signature =
+        '${selectedPurchaseType ?? ''}|${selectedDurationMonths ?? ''}|${selectedRepaymentFrequency ?? ''}';
+    if (signature == _lastPreviewSignature) return;
+    _lastPreviewSignature = signature;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _showPaymentPlanBreakdownSheet();
+    });
+  }
+
+  void _showPaymentPlanBreakdownSheet() {
+    final purchaseType = selectedPurchaseType;
+    if (purchaseType == null) return;
+
+    final totalPrice = widget.product.price.toDouble();
+    final downPercent = _downPaymentPercent(purchaseType);
+    final downPayment = totalPrice * downPercent;
+    final remainingBalance = (totalPrice - downPayment).clamp(0, totalPrice);
+
+    final isOutright = purchaseType == 'outright';
+    final frequency = selectedRepaymentFrequency;
+    final months = selectedDurationMonths;
+    final count = isOutright
+        ? 0
+        : _installmentCount(months!, frequency!);
+    final eachInstallment = count > 0 ? (remainingBalance / count) : 0.0;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) {
+        return SafeArea(
+          child: FractionallySizedBox(
+            heightFactor: 0.8,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 22),
+              child: Column(
+                mainAxisSize: MainAxisSize.max,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 58,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  Text(
+                    'Payment Plan Breakdown',
+                    style: GoogleFonts.dmSans(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w800,
+                      color: const Color(0xFF103C57),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    widget.product.name,
+                    style: GoogleFonts.dmSans(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.grey.shade700,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      child: Column(
+                        children: [
+                          _planRow('Product price', _formatMoney(totalPrice)),
+                          _planRow('Purchase type', purchaseType.replaceAll('_', ' ')),
+                          _planRow('Down payment now', _formatMoney(downPayment)),
+                          if (!isOutright) ...[
+                            _planRow('Remaining balance', _formatMoney(remainingBalance)),
+                            _planRow('Repayment frequency', frequency!),
+                            _planRow('Duration', '$months months'),
+                            _planRow('No. of installments', '$count'),
+                            _planRow(
+                              'Each ${frequency == 'biweekly' ? '2 weeks' : frequency}',
+                              _formatMoney(eachInstallment),
+                            ),
+                          ],
+                          const SizedBox(height: 14),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF5F8FA),
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: Text(
+                              isOutright
+                                  ? 'You will pay ${_formatMoney(totalPrice)} once.'
+                                  : 'You will pay ${_formatMoney(downPayment)} now, then $count payments of ${_formatMoney(eachInstallment)}.',
+                              style: GoogleFonts.dmSans(
+                                fontSize: 15,
+                                height: 1.4,
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xFF103C57),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF103C57),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                      ),
+                      child: Text(
+                        'Continue',
+                        style: GoogleFonts.dmSans(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _planRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: GoogleFonts.dmSans(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey.shade700,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Flexible(
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              style: GoogleFonts.dmSans(
+                fontSize: 17,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFF103C57),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   Future<void> makeBuyProductRequest(
     String token,
@@ -605,6 +847,7 @@ class _ProductDetailsState extends State<ProductDetails> {
   }
 
   Future<void> purchaseProduct() async {
+    if (!mounted) return;
     setState(() {
       loading = true;
     });
@@ -614,6 +857,7 @@ class _ProductDetailsState extends State<ProductDetails> {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: CustomText('Use One Time Pay for outright purchases'),
       ));
+      if (!mounted) return;
       setState(() {
         loading = false;
       });
@@ -644,12 +888,14 @@ class _ProductDetailsState extends State<ProductDetails> {
       print(selectedRepaymentFrequency);
     }
 
+    if (!mounted) return;
     setState(() {
       loading = false;
     });
   }
 
   Future<void> initializeInstallmentCardPayment(BuildContext context) async {
+    await _loadUserData();
     if (selectedPurchaseType == "outright") {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: CustomText('Use One Time Pay for outright purchases'),
@@ -987,6 +1233,7 @@ class _ProductDetailsState extends State<ProductDetails> {
                               selectedRepaymentFrequency = null;
                             }
                           });
+                          _onPlanSelectionUpdated();
                         },
                       ),
                       const SizedBox(height: 12),
@@ -1009,6 +1256,7 @@ class _ProductDetailsState extends State<ProductDetails> {
                           setState(() {
                             selectedDurationMonths = value;
                           });
+                          _onPlanSelectionUpdated();
                         },
                       ),
                       const SizedBox(height: 12),
@@ -1040,6 +1288,7 @@ class _ProductDetailsState extends State<ProductDetails> {
                           setState(() {
                             selectedRepaymentFrequency = value;
                           });
+                          _onPlanSelectionUpdated();
                         },
                       ),
                       if (selectedPurchaseType != null ||
