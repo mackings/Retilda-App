@@ -19,13 +19,12 @@ class Transactions extends ConsumerStatefulWidget {
 
 class _TransactionsState extends ConsumerState<Transactions> {
   String? _token;
-  num? WalletBalance;
   String? AccountNumber;
   String? AccountName;
   List<Content> _transactions = [];
-  dynamic _userBalance;
+  double? _userBalance;
 
-  bool _isLoading = true;
+  bool _isLoadingTransactions = true;
 
   double? _parseBalanceValue(dynamic value) {
     if (value == null) return null;
@@ -67,21 +66,28 @@ class _TransactionsState extends ConsumerState<Transactions> {
       print(
           "Parsed User Data: $userData"); // Log entire parsed data for confirmation
 
-      String? token = userData['data']?['token'];
-      String? account = userData['data']?['user']?['wallet']?['accountNumber'];
-      num balance = userData['data']?['user']?['balance'];
+      String? token = userData['data']?['token']?.toString();
+      String? account =
+          userData['data']?['user']?['wallet']?['accountNumber']?.toString();
+      final cachedBalance =
+          _parseBalanceValue(userData['data']?['user']?['balance']);
       String? name = userData['data']?['user']?['wallet']?['accountName'];
 
       setState(() {
         _token = token;
         AccountNumber = account;
         AccountName = name;
-        WalletBalance = balance;
-        _userBalance = balance.toDouble();
+        _userBalance = cachedBalance;
       });
 
-      await fetchTransactions();
       await fetchUserBalance();
+      try {
+        await fetchTransactions();
+      } catch (error) {
+        print('Error fetching transactions: $error');
+      }
+    } else {
+      setState(() => _isLoadingTransactions = false);
     }
   }
 
@@ -103,9 +109,10 @@ class _TransactionsState extends ConsumerState<Transactions> {
         _transactions = transactionsData
             .map((transaction) => Content.fromJson(transaction))
             .toList();
-        _isLoading = false;
+        _isLoadingTransactions = false;
       });
     } else {
+      setState(() => _isLoadingTransactions = false);
       throw Exception('Failed to load transactions');
     }
   }
@@ -130,6 +137,9 @@ class _TransactionsState extends ConsumerState<Transactions> {
         },
       );
 
+      print('Balance GET status: ${response.statusCode}');
+      print('Balance GET body: ${response.body}');
+
       if (response.statusCode != 200) {
         response = await http.post(
           Uri.parse('https://retildaserver.vercel.app/Api/balance'),
@@ -141,6 +151,9 @@ class _TransactionsState extends ConsumerState<Transactions> {
             'walletAccountNumber': AccountNumber,
           }),
         );
+
+        print('Balance POST status: ${response.statusCode}');
+        print('Balance POST body: ${response.body}');
       }
 
       if (response.statusCode == 200) {
@@ -150,7 +163,11 @@ class _TransactionsState extends ConsumerState<Transactions> {
         if (responseData['success'] == true && userBalance != null) {
           setState(() {
             _userBalance = userBalance;
-            _isLoading = false;
+            AccountNumber =
+                responseData['data']?['walletAccountNumber']?.toString() ??
+                    AccountNumber;
+            AccountName =
+                responseData['data']?['accountName']?.toString() ?? AccountName;
           });
           print(_userBalance);
         } else {
@@ -407,46 +424,54 @@ class _TransactionsState extends ConsumerState<Transactions> {
             ),
           ),
           Expanded(
-            child: _transactions.isEmpty
+            child: _isLoadingTransactions
                 ? Center(
                     child: Padding(
-                      padding: const EdgeInsets.only(left: 30, right: 30),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.info_outline,
-                              size: 50, color: Colors.black),
-                          SizedBox(height: 16),
-                          CustomText(
-                            'No transactions available',
-                          ),
-                        ],
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 40),
+                      child: LinearProgressIndicator(),
                     ),
                   )
-                : Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: ListView.builder(
-                      itemCount: _transactions.length,
-                      itemBuilder: (context, index) {
-                        // Reverse the index to display the latest first
-                        final transaction =
-                            _transactions[_transactions.length - 1 - index];
-                        final transactionDateTime = DateTime.parse(
-                                transaction.transactionDate.toString())
-                            .add(Duration(hours: 1));
-                        final formattedDate = DateFormat('MMMM d, yyyy, h:mma')
-                            .format(transactionDateTime);
+                : _transactions.isEmpty
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.only(left: 30, right: 30),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.info_outline,
+                                  size: 50, color: Colors.black),
+                              SizedBox(height: 16),
+                              CustomText(
+                                'No transactions available',
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    : Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: ListView.builder(
+                          itemCount: _transactions.length,
+                          itemBuilder: (context, index) {
+                            // Reverse the index to display the latest first
+                            final transaction =
+                                _transactions[_transactions.length - 1 - index];
+                            final transactionDateTime = DateTime.parse(
+                                    transaction.transactionDate.toString())
+                                .add(Duration(hours: 1));
+                            final formattedDate =
+                                DateFormat('MMMM d, yyyy, h:mma')
+                                    .format(transactionDateTime);
 
-                        final formattedAmount = NumberFormat.currency(
-                          locale: 'en_NG',
-                          symbol: 'N',
-                          decimalDigits: 0,
-                        ).format(transaction.amount);
+                            final formattedAmount = NumberFormat.currency(
+                              locale: 'en_NG',
+                              symbol: 'N',
+                              decimalDigits: 0,
+                            ).format(transaction.amount);
 
 // Determine the title based on transaction type
-                        final titleText =
-                            transaction.transactionType == "purchase"
+                            final titleText = transaction.transactionType ==
+                                    "purchase"
                                 ? (transaction.status == "settlement"
                                     ? "Product Settlement"
                                     : "Product Purchase")
@@ -454,39 +479,42 @@ class _TransactionsState extends ConsumerState<Transactions> {
                                     ? "Service charge"
                                     : transaction.senderName);
 
-                        return Padding(
-                          padding: const EdgeInsets.all(15.0),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(8),
-                              border:
-                                  Border.all(width: 0.5, color: Colors.grey),
-                            ),
-                            child: ListTile(
-                              leading: transaction.transactionType == "purchase"
-                                  ? Icon(Icons.arrow_circle_down_sharp,
-                                      color: Colors.red)
-                                  : Icon(Icons.arrow_circle_up_sharp,
-                                      color: Colors.green),
-                              title: CustomText(
-                                  titleText), // Conditionally set title
-                              subtitle: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  CustomText(formattedDate),
-                                  CustomText(
-                                    transaction.description, // Description
-                                    fontSize: 13.sp,
+                            return Padding(
+                              padding: const EdgeInsets.all(15.0),
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                      width: 0.5, color: Colors.grey),
+                                ),
+                                child: ListTile(
+                                  leading:
+                                      transaction.transactionType == "purchase"
+                                          ? Icon(Icons.arrow_circle_down_sharp,
+                                              color: Colors.red)
+                                          : Icon(Icons.arrow_circle_up_sharp,
+                                              color: Colors.green),
+                                  title: CustomText(
+                                      titleText), // Conditionally set title
+                                  subtitle: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      CustomText(formattedDate),
+                                      CustomText(
+                                        transaction.description, // Description
+                                        fontSize: 13.sp,
+                                      ),
+                                    ],
                                   ),
-                                ],
+                                  trailing:
+                                      CustomText(formattedAmount), // Amount
+                                ),
                               ),
-                              trailing: CustomText(formattedAmount), // Amount
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
+                            );
+                          },
+                        ),
+                      ),
           ),
         ],
       ),

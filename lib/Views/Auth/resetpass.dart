@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
@@ -21,6 +20,16 @@ class _ResetPasswordState extends State<ResetPassword> {
   bool _isUpdating = false;
   bool _isResetRequested = false; // To track if the reset was requested
 
+  Map<String, dynamic>? _tryDecodeJson(String body) {
+    if (body.isEmpty) return null;
+    try {
+      final decoded = json.decode(body);
+      return decoded is Map<String, dynamic> ? decoded : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<void> requestPasswordReset() async {
     setState(() => _isRequesting = true);
 
@@ -29,12 +38,13 @@ class _ResetPasswordState extends State<ResetPassword> {
     final response = await http.post(
       url,
       headers: {'Content-Type': 'application/json'},
-      body: json.encode({"email": _emailController.text}),
+      body: json.encode({"email": _emailController.text.trim()}),
     );
+    final responseData = _tryDecodeJson(response.body);
 
     setState(() => _isRequesting = false);
 
-    if (response.statusCode == 200) {
+    if (response.statusCode == 200 && responseData?['success'] == true) {
       setState(() {
         _isResetRequested = true; // Show the update password section
       });
@@ -43,7 +53,9 @@ class _ResetPasswordState extends State<ResetPassword> {
         context: context,
         builder: (context) => AlertDialog(
           title: const Text("Success"),
-          content: const Text("OTP has been sent to your email."),
+          content: Text(
+            responseData?['message'] ?? "OTP has been sent to your email.",
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
@@ -57,7 +69,9 @@ class _ResetPasswordState extends State<ResetPassword> {
         context: context,
         builder: (context) => AlertDialog(
           title: const Text("Error"),
-          content: Text("Failed to send OTP: ${response.body}"),
+          content: Text(
+            responseData?['message'] ?? "Failed to send OTP: ${response.body}",
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
@@ -72,27 +86,30 @@ class _ResetPasswordState extends State<ResetPassword> {
   Future<void> resetPassword() async {
     setState(() => _isUpdating = true);
 
-    final url =
-        Uri.parse("https://retildaserver.vercel.app/Api/resetPassword");
+    final url = Uri.parse("https://retildaserver.vercel.app/Api/resetPassword");
     final response = await http.post(
       url,
       headers: {'Content-Type': 'application/json'},
       body: json.encode({
+        "email": _emailController.text.trim(),
         "password": _passwordController.text,
-        "otp": _otpController.text,
+        "otp": _otpController.text.trim(),
       }),
     );
+    final responseData = _tryDecodeJson(response.body);
 
     setState(() => _isUpdating = false);
 
-    if (response.statusCode == 200) {
+    if (response.statusCode == 200 && responseData?['success'] == true) {
       Navigator.pop(context);
 
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
           title: const Text("Success"),
-          content: const Text("Password has been updated."),
+          content: Text(
+            responseData?['message'] ?? "Password has been updated.",
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
@@ -106,7 +123,10 @@ class _ResetPasswordState extends State<ResetPassword> {
         context: context,
         builder: (context) => AlertDialog(
           title: const Text("Error"),
-          content: Text("Failed to update password: ${response.body}"),
+          content: Text(
+            responseData?['message'] ??
+                "Failed to update password: ${response.body}",
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
@@ -145,8 +165,10 @@ class _ResetPasswordState extends State<ResetPassword> {
                   ),
                   child: _isRequesting
                       ? const CircularProgressIndicator(color: Colors.white)
-                      : Text("Request Password Reset",
-                          style: GoogleFonts.poppins(color: Colors.white)),
+                      : const Text(
+                          "Request Password Reset",
+                          style: TextStyle(color: Colors.white),
+                        ),
                 ),
               ),
             ] else ...[
