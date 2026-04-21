@@ -1,20 +1,26 @@
-
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:retilda/Views/Auth/Signup.dart';
-
+import 'package:retilda/features/auth/presentation/screens/onboarding.dart';
+import 'package:retilda/core/theme/app_theme.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 //   // Handle background notifications
-//   print("Handling a background message: ${message.messageId}");
 // }
 
 void main() async {
-  await  WidgetsFlutterBinding.ensureInitialized();
+  WidgetsFlutterBinding.ensureInitialized();
+  try {
+    await dotenv.load(fileName: '.env');
+  } catch (_) {
+    // AppConfig has safe defaults for local builds without a checked-in .env.
+  }
   //await Firebase.initializeApp( options: DefaultFirebaseOptions.currentPlatform,);
 
- // FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
-  runApp(const MyApp());
-
+  // FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+  runApp(const ProviderScope(child: MyApp()));
 }
 
 class MyApp extends StatelessWidget {
@@ -23,12 +29,44 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
-      ),
-      home: Signup(),
+      title: 'Retilda',
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.light,
+      home: const _StartupGate(),
+    );
+  }
+}
+
+class _StartupGate extends StatefulWidget {
+  const _StartupGate();
+
+  @override
+  State<_StartupGate> createState() => _StartupGateState();
+}
+
+class _StartupGateState extends State<_StartupGate> {
+  late final Future<bool> _hasSeenOnboarding = _loadOnboardingState();
+
+  Future<bool> _loadOnboardingState() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(OnboardingScreen.seenKey) ?? false;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<bool>(
+      future: _hasSeenOnboarding,
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const Scaffold(
+            body: Center(
+              child: CircularProgressIndicator(),
+            ),
+          );
+        }
+
+        return snapshot.data! ? const Signup() : const OnboardingScreen();
+      },
     );
   }
 }

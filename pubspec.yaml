@@ -37,6 +37,8 @@ dependencies:
   cupertino_icons: ^1.0.2
   http: ^1.1.0
   shared_preferences: ^2.2.3
+  flutter_secure_storage: ^9.2.4
+  local_auth: ^2.3.0
   flutter_riverpod: ^2.4.10
   riverpod: ^2.5.0
   google_fonts: ^6.3.3
@@ -57,6 +59,7 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  flutter_lints: ^5.0.0
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
@@ -67,9 +70,6 @@ flutter_icons:
   android: true
   ios: true
   image_path: "assets/la.png"
-  
-  flutter_lints: ^5.0.0
-  
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -86,6 +86,7 @@ flutter:
   assets:
     
       - assets/
+      - .env
   #   - images/a_dot_ham.jpeg
 
   # An image asset can refer to one or more resolution-specific "variants", see
