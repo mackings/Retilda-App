@@ -10,13 +10,15 @@ import 'package:retilda/Views/Widgets/productcard.dart';
 import 'package:retilda/Views/Widgets/widgets.dart';
 import 'package:retilda/core/network/api_client.dart';
 import 'package:retilda/core/network/api_providers.dart';
+import 'package:retilda/core/presentation/widgets/user_walkthrough_sheet.dart';
 import 'package:retilda/core/security/app_session.dart';
+import 'package:retilda/core/theme/app_theme.dart';
 import 'package:retilda/model/products.dart';
 import 'package:sizer/sizer.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
 class Dashboard extends ConsumerStatefulWidget {
-  const Dashboard({Key? key}) : super(key: key);
+  const Dashboard({super.key});
 
   @override
   ConsumerState<ConsumerStatefulWidget> createState() => _DashboardState();
@@ -25,18 +27,40 @@ class Dashboard extends ConsumerStatefulWidget {
 class _DashboardState extends ConsumerState<Dashboard>
     with SingleTickerProviderStateMixin {
   Future<ApiResponse>? _futureProducts;
-  String? Token;
+  String? tokenValue;
   late final ApiClient _apiClient;
   late final AnimationController _shimmerController;
 
   Future<void> _loadUserData() async {
     final token = await AppSession().userToken();
+
+    if (!mounted) {
+      return;
+    }
+
     if (token != null) {
       setState(() {
-        Token = token;
+        tokenValue = token;
         _futureProducts = fetchData(token);
       });
     }
+  }
+
+  Future<void> _maybeShowWalkthrough() async {
+    final shouldShow = await shouldAutoShowPurchaseWalkthrough();
+    if (!shouldShow || !mounted) {
+      return;
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      showUserPurchaseWalkthroughSheet(
+        context,
+        showDisableOption: true,
+      );
+    });
   }
 
   Future<ApiResponse> fetchData(String token) async {
@@ -52,7 +76,7 @@ class _DashboardState extends ConsumerState<Dashboard>
         throw Exception('Failed to load data');
       }
     } catch (error) {
-      throw error;
+      rethrow;
     }
   }
 
@@ -64,6 +88,7 @@ class _DashboardState extends ConsumerState<Dashboard>
       duration: const Duration(milliseconds: 1200),
     )..repeat();
     _loadUserData();
+    _maybeShowWalkthrough();
     //_futureProducts = _loadProducts();
     super.initState();
   }
@@ -77,9 +102,9 @@ class _DashboardState extends ConsumerState<Dashboard>
 
   TextEditingController searchcontroller = TextEditingController();
   void _retryFetch() {
-    if (Token != null) {
+    if (tokenValue != null) {
       setState(() {
-        _futureProducts = fetchData(Token!);
+        _futureProducts = fetchData(tokenValue!);
       });
     }
   }
@@ -121,9 +146,9 @@ class _DashboardState extends ConsumerState<Dashboard>
           backgroundColor: pageBg,
           body: RefreshIndicator(
             onRefresh: () async {
-              if (Token != null) {
+              if (tokenValue != null) {
                 setState(() {
-                  _futureProducts = fetchData(Token!);
+                  _futureProducts = fetchData(tokenValue!);
                 });
               }
             },
@@ -200,7 +225,7 @@ class _DashboardState extends ConsumerState<Dashboard>
                           "Curated categories",
                           fontSize: 15.sp,
                           fontWeight: FontWeight.bold,
-                          color: RButtoncolor,
+                          color: AppTheme.ink,
                         ),
                         Icon(Icons.auto_awesome_rounded,
                             color: ROrange, size: 20.sp),
@@ -353,7 +378,8 @@ class _DashboardState extends ConsumerState<Dashboard>
                                                   boxShadow: [
                                                     BoxShadow(
                                                       color: Colors.black12
-                                                          .withOpacity(0.05),
+                                                          .withValues(
+                                                              alpha: 0.05),
                                                       blurRadius: 10,
                                                       offset:
                                                           const Offset(0, 6),
@@ -409,7 +435,7 @@ class _DashboardState extends ConsumerState<Dashboard>
                               "Hot picks for you",
                               fontSize: 15.sp,
                               fontWeight: FontWeight.bold,
-                              color: RButtoncolor,
+                              color: AppTheme.ink,
                             ),
                           ],
                         ),
@@ -426,11 +452,11 @@ class _DashboardState extends ConsumerState<Dashboard>
                                 "View all",
                                 fontSize: 13.sp,
                                 fontWeight: FontWeight.w600,
-                                color: RButtoncolor,
+                                color: AppTheme.ink,
                               ),
                               const SizedBox(width: 4),
                               Icon(Icons.arrow_forward_rounded,
-                                  color: RButtoncolor, size: 16.sp),
+                                  color: AppTheme.ink, size: 16.sp),
                             ],
                           ),
                         ),
@@ -467,7 +493,8 @@ class _DashboardState extends ConsumerState<Dashboard>
                                       borderRadius: BorderRadius.circular(14),
                                       boxShadow: [
                                         BoxShadow(
-                                          color: Colors.black.withOpacity(0.04),
+                                          color: Colors.black
+                                              .withValues(alpha: 0.04),
                                           blurRadius: 10,
                                           offset: const Offset(0, 8),
                                         )

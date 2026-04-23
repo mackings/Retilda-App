@@ -3,17 +3,43 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:retilda/Views/Widgets/widgets.dart';
+import 'package:retilda/core/presentation/widgets/dialogs.dart';
 import 'package:retilda/core/theme/app_theme.dart';
 import 'package:retilda/features/wallet/domain/entities/wallet_overview.dart';
 import 'package:retilda/features/wallet/domain/entities/wallet_transaction.dart';
 import 'package:retilda/features/wallet/presentation/providers/wallet_providers.dart';
 import 'package:sizer/sizer.dart';
 
-class Transactions extends ConsumerWidget {
+class Transactions extends ConsumerStatefulWidget {
   const Transactions({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<Transactions> createState() => _TransactionsState();
+}
+
+class _TransactionsState extends ConsumerState<Transactions>
+    with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      ref.invalidate(walletOverviewProvider);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final overviewState = ref.watch(walletOverviewProvider);
     final filter = ref.watch(walletTransactionFilterProvider);
     final filteredTransactions = ref.watch(filteredWalletTransactionsProvider);
@@ -102,10 +128,16 @@ class _WalletBalanceCard extends StatelessWidget {
 
   final WalletOverview overview;
 
+  static final NumberFormat _balanceFormatter = NumberFormat.currency(
+    locale: 'en_NG',
+    symbol: '',
+    decimalDigits: 2,
+  );
+
   @override
   Widget build(BuildContext context) {
     return Container(
-      constraints: const BoxConstraints(minHeight: 172),
+      constraints: const BoxConstraints(minHeight: 188),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(14),
         gradient: const LinearGradient(
@@ -121,7 +153,7 @@ class _WalletBalanceCard extends StatelessWidget {
           )
         ],
       ),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(18),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
@@ -133,45 +165,50 @@ class _WalletBalanceCard extends StatelessWidget {
                 CustomText(
                   'Available Balance',
                   color: Colors.white70,
-                  fontSize: 12.sp,
+                  fontSize: 13.sp,
+                  fontWeight: FontWeight.w600,
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 8),
                 CustomText(
                   'N${_formatBalance(overview.balance)}',
-                  fontSize: 20.sp,
+                  fontSize: 23.sp,
                   fontWeight: FontWeight.w800,
                   color: Colors.white,
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 18),
                 CustomText(
                   overview.accountNumber ?? 'No account number',
                   color: Colors.white,
-                  fontSize: 12.sp,
+                  fontSize: 14.sp,
+                  fontWeight: FontWeight.w700,
                 ),
                 const SizedBox(height: 3),
                 CustomText(
                   overview.bankName,
                   color: Colors.white70,
-                  fontSize: 11.sp,
+                  fontSize: 12.5.sp,
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 14),
           FilledButton.icon(
             style: FilledButton.styleFrom(
               backgroundColor: AppTheme.accent,
               foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(14),
               ),
             ),
             onPressed: overview.accountNumber == null
                 ? null
                 : () => _showBankDetailsModal(context, overview),
-            icon: const Icon(Icons.add, size: 18),
-            label: const Text('Top Up'),
+            icon: const Icon(Icons.add_rounded, size: 20),
+            label: const Text(
+              'Top Up',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+            ),
           ),
         ],
       ),
@@ -180,10 +217,7 @@ class _WalletBalanceCard extends StatelessWidget {
 
   static String _formatBalance(double? balance) {
     if (balance == null) return '****';
-    return balance.toStringAsFixed(1).replaceAllMapped(
-          RegExp(r'\B(?=(\d{3})+(?!\d))'),
-          (match) => ',',
-        );
+    return _balanceFormatter.format(balance);
   }
 
   static void _showBankDetailsModal(
@@ -194,96 +228,166 @@ class _WalletBalanceCard extends StatelessWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) {
-        return DraggableScrollableSheet(
-          expand: false,
-          minChildSize: 0.25,
-          initialChildSize: 0.35,
-          maxChildSize: 0.5,
-          builder: (context, scrollController) {
-            return Container(
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-              ),
-              child: ListView(
-                controller: scrollController,
-                padding: const EdgeInsets.fromLTRB(16, 10, 16, 18),
-                children: [
-                  Center(
-                    child: Container(
-                      width: 50,
-                      height: 5,
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade300,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: CustomText(
-                          'Wallet top-up',
-                          fontWeight: FontWeight.w900,
-                          fontSize: 15.sp,
+      builder: (sheetContext) {
+        final accountNumber = overview.accountNumber ?? '';
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(30),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.16),
+                  blurRadius: 34,
+                  offset: const Offset(0, 18),
+                ),
+              ],
+            ),
+            child: SafeArea(
+              top: false,
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(22, 14, 22, 22),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        height: 5,
+                        width: 56,
+                        decoration: BoxDecoration(
+                          color: Colors.black12,
+                          borderRadius: BorderRadius.circular(999),
                         ),
                       ),
-                      IconButton(
-                        onPressed: () => Navigator.pop(context),
-                        icon: const Icon(Icons.close),
-                      ),
-                    ],
-                  ),
-                  CustomText(
-                    'Send a transfer to fund your wallet.',
-                    fontSize: 13.sp,
-                    color: Colors.grey[700],
-                  ),
-                  const SizedBox(height: 16),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: AppTheme.ocean.withValues(alpha: 0.06),
-                      borderRadius: BorderRadius.circular(12),
                     ),
-                    padding: const EdgeInsets.all(14),
-                    child: Column(
+                    const SizedBox(height: 20),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _DetailRow(label: 'Bank', value: overview.bankName),
-                        const SizedBox(height: 12),
-                        _DetailRow(
-                          label: 'Account Number',
-                          value: overview.accountNumber ?? '',
-                          trailing: IconButton(
-                            icon: const Icon(Icons.copy, size: 22),
-                            onPressed: () {
-                              final accountNumber =
-                                  overview.accountNumber ?? '';
-                              Clipboard.setData(
-                                ClipboardData(text: accountNumber),
-                              );
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Account number copied'),
-                                ),
-                              );
-                            },
+                        Container(
+                          height: 60,
+                          width: 60,
+                          decoration: BoxDecoration(
+                            color: AppTheme.accent.withValues(alpha: 0.14),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: const Icon(
+                            Icons.account_balance_rounded,
+                            color: AppTheme.ocean,
+                            size: 28,
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              CustomText(
+                                'Top up your wallet',
+                                fontWeight: FontWeight.w900,
+                                fontSize: 18.sp,
+                                color: AppTheme.ink,
+                              ),
+                              const SizedBox(height: 6),
+                              CustomText(
+                                'Transfer to this reserved account and your wallet balance will update automatically after confirmation.',
+                                fontSize: 13.5.sp,
+                                color: Colors.black.withValues(alpha: 0.66),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.of(sheetContext).pop(),
+                          icon: const Icon(Icons.close_rounded),
+                          style: IconButton.styleFrom(
+                            backgroundColor: const Color(0xFFF4F7FB),
+                            foregroundColor: Colors.black54,
                           ),
                         ),
                       ],
                     ),
-                  ),
-                  const SizedBox(height: 14),
-                  CustomText(
-                    'Funds reflect automatically once your transfer clears.',
-                    fontSize: 12.sp,
-                    color: Colors.grey[600],
-                  ),
-                ],
+                    const SizedBox(height: 20),
+                    Container(
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            AppTheme.ocean.withValues(alpha: 0.08),
+                            AppTheme.accent.withValues(alpha: 0.12),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(22),
+                        border: Border.all(
+                          color: AppTheme.ocean.withValues(alpha: 0.10),
+                        ),
+                      ),
+                      padding: const EdgeInsets.all(18),
+                      child: Column(
+                        children: [
+                          _DetailRow(
+                              label: 'Bank name', value: overview.bankName),
+                          const SizedBox(height: 16),
+                          _DetailRow(
+                            label: 'Account number',
+                            value: accountNumber,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        onPressed: () {
+                          Clipboard.setData(
+                            ClipboardData(text: accountNumber),
+                          );
+                          showAppSnackBar(
+                            sheetContext,
+                            message: 'Account number copied',
+                            tone: AppFeedbackTone.success,
+                          );
+                        },
+                        style: FilledButton.styleFrom(
+                          backgroundColor: AppTheme.ocean,
+                          minimumSize: const Size.fromHeight(54),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                        ),
+                        icon: const Icon(Icons.copy_rounded),
+                        label: const Text(
+                          'Copy account number',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    Container(
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF7F9FC),
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                      padding: const EdgeInsets.all(16),
+                      child: CustomText(
+                        'Use your bank app or transfer code, then send the exact amount you want to add. Wallet top-ups usually reflect shortly after your bank confirms the transfer.',
+                        fontSize: 13.sp,
+                        color: Colors.black.withValues(alpha: 0.68),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            );
-          },
+            ),
+          ),
         );
       },
     );
@@ -294,33 +398,36 @@ class _DetailRow extends StatelessWidget {
   const _DetailRow({
     required this.label,
     required this.value,
-    this.trailing,
   });
 
   final String label;
   final String value;
-  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              CustomText(label, fontSize: 12.sp, color: Colors.grey[700]),
-              const SizedBox(height: 5),
+              CustomText(
+                label,
+                fontSize: 12.2.sp,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey[700],
+              ),
+              const SizedBox(height: 6),
               CustomText(
                 value,
-                fontSize: 15.sp,
+                fontSize: 16.2.sp,
                 fontWeight: FontWeight.w800,
                 color: AppTheme.ink,
               ),
             ],
           ),
         ),
-        if (trailing != null) trailing!,
       ],
     );
   }
@@ -374,8 +481,27 @@ class _FilterChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChoiceChip(
-      label: Text(label),
+      label: Text(
+        label,
+        style: TextStyle(
+          fontSize: 15,
+          fontWeight: selected ? FontWeight.w800 : FontWeight.w700,
+          color: selected ? AppTheme.ink : AppTheme.ocean,
+        ),
+      ),
       selected: selected,
+      showCheckmark: selected,
+      selectedColor: AppTheme.accent.withValues(alpha: 0.20),
+      backgroundColor: Colors.white,
+      side: BorderSide(
+        color: selected
+            ? AppTheme.accent.withValues(alpha: 0.28)
+            : Colors.black.withValues(alpha: 0.08),
+      ),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       onSelected: (_) => onSelected(),
     );
   }
@@ -399,22 +525,24 @@ class _TransactionTile extends StatelessWidget {
     final color = transaction.isDebit ? Colors.red : Colors.green;
 
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 8),
+            blurRadius: 16,
+            offset: const Offset(0, 10),
           )
         ],
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            padding: const EdgeInsets.all(10),
+            height: 54,
+            width: 54,
             decoration: BoxDecoration(
               color: color.withValues(alpha: 0.10),
               shape: BoxShape.circle,
@@ -422,38 +550,42 @@ class _TransactionTile extends StatelessWidget {
             child: Icon(
               transaction.isDebit ? Icons.south_east : Icons.north_east,
               color: color,
-              size: 18,
+              size: 24,
             ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 CustomText(
                   transaction.displayTitle,
-                  fontSize: 15.sp,
+                  fontSize: 16.4.sp,
                   fontWeight: FontWeight.w800,
                   color: AppTheme.ink,
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 6),
                 CustomText(
                   transaction.description,
-                  fontSize: 13.sp,
-                  color: Colors.grey[700],
+                  fontSize: 13.6.sp,
+                  color: Colors.black.withValues(alpha: 0.66),
                 ),
-                const SizedBox(height: 4),
-                CustomText(date, fontSize: 12.sp, color: Colors.grey[600]),
+                const SizedBox(height: 6),
+                CustomText(
+                  date,
+                  fontSize: 12.4.sp,
+                  color: Colors.grey[600],
+                ),
               ],
             ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 12),
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               CustomText(
                 amount,
-                fontSize: 15.sp,
+                fontSize: 16.6.sp,
                 fontWeight: FontWeight.w900,
                 color: color,
               ),
@@ -466,10 +598,11 @@ class _TransactionTile extends StatelessWidget {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
                 child: CustomText(
                   transaction.status,
-                  fontSize: 12.sp,
+                  fontSize: 12.1.sp,
+                  fontWeight: FontWeight.w700,
                   color: transaction.isSuccess ? Colors.green : Colors.orange,
                 ),
               ),

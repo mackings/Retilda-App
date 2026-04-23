@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:sizer/sizer.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:retilda/Views/Widgets/components.dart';
 import 'package:retilda/Views/Widgets/widgets.dart';
+import 'package:retilda/core/presentation/widgets/dialogs.dart';
+import 'package:retilda/core/theme/app_theme.dart';
+import 'package:retilda/core/presentation/widgets/user_walkthrough_sheet.dart';
+import 'package:sizer/sizer.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class Support extends StatefulWidget {
   const Support({super.key});
@@ -20,8 +23,11 @@ class _SupportState extends State<Support> {
     if (await canLaunchUrl(emailLaunchUri)) {
       await launchUrl(emailLaunchUri);
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not launch email client')));
+      showAppSnackBar(
+        context,
+        message: 'Could not launch email client',
+        tone: AppFeedbackTone.error,
+      );
     }
   }
 
@@ -35,8 +41,11 @@ class _SupportState extends State<Support> {
       if (await canLaunchUrl(whatsappUri)) {
         await launchUrl(whatsappUri);
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Could not launch WhatsApp')));
+        showAppSnackBar(
+          context,
+          message: 'Could not launch WhatsApp',
+          tone: AppFeedbackTone.error,
+        );
       }
     }
   }
@@ -46,29 +55,21 @@ class _SupportState extends State<Support> {
     if (await canLaunchUrl(callLaunchUri)) {
       await launchUrl(callLaunchUri);
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not make the call')));
+      showAppSnackBar(
+        context,
+        message: 'Could not make the call',
+        tone: AppFeedbackTone.error,
+      );
     }
   }
 
   Future<void> _launchGuide(BuildContext context) async {
-    final Uri youtubeUri =
-        Uri.parse("https://youtu.be/DNpEHq_WKvQ?feature=shared");
-
-    if (await canLaunchUrl(youtubeUri)) {
-      await launchUrl(youtubeUri, mode: LaunchMode.externalApplication);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not launch YouTube link')),
-      );
-    }
+    await showUserPurchaseWalkthroughSheet(context, showDisableOption: true);
   }
 
   @override
   Widget build(BuildContext context) {
     const Color pageBg = Color(0xFFF6F7FB);
-    const Color deepBlue = Color(0xFF103C57);
-
     return Scaffold(
       backgroundColor: pageBg,
       appBar: AppBar(
@@ -79,7 +80,7 @@ class _SupportState extends State<Support> {
           'Support',
           fontSize: 17.sp,
           fontWeight: FontWeight.w800,
-          color: deepBlue,
+          color: AppTheme.ink,
         ),
       ),
       body: SingleChildScrollView(
@@ -95,26 +96,26 @@ class _SupportState extends State<Support> {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(24),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.08),
-                    blurRadius: 16,
-                    offset: const Offset(0, 12),
+                    color: Colors.black.withValues(alpha: 0.10),
+                    blurRadius: 24,
+                    offset: const Offset(0, 16),
                   )
                 ],
               ),
-              padding: const EdgeInsets.all(18),
+              padding: const EdgeInsets.all(20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.all(12),
+                        padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
                           color: Colors.white.withOpacity(0.12),
-                          shape: BoxShape.circle,
+                          borderRadius: BorderRadius.circular(18),
                         ),
                         child: const Icon(Icons.headset_mic,
                             color: Colors.white, size: 26),
@@ -126,14 +127,14 @@ class _SupportState extends State<Support> {
                           children: [
                             CustomText(
                               "We're here to help",
-                              fontSize: 17.sp,
+                              fontSize: 18.sp,
                               fontWeight: FontWeight.w800,
                               color: Colors.white,
                             ),
                             const SizedBox(height: 4),
                             CustomText(
                               "Reach us anytime for account or order support.",
-                              fontSize: 13.sp,
+                              fontSize: 13.5.sp,
                               color: Colors.white70,
                             ),
                           ],
@@ -145,7 +146,7 @@ class _SupportState extends State<Support> {
                   Container(
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(18),
                     ),
                     padding: const EdgeInsets.all(12),
                     child: Row(
@@ -168,7 +169,7 @@ class _SupportState extends State<Support> {
               "Contact options",
               fontSize: 14.sp,
               fontWeight: FontWeight.w800,
-              color: deepBlue,
+              color: AppTheme.ink,
             ),
             const SizedBox(height: 10),
             _SupportTile(
@@ -221,11 +222,11 @@ class _SupportTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 12,
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 14,
             offset: const Offset(0, 10),
           )
         ],
@@ -233,25 +234,27 @@ class _SupportTile extends StatelessWidget {
       child: ListTile(
         onTap: onTap,
         leading: Container(
-          padding: const EdgeInsets.all(10),
+          height: 46,
+          width: 46,
           decoration: BoxDecoration(
             color: ROrange.withOpacity(0.12),
-            shape: BoxShape.circle,
+            borderRadius: BorderRadius.circular(14),
           ),
           child: Icon(icon, color: ROrange),
         ),
         title: CustomText(
           title,
-          fontSize: 14.sp,
+          fontSize: 15.sp,
           fontWeight: FontWeight.w800,
-          color: const Color(0xFF103C57),
+          color: AppTheme.ink,
         ),
         subtitle: CustomText(
           subtitle,
-          fontSize: 12.sp,
-          color: Colors.grey[700],
+          fontSize: 12.5.sp,
+          color: Colors.black.withValues(alpha: 0.62),
         ),
-        trailing: const Icon(Icons.chevron_right, color: Colors.black54),
+        trailing:
+            const Icon(Icons.chevron_right_rounded, color: Colors.black54),
       ),
     );
   }

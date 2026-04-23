@@ -1,19 +1,22 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:retilda/Views/Home/dashboard.dart';
 import 'package:retilda/Views/Products/cartpage.dart';
 import 'package:retilda/Views/Profile/profile.dart';
 import 'package:retilda/Views/Wallet/Purchasehistory.dart';
 import 'package:retilda/Views/Wallet/transactions.dart';
-import 'package:retilda/Views/Widgets/components.dart';
+import 'package:retilda/core/theme/app_theme.dart';
+import 'package:retilda/features/wallet/presentation/providers/wallet_providers.dart';
 import 'package:retilda/model/cartmodel.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({Key? key}) : super(key: key);
+  const HomePage({super.key});
 
   @override
-  _HomePageState createState() => _HomePageState();
+  State<HomePage> createState() => _HomePageState();
 }
 
 class _HomePageState extends State<HomePage> {
@@ -21,11 +24,13 @@ class _HomePageState extends State<HomePage> {
   late List<CartItem> cartItems;
 
   late final List<Widget> _pages;
+  late final List<_NavItemConfig> _navItems;
 
   @override
   void initState() {
     super.initState();
     _initializePages();
+    _initializeNavItems();
     _loadCartItems();
   }
 
@@ -42,7 +47,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _initializePages() {
-    _pages = [
+    _pages = const [
       Dashboard(),
       CartPage(),
       PurchaseHistory(),
@@ -51,44 +56,127 @@ class _HomePageState extends State<HomePage> {
     ];
   }
 
+  void _initializeNavItems() {
+    _navItems = const [
+      _NavItemConfig(
+        label: 'Home',
+        activeIcon: Icons.home_rounded,
+        inactiveIcon: Icons.home_outlined,
+      ),
+      _NavItemConfig(
+        label: 'Cart',
+        activeIcon: Icons.shopping_bag_rounded,
+        inactiveIcon: Icons.shopping_bag_outlined,
+      ),
+      _NavItemConfig(
+        label: 'History',
+        activeIcon: Icons.receipt_long_rounded,
+        inactiveIcon: Icons.receipt_long_outlined,
+      ),
+      _NavItemConfig(
+        label: 'Payments',
+        activeIcon: Icons.account_balance_wallet_rounded,
+        inactiveIcon: Icons.account_balance_wallet_outlined,
+      ),
+      _NavItemConfig(
+        label: 'Account',
+        activeIcon: Icons.person_rounded,
+        inactiveIcon: Icons.person_outline_rounded,
+      ),
+    ];
+  }
+
   void _onItemTapped(int index) {
+    if (index == 3) {
+      ProviderScope.containerOf(
+        context,
+        listen: false,
+      ).invalidate(walletOverviewProvider);
+    }
+
     setState(() {
       _selectedIndex = index;
     });
   }
 
-  Widget _buildNavItem(
-      {required IconData icon, required String label, required int index}) {
+  Widget _buildNavItem({required _NavItemConfig item, required int index}) {
     final bool isSelected = _selectedIndex == index;
+    const Color activeColor = AppTheme.ink;
+    const Color accentColor = AppTheme.accent;
     return InkWell(
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(18),
       onTap: () => _onItemTapped(index),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
-        padding: EdgeInsets.symmetric(
-            horizontal: isSelected ? 14 : 12, vertical: 10),
+        curve: Curves.easeOutCubic,
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
         decoration: BoxDecoration(
-          color: isSelected ? ROrange.withOpacity(0.12) : Colors.transparent,
-          borderRadius: BorderRadius.circular(14),
+          gradient: isSelected
+              ? const LinearGradient(
+                  colors: [
+                    Color(0xFFF6FAFD),
+                    Color(0xFFEAF3FB),
+                  ],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                )
+              : null,
+          color: isSelected ? null : Colors.transparent,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: isSelected
+                ? activeColor.withValues(alpha: 0.12)
+                : Colors.transparent,
+          ),
         ),
-        child: Row(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              icon,
-              color: isSelected ? ROrange : Colors.grey[600],
-              size: 22,
-            ),
-            if (isSelected) ...[
-              const SizedBox(width: 8),
-              Text(
-                label,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w700,
-                  color: Colors.black87,
-                  fontSize: 13,
-                ),
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              curve: Curves.easeOutCubic,
+              padding: const EdgeInsets.all(9),
+              decoration: BoxDecoration(
+                color: isSelected ? activeColor : const Color(0xFFF2F4F7),
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: isSelected
+                    ? [
+                        BoxShadow(
+                          color: activeColor.withValues(alpha: 0.18),
+                          blurRadius: 14,
+                          offset: const Offset(0, 8),
+                        ),
+                      ]
+                    : null,
               ),
-            ]
+              child: Icon(
+                isSelected ? item.activeIcon : item.inactiveIcon,
+                color: isSelected ? Colors.white : Colors.grey[700],
+                size: 15,
+              ),
+            ),
+            const SizedBox(height: 3),
+            Text(
+              item.label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.manrope(
+                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                color: isSelected ? activeColor : Colors.grey[700],
+                fontSize: isSelected ? 11.8 : 11.2,
+              ),
+            ),
+            const SizedBox(height: 1),
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              height: 1,
+              width: isSelected ? 18 : 4,
+              decoration: BoxDecoration(
+                color: isSelected ? accentColor : Colors.transparent,
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
           ],
         ),
       ),
@@ -103,35 +191,44 @@ class _HomePageState extends State<HomePage> {
         child: Padding(
           padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            padding: const EdgeInsets.fromLTRB(8, 10, 8, 8),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(26),
+              border: Border.all(
+                color: AppTheme.ink.withValues(alpha: 0.06),
+              ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.06),
-                  blurRadius: 18,
-                  offset: const Offset(0, 10),
+                  color: Colors.black.withValues(alpha: 0.07),
+                  blurRadius: 24,
+                  offset: const Offset(0, 14),
                 ),
               ],
             ),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _buildNavItem(icon: Icons.home, label: 'Home', index: 0),
-                _buildNavItem(
-                    icon: Icons.shopping_cart, label: 'Cart', index: 1),
-                _buildNavItem(icon: Icons.history, label: 'History', index: 2),
-                _buildNavItem(
-                    icon: Icons.account_balance,
-                    label: 'Transactions',
-                    index: 3),
-                _buildNavItem(icon: Icons.person, label: 'Account', index: 4),
-              ],
+              children: List.generate(
+                _navItems.length,
+                (index) => Expanded(
+                  child: _buildNavItem(item: _navItems[index], index: index),
+                ),
+              ),
             ),
           ),
         ),
       ),
     );
   }
+}
+
+class _NavItemConfig {
+  final String label;
+  final IconData activeIcon;
+  final IconData inactiveIcon;
+
+  const _NavItemConfig({
+    required this.label,
+    required this.activeIcon,
+    required this.inactiveIcon,
+  });
 }

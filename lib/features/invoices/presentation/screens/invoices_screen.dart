@@ -6,6 +6,8 @@ import 'package:retilda/Views/Invoices/views/invoice_pdf_screen.dart';
 import 'package:retilda/Views/Invoices/widgets/invoice_card.dart';
 import 'package:retilda/Views/Widgets/widgets.dart';
 import 'package:retilda/Views/Widgets/webview.dart';
+import 'package:retilda/core/presentation/widgets/dialogs.dart';
+import 'package:retilda/core/theme/app_theme.dart';
 import 'package:retilda/model/invoice.dart';
 import 'package:sizer/sizer.dart';
 
@@ -56,10 +58,12 @@ class _InvoicesScreenState extends ConsumerState<InvoicesScreen> {
               ),
             );
           } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(result.message ?? 'Unable to initiate payment'),
-              ),
+            showAppAlert(
+              context: context,
+              title: 'Payment unavailable',
+              message: result.message ?? 'Unable to initiate payment',
+              tone: AppFeedbackTone.error,
+              buttonText: 'Okay',
             );
           }
         },
@@ -69,8 +73,10 @@ class _InvoicesScreenState extends ConsumerState<InvoicesScreen> {
           if (link != null && link.isNotEmpty) {
             await Clipboard.setData(ClipboardData(text: link));
             if (!mounted) return;
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Pay link copied')),
+            showAppSnackBar(
+              context,
+              message: 'Pay link copied',
+              tone: AppFeedbackTone.success,
             );
             return;
           }
@@ -79,14 +85,18 @@ class _InvoicesScreenState extends ConsumerState<InvoicesScreen> {
           if (result.payLink != null) {
             await Clipboard.setData(ClipboardData(text: result.payLink!));
             if (!mounted) return;
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Pay link copied')),
+            showAppSnackBar(
+              context,
+              message: 'Pay link copied',
+              tone: AppFeedbackTone.success,
             );
           } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(result.message ?? 'Unable to get pay link'),
-              ),
+            showAppAlert(
+              context: context,
+              title: 'Link unavailable',
+              message: result.message ?? 'Unable to get pay link',
+              tone: AppFeedbackTone.error,
+              buttonText: 'Okay',
             );
           }
         },
@@ -129,7 +139,6 @@ class _InvoicesScreenState extends ConsumerState<InvoicesScreen> {
   @override
   Widget build(BuildContext context) {
     const Color pageBg = Color(0xFFF6F7FB);
-    const Color deepBlue = Color(0xFF103C57);
     const Color accent = Color(0xFFFB9324);
 
     return Sizer(
@@ -142,7 +151,7 @@ class _InvoicesScreenState extends ConsumerState<InvoicesScreen> {
               'Invoices',
               fontSize: 16.sp,
               fontWeight: FontWeight.w700,
-              color: deepBlue,
+              color: AppTheme.ink,
             ),
           ),
           body: _loading
@@ -158,6 +167,36 @@ class _InvoicesScreenState extends ConsumerState<InvoicesScreen> {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 14, vertical: 12),
                     children: [
+                      Container(
+                        width: double.infinity,
+                        margin: const EdgeInsets.only(bottom: 14),
+                        padding: const EdgeInsets.all(18),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF0C3554), Color(0xFF145E8D)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(22),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            CustomText(
+                              'Billing and receipts',
+                              fontSize: 16.sp,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                            ),
+                            const SizedBox(height: 6),
+                            CustomText(
+                              'Open invoices, copy pay links, and view invoice or receipt PDFs from one place.',
+                              fontSize: 12.5.sp,
+                              color: Colors.white70,
+                            ),
+                          ],
+                        ),
+                      ),
                       if (_invoices.isEmpty)
                         Padding(
                           padding: const EdgeInsets.only(top: 140),
@@ -170,7 +209,7 @@ class _InvoicesScreenState extends ConsumerState<InvoicesScreen> {
                                 'No invoices yet',
                                 fontSize: 16.sp,
                                 fontWeight: FontWeight.w600,
-                                color: deepBlue,
+                                color: AppTheme.ink,
                               ),
                               const SizedBox(height: 6),
                               CustomText(
@@ -234,14 +273,11 @@ class _InvoiceActionsSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const Color deepBlue = Color(0xFF103C57);
-    const Color accent = Color(0xFFFB9324);
-
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
-      decoration: const BoxDecoration(
+      padding: const EdgeInsets.fromLTRB(18, 14, 18, 22),
+      decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: BorderRadius.circular(28),
       ),
       child: SafeArea(
         top: false,
@@ -259,34 +295,82 @@ class _InvoiceActionsSheet extends StatelessWidget {
             const SizedBox(height: 14),
             CustomText(
               invoice.reference ?? 'Invoice',
-              fontWeight: FontWeight.w700,
-              fontSize: 13.sp,
-              color: deepBlue,
+              fontWeight: FontWeight.w800,
+              fontSize: 15.sp,
+              color: AppTheme.ink,
             ),
-            const SizedBox(height: 12),
-            ListTile(
-              leading: const Icon(Icons.payment, color: accent),
-              title: const Text('Pay invoice'),
+            const SizedBox(height: 4),
+            CustomText(
+              'Choose what you want to do with this invoice.',
+              fontSize: 12.2.sp,
+              color: Colors.black.withValues(alpha: 0.58),
+            ),
+            const SizedBox(height: 14),
+            _InvoiceSheetAction(
+              icon: Icons.payment_rounded,
+              color: AppTheme.accent,
+              title: 'Pay invoice',
               onTap: onPay,
             ),
-            ListTile(
-              leading: const Icon(Icons.link, color: accent),
-              title: const Text('Copy pay link'),
+            _InvoiceSheetAction(
+              icon: Icons.link_rounded,
+              color: AppTheme.accent,
+              title: 'Copy pay link',
               onTap: onCopyPayLink,
             ),
-            ListTile(
-              leading: const Icon(Icons.picture_as_pdf, color: deepBlue),
-              title: const Text('View invoice PDF'),
+            _InvoiceSheetAction(
+              icon: Icons.picture_as_pdf_rounded,
+              color: AppTheme.ocean,
+              title: 'View invoice PDF',
               onTap: onViewInvoice,
             ),
-            ListTile(
-              leading: const Icon(Icons.receipt, color: deepBlue),
-              title: const Text('View receipt PDF'),
+            _InvoiceSheetAction(
+              icon: Icons.receipt_long_rounded,
+              color: AppTheme.ocean,
+              title: 'View receipt PDF',
               onTap: onViewReceipt,
             ),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _InvoiceSheetAction extends StatelessWidget {
+  const _InvoiceSheetAction({
+    required this.icon,
+    required this.color,
+    required this.title,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final Color color;
+  final String title;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+      onTap: onTap,
+      leading: Container(
+        height: 42,
+        width: 42,
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Icon(icon, color: color),
+      ),
+      title: CustomText(
+        title,
+        fontSize: 14.5,
+        fontWeight: FontWeight.w800,
+        color: AppTheme.ink,
+      ),
+      trailing: const Icon(Icons.chevron_right_rounded, color: Colors.black54),
     );
   }
 }

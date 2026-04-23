@@ -1,15 +1,12 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import 'package:retilda/Views/Products/Connect/views/connect.dart';
 import 'package:retilda/Views/Wallet/Api/ApiService.dart';
-import 'package:retilda/Views/Widgets/breakdownwidget.dart';
-import 'package:retilda/Views/Widgets/components.dart';
 import 'package:retilda/Views/Widgets/deliverymodal.dart';
-import 'package:retilda/Views/Widgets/linearpercent.dart';
 import 'package:retilda/Views/Widgets/widgets.dart';
+import 'package:retilda/core/presentation/widgets/dialogs.dart';
+import 'package:retilda/core/presentation/widgets/webview.dart';
 import 'package:retilda/model/purchases.dart';
 import 'package:sizer/sizer.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -27,21 +24,18 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
   final WalletApiService _walletService = WalletApiService();
 
   String? productId;
-  String? UserId;
-  String? PurchaseId;
-  String? Token;
-  dynamic Wallet;
   bool _isLoading = false;
+  String? _activeAction;
+  bool _deliveryCheckLoading = false;
+  bool _deliveryAutoModalShown = false;
+  Map<String, dynamic>? _deliveryCalculation;
+  String? _deliveryCalculationMessage;
 
   Future<void> _loadUserData() async {
     final userData = await _walletService.getUserData();
     if (userData != null) {
       setState(() {
-        Token = userData['token'];
-        UserId = userData['userId'];
-        PurchaseId = widget.purchase.id;
         productId = widget.purchase.product!.id;
-        Wallet = userData['wallet'];
       });
     }
   }
@@ -70,10 +64,10 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
         final amountToPay = payments[i].amountToPay ?? 0;
         final amountPaid = payments[i].amountPaid ?? 0;
         final remainingAmount = amountToPay - amountPaid;
-        return 'N${remainingAmount.toStringAsFixed(0)}';
+        return _formatMoney(remainingAmount);
       }
     }
-    return "N 0";
+    return _formatMoney(0);
   }
 
   String getNextPaymentStatus(List<Payment> payments) {
@@ -92,197 +86,190 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
     return "Fully Paid";
   }
 
-  Future<void> _handleWalletPayment() async {
-    if (productId == null) return;
-
-    setState(() => _isLoading = true);
-
-    final result =
-        await _walletService.makeInstallmentPaymentUsingWallet(productId!);
-
-    setState(() => _isLoading = false);
-
-    if (!mounted) return;
-
-    if (result['success']) {
-      showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            title: const Text('Success'),
-            content: Text(result['message']),
-            actions: <Widget>[
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  Navigator.of(context).pop();
-                },
-                child: const Text('OK'),
-              ),
-            ],
-          );
-        },
-      );
-    } else {
-      _showApiDialog(
-          title: 'Error', message: result['message'] ?? 'Payment failed');
+  Payment? _nextPendingPayment(List<Payment> payments) {
+    for (final payment in payments) {
+      if (payment.status != 'completed') return payment;
     }
+    return null;
   }
 
-  Future<void> _handleCardPayment() async {
-    if (productId == null) return;
+  num? _readNum(dynamic value) {
+    if (value is num) return value;
+    if (value is String) return num.tryParse(value);
+    return null;
+  }
 
-    setState(() => _isLoading = true);
+  num _deliveryAmountNeeded(Map<String, dynamic>? data) {
+    if (data == null) return 0;
+    return _readNum(data['amountNeeded'] ?? data['deliveryFee']) ?? 0;
+  }
 
-    final result =
-        await _walletService.makeInstallmentPaymentUsingCard(productId!);
+  bool _canPayLegacyDeliveryTopUp(Map<String, dynamic>? data) {
+    if (data == null) return false;
+    return data['deliveryRequirement']?.toString() != 'down_payment' &&
+        _deliveryAmountNeeded(data) > 0;
+  }
 
-    setState(() => _isLoading = false);
+  bool _shouldShowDeliveryModal(Map<String, dynamic> data) {
+    return data['deliveryEligible'] == true || _deliveryAmountNeeded(data) > 0;
+  }
 
-    if (!mounted) return;
-
-    if (result['success']) {
-      final String paymentUrl = result['paymentUrl'];
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (BuildContext context) {
-          return Scaffold(
-            appBar: AppBar(
-              title: const Text('Card Payment'),
-              leading: IconButton(
-                icon: const Icon(Icons.close),
-                onPressed: () => Navigator.of(context).pop(),
-              ),
-            ),
-            body: WebViewPage(url: paymentUrl),
-          );
-        },
-      );
-    } else {
-      _showApiDialog(
-          title: 'Error', message: result['message'] ?? 'Card payment failed');
+  String _deliveryButtonLabel() {
+    final data = _deliveryCalculation;
+    if (_deliveryCheckLoading) return 'Checking delivery...';
+    if (data == null) return 'Delivery options';
+    if (_canPayLegacyDeliveryTopUp(data)) return 'Top up for delivery';
+    if (data['deliveryEligible'] == true || _deliveryAmountNeeded(data) == 0) {
+      return 'Request delivery';
     }
+    if (_deliveryAmountNeeded(data) > 0) return 'Complete down payment';
+    return 'Delivery options';
   }
 
-  void _showPaymentMethodDialog() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
-          contentPadding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-          title: CustomText(
-            'Choose how to pay',
-            fontWeight: FontWeight.w700,
-            fontSize: 13.sp,
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.account_balance_wallet_outlined,
-                    color: Colors.green),
-                title: const Text('Pay from Wallet'),
-                subtitle: const Text('Instant debit from your Retilda wallet'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _handleWalletPayment();
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.credit_card, color: Colors.blue),
-                title: const Text('Pay with Card'),
-                subtitle: const Text('Secure card checkout'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _handleCardPayment();
-                },
-              ),
-            ],
-          ),
-        );
-      },
-    );
+  IconData _deliveryButtonIcon() {
+    final data = _deliveryCalculation;
+    if (_deliveryCheckLoading) return Icons.sync_rounded;
+    if (data == null) return Icons.local_shipping_outlined;
+    if (_canPayLegacyDeliveryTopUp(data)) {
+      return Icons.account_balance_wallet_outlined;
+    }
+    if (data['deliveryEligible'] == true || _deliveryAmountNeeded(data) == 0) {
+      return Icons.local_shipping_outlined;
+    }
+    if (_deliveryAmountNeeded(data) > 0) return Icons.info_outline_rounded;
+    return Icons.local_shipping_outlined;
   }
 
-  Future<void> _handleTopUpForDelivery() async {
-    if (_isLoading || productId == null) return;
-
-    setState(() => _isLoading = true);
-
-    final calculation = _walletService.calculateTopUpAmount(
-      totalAmount: widget.purchase.totalAmountToPay!.toDouble(),
-      amountPaid: widget.purchase.totalAmountPaid!.toDouble(),
-    );
-
-    if (!calculation['isValid']) {
-      setState(() => _isLoading = false);
-      await showDialog(
-        context: context,
-        builder: (_) => AlertDialog(
-          title: const Text("No Top-up Needed"),
-          content: Text(calculation['message']),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("OK"),
-            ),
-          ],
-        ),
-      );
+  Future<void> _checkDeliveryEligibilityInBackground({
+    bool showModalIfActionable = false,
+  }) async {
+    final purchaseId = widget.purchase.id;
+    if (_deliveryCheckLoading || purchaseId == null || purchaseId.isEmpty) {
       return;
     }
 
-    final result = await _walletService.topUpWalletForDelivery(
-      productId!,
-      calculation['amountToTopUp'],
-    );
+    setState(() => _deliveryCheckLoading = true);
 
-    setState(() => _isLoading = false);
+    final result =
+        await _walletService.calculateDeliveryEligibility(purchaseId);
 
     if (!mounted) return;
 
-    if (result['success']) {
-      showDialog(
-        context: context,
-        builder: (_) => AlertDialog(
-          title: const Text("Top-up Successful"),
-          content: const Text("You can now request for Delivery"),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              child: const Text("OK"),
-            ),
-          ],
-        ),
+    final data = result['data'];
+    final calculation = data is Map ? Map<String, dynamic>.from(data) : null;
+    final message = result['message']?.toString();
+
+    setState(() {
+      _deliveryCheckLoading = false;
+      if (result['success'] == true && calculation != null) {
+        _deliveryCalculation = calculation;
+        _deliveryCalculationMessage = message;
+      }
+    });
+
+    if (result['success'] == true &&
+        calculation != null &&
+        showModalIfActionable &&
+        !_deliveryAutoModalShown &&
+        _shouldShowDeliveryModal(calculation)) {
+      _deliveryAutoModalShown = true;
+      await _openDeliveryModal(
+        purchaseId: purchaseId,
+        initialCalculation: calculation,
+        initialMessage: message,
       );
-    } else {
-      _showApiDialog(
-          title: "Failed", message: result['message'] ?? 'Top-up failed');
     }
+  }
+
+  Future<void> _runLoadingAction(
+    String actionKey,
+    Future<Map<String, dynamic>> Function() request,
+    Future<void> Function(Map<String, dynamic> result) onSuccess,
+    String fallbackError,
+  ) async {
+    if (_isLoading || productId == null) return;
+
+    setState(() {
+      _isLoading = true;
+      _activeAction = actionKey;
+    });
+
+    final result = await request();
+
+    if (!mounted) return;
+    setState(() {
+      _isLoading = false;
+      _activeAction = null;
+    });
+
+    if (result['success'] == true) {
+      await onSuccess(result);
+      return;
+    }
+
+    _showApiDialog(
+      title: 'Error',
+      message: result['message'] ?? fallbackError,
+    );
+  }
+
+  Future<void> _handleWalletPayment() async {
+    final purchaseId = widget.purchase.id;
+    await _runLoadingAction(
+      'wallet_payment',
+      () => _walletService.makeInstallmentPaymentUsingWallet(
+        productId!,
+        purchaseId: purchaseId,
+      ),
+      (result) async {
+        await showAppAlert(
+          context: context,
+          title: 'Success',
+          message: result['message'] ?? 'Payment completed successfully.',
+          tone: AppFeedbackTone.success,
+          buttonText: 'Continue',
+          icon: Icons.check_circle_outline_rounded,
+          onButtonPressed: () {
+            Navigator.of(context).pop();
+            Navigator.of(context).pop(true);
+          },
+        );
+      },
+      'Payment failed',
+    );
+  }
+
+  Future<void> _handleCardPayment() async {
+    final purchaseId = widget.purchase.id;
+    await _runLoadingAction(
+      'card_payment',
+      () => _walletService.makeInstallmentPaymentUsingCard(
+        productId!,
+        purchaseId: purchaseId,
+      ),
+      (result) async {
+        final String paymentUrl = result['paymentUrl'];
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => WebViewScreen(
+              url: paymentUrl,
+              title: 'Pay with card',
+            ),
+          ),
+        );
+      },
+      'Card payment failed',
+    );
   }
 
   @override
   void initState() {
     super.initState();
     _loadUserData();
-
-    Timer(Duration(seconds: 1), () {
-      if (widget.purchase.totalAmountPaid! >=
-          widget.purchase.totalAmountToPay! * 0.6) {
-        showModalBottomSheet(
-          context: context,
-          isScrollControlled: true,
-          builder: (context) => DeliveryModal(
-            purchaseId: '${widget.purchase.id}',
-          ),
-        );
-      }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _checkDeliveryEligibilityInBackground(showModalIfActionable: true);
     });
   }
 
@@ -303,31 +290,19 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
     final lower = message.toLowerCase();
     final bool tokenExpired =
         lower.contains('token has expired') || lower.contains('401');
-    showDialog(
+    showAppAlert(
       context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        title: Text(
-          tokenExpired ? "Session expired" : title,
-          style: const TextStyle(fontWeight: FontWeight.w700),
-        ),
-        content: Text(
-          tokenExpired
-              ? "Your session has expired. Please log out and sign back in to continue."
-              : message,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("OK"),
-          ),
-          if (tokenExpired)
-            TextButton(
-              onPressed: _forceLogout,
-              child: const Text("Log out"),
-            ),
-        ],
-      ),
+      title: tokenExpired ? 'Session expired' : title,
+      message: tokenExpired
+          ? 'Your session has expired. Please log out and sign back in to continue.'
+          : message,
+      tone: tokenExpired ? AppFeedbackTone.warning : AppFeedbackTone.error,
+      buttonText: tokenExpired ? 'Stay here' : 'Okay',
+      secondaryButtonText: tokenExpired ? 'Log out' : null,
+      onSecondaryButtonPressed: tokenExpired ? _forceLogout : null,
+      icon: tokenExpired
+          ? Icons.lock_clock_outlined
+          : Icons.error_outline_rounded,
     );
     if (tokenExpired) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -339,24 +314,208 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
     }
   }
 
+  Future<void> _showPaymentConfirmationSheet({
+    required String title,
+    required String message,
+    required String confirmLabel,
+    required IconData icon,
+    required Future<void> Function() onConfirm,
+    AppFeedbackTone tone = AppFeedbackTone.info,
+  }) async {
+    await showAppNoticeSheet<void>(
+      context: context,
+      title: title,
+      message: message,
+      tone: tone,
+      primaryLabel: confirmLabel,
+      secondaryLabel: 'Cancel',
+      icon: icon,
+      onPrimaryPressed: () {
+        Navigator.of(context).pop();
+        onConfirm();
+      },
+      onSecondaryPressed: () => Navigator.of(context).pop(),
+    );
+  }
+
+  Future<void> _openDeliveryModal({
+    required String purchaseId,
+    Map<String, dynamic>? initialCalculation,
+    String? initialMessage,
+  }) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => DeliveryModal(
+        purchaseId: purchaseId,
+        initialCalculation: initialCalculation,
+        initialMessage: initialMessage,
+      ),
+    );
+  }
+
+  Future<void> _showTopUpConfirmationSheet() async {
+    final purchaseId = widget.purchase.id;
+    if (purchaseId == null || purchaseId.isEmpty) {
+      _showApiDialog(
+        title: 'Delivery unavailable',
+        message: 'Unable to check delivery eligibility for this purchase.',
+      );
+      return;
+    }
+
+    if (_deliveryCheckLoading) return;
+
+    await _openDeliveryModal(
+      purchaseId: purchaseId,
+      initialCalculation: _deliveryCalculation,
+      initialMessage: _deliveryCalculationMessage,
+    );
+  }
+
+  String _formatMoney(num amount) {
+    return 'N${NumberFormat('#,##0').format(amount)}';
+  }
+
+  double _completionRatio(num totalPaid, num totalToPay) {
+    if (totalToPay <= 0) {
+      return 0;
+    }
+    return (totalPaid / totalToPay).clamp(0, 1).toDouble();
+  }
+
+  Widget _buildStatCard({
+    required String label,
+    required String value,
+    required Color backgroundColor,
+    required Color valueColor,
+    IconData? icon,
+    String? caption,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (icon != null) ...[
+            Container(
+              height: 36,
+              width: 36,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.7),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, size: 18, color: valueColor),
+            ),
+            const SizedBox(height: 10),
+          ],
+          Text(
+            label,
+            style: GoogleFonts.manrope(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w700,
+              color: Colors.black.withValues(alpha: 0.62),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: GoogleFonts.spaceGrotesk(
+              fontSize: 22,
+              fontWeight: FontWeight.w700,
+              color: valueColor,
+              letterSpacing: -0.4,
+            ),
+          ),
+          if (caption != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              caption,
+              style: GoogleFonts.manrope(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w700,
+                color: Colors.black.withValues(alpha: 0.54),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetailRow({
+    required String label,
+    required String value,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: GoogleFonts.manrope(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: Colors.grey.shade700,
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Flexible(
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              style: GoogleFonts.spaceGrotesk(
+                fontSize: 17,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFF103C57),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final payments = widget.purchase.payments ?? const <Payment>[];
+    final imageUrl = (widget.purchase.product?.images?.isNotEmpty ?? false)
+        ? widget.purchase.product!.images!.first
+        : '';
+    final productTitle = widget.purchase.product?.name?.trim();
+    final displayTitle = (productTitle != null && productTitle.isNotEmpty)
+        ? productTitle
+        : 'Purchased item';
+    final totalToPay = widget.purchase.totalToPayComputed;
+    final totalPaid = widget.purchase.totalPaidComputed;
+    final remainingBalance = widget.purchase.totalOutstandingComputed;
+    final progress = _completionRatio(totalPaid, totalToPay);
+    final nextPaymentDate = getNextPaymentDate(payments);
+    final nextPaymentAmount = getNextPaymentAmount(payments);
+    final nextPaymentStatus = getNextPaymentStatus(payments);
+    final nextPendingPayment = _nextPendingPayment(payments);
+    final nextLateFee = nextPendingPayment?.lateFeeTotal ?? 0;
+    final nextLateFeeWeeks = nextPendingPayment?.lateFeeAppliedWeeks ?? 0;
+    final nextAmountToPay = nextPendingPayment?.amountToPay ?? 0;
+    final nextAmountPaid = nextPendingPayment?.amountPaid ?? 0;
+    final nextOutstanding = nextPendingPayment?.outstandingAmount ?? 0;
+    final deliveryStatus =
+        widget.purchase.deliveryStatus?.toString() ?? 'Pending';
     final durationLabel = widget.purchase.durationMonths != null
         ? '${widget.purchase.durationMonths} ${widget.purchase.repaymentFrequency ?? 'months'}'
         : '${payments.length} ${widget.purchase.paymentPlan == "monthly" ? 'Months' : "weeks"}';
-
-    final formattedAmount = NumberFormat.currency(
-      locale: 'en_NG',
-      symbol: 'N',
-      decimalDigits: 0,
-    ).format(widget.purchase.totalAmountToPay);
-
-    final formattedAmount2 = NumberFormat.currency(
-      locale: 'en_NG',
-      symbol: 'N',
-      decimalDigits: 0,
-    ).format(widget.purchase.totalAmountPaid);
+    final planLabel =
+        (widget.purchase.purchaseType ?? widget.purchase.paymentPlan ?? 'Plan')
+            .replaceAll('_', ' ');
 
     return Sizer(
       builder: (context, orientation, deviceType) {
@@ -374,7 +533,7 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.08),
+                    color: Colors.black.withValues(alpha: 0.08),
                     blurRadius: 16,
                     offset: const Offset(0, 10),
                   ),
@@ -384,7 +543,9 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
               child: SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: _handleTopUpForDelivery,
+                  onPressed: _deliveryCheckLoading
+                      ? null
+                      : _showTopUpConfirmationSheet,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.orange,
                     foregroundColor: Colors.white,
@@ -393,22 +554,36 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
                     ),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     elevation: 0,
-                    shadowColor: Colors.orange.withOpacity(0.3),
+                    shadowColor: Colors.orange.withValues(alpha: 0.3),
                   ),
-                  child: _isLoading
-                      ? const SizedBox(
-                          height: 22,
-                          width: 22,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (_deliveryCheckLoading)
+                        const SizedBox(
+                          width: 18,
+                          height: 18,
                           child: CircularProgressIndicator(
-                            color: Colors.white,
                             strokeWidth: 2,
+                            color: Colors.white,
                           ),
                         )
-                      : const CustomText(
-                          "Top-up for Delivery",
-                          color: Colors.white,
-                          fontWeight: FontWeight.w700,
+                      else
+                        Icon(_deliveryButtonIcon(), size: 19),
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: Text(
+                          _deliveryButtonLabel(),
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.manrope(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -423,37 +598,48 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
             ),
           ),
           body: SingleChildScrollView(
-            physics: BouncingScrollPhysics(),
+            physics: const BouncingScrollPhysics(),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Column(
                 children: [
                   Container(
-                    height: 28.h,
+                    height: 24.h,
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(18),
+                      borderRadius: BorderRadius.circular(24),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.08),
-                          blurRadius: 12,
+                          color: Colors.black.withValues(alpha: 0.08),
+                          blurRadius: 16,
                           offset: const Offset(0, 10),
                         )
                       ],
                     ),
                     child: ClipRRect(
-                      borderRadius: BorderRadius.circular(18),
+                      borderRadius: BorderRadius.circular(24),
                       child: Stack(
                         fit: StackFit.expand,
                         children: [
-                          Image.network(
-                            widget.purchase.product!.images![0],
-                            fit: BoxFit.cover,
-                          ),
+                          if (imageUrl.isNotEmpty)
+                            Image.network(
+                              imageUrl,
+                              fit: BoxFit.cover,
+                            )
+                          else
+                            Container(
+                              color: const Color(0xFFEAF1F6),
+                              alignment: Alignment.center,
+                              child: const Icon(
+                                Icons.inventory_2_outlined,
+                                size: 56,
+                                color: Color(0xFF103C57),
+                              ),
+                            ),
                           Container(
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
                                 colors: [
-                                  Colors.black.withOpacity(0.45),
+                                  Colors.black.withValues(alpha: 0.62),
                                   Colors.transparent
                                 ],
                                 begin: Alignment.bottomCenter,
@@ -462,14 +648,14 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
                             ),
                           ),
                           Positioned(
-                            top: 12,
-                            left: 12,
+                            top: 14,
+                            left: 14,
                             child: Container(
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 12, vertical: 8),
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.9),
-                                borderRadius: BorderRadius.circular(12),
+                                color: Colors.white.withValues(alpha: 0.9),
+                                borderRadius: BorderRadius.circular(14),
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
@@ -478,13 +664,79 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
                                       size: 16, color: Colors.black87),
                                   const SizedBox(width: 6),
                                   CustomText(
-                                    widget.purchase.paymentPlan ?? "Plan",
+                                    planLabel,
                                     fontSize: 11.sp,
                                     fontWeight: FontWeight.w600,
                                     color: Colors.black87,
                                   ),
                                 ],
                               ),
+                            ),
+                          ),
+                          Positioned(
+                            left: 16,
+                            right: 16,
+                            bottom: 16,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  displayTitle,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: GoogleFonts.spaceGrotesk(
+                                    fontSize: 28,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white,
+                                    letterSpacing: -0.8,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 6,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white
+                                            .withValues(alpha: 0.16),
+                                        borderRadius:
+                                            BorderRadius.circular(999),
+                                      ),
+                                      child: Text(
+                                        'Next: $nextPaymentDate',
+                                        style: GoogleFonts.manrope(
+                                          fontSize: 11.5,
+                                          fontWeight: FontWeight.w800,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 6,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: accent.withValues(alpha: 0.22),
+                                        borderRadius:
+                                            BorderRadius.circular(999),
+                                      ),
+                                      child: Text(
+                                        deliveryStatus,
+                                        style: GoogleFonts.manrope(
+                                          fontSize: 11.5,
+                                          fontWeight: FontWeight.w800,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
                             ),
                           ),
                         ],
@@ -494,14 +746,14 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
                   const SizedBox(height: 14),
                   Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(18),
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(18),
+                      borderRadius: BorderRadius.circular(24),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 12,
+                          color: Colors.black.withValues(alpha: 0.05),
+                          blurRadius: 16,
                           offset: const Offset(0, 10),
                         )
                       ],
@@ -509,145 +761,261 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        Text(
+                          'Payment progress',
+                          style: GoogleFonts.spaceGrotesk(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w700,
+                            color: deepBlue,
+                            letterSpacing: -0.6,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          widget.purchase.paymentPlan == "once"
+                              ? 'This order was created as a one-time payment.'
+                              : 'You have paid ${_formatMoney(totalPaid)} out of ${_formatMoney(totalToPay)} so far.',
+                          style: GoogleFonts.manrope(
+                            fontSize: 13.5,
+                            height: 1.5,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black.withValues(alpha: 0.68),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
                         Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Expanded(
-                              child: CustomText(
-                                widget.purchase.product!.name.toString(),
-                                fontWeight: FontWeight.w700,
-                                fontSize: 15.sp,
-                                color: deepBlue,
+                              child: _buildStatCard(
+                                label: 'Paid',
+                                value: _formatMoney(totalPaid),
+                                backgroundColor: const Color(0xFFF7F9FC),
+                                valueColor: deepBlue,
+                                icon: Icons.check_circle_outline_rounded,
                               ),
                             ),
-                            // if (widget.purchase.totalAmountToPay!.toInt() !=
-                            //     widget.purchase.totalAmountPaid!.toInt())
-                            //   GestureDetector(
-                            //     onTap: _showPaymentMethodDialog,
-                            //     child: Container(
-                            //       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                            //       decoration: BoxDecoration(
-                            //         color: RButtoncolor,
-                            //         borderRadius: BorderRadius.circular(12),
-                            //       ),
-                            //       child: CustomText(
-                            //         "Pay Installments",
-                            //         fontWeight: FontWeight.w600,
-                            //         fontSize: 11.sp,
-                            //         color: Colors.white,
-                            //       ),
-                            //     ),
-                            //   ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 10, vertical: 8),
-                              decoration: BoxDecoration(
-                                color: deepBlue.withOpacity(0.08),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Row(
-                                children: [
-                                  Icon(Icons.calendar_today,
-                                      size: 14, color: deepBlue),
-                                  const SizedBox(width: 6),
-                                  CustomText(
-                                    "Next: ${getNextPaymentDate(payments)}",
-                                    fontSize: 11.sp,
-                                    color: deepBlue,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ],
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: _buildStatCard(
+                                label: 'Remaining',
+                                value: _formatMoney(remainingBalance),
+                                backgroundColor: const Color(0xFFFFF7ED),
+                                valueColor: accent,
+                                icon: Icons.schedule_rounded,
                               ),
                             ),
                           ],
-                        ),
-                        const SizedBox(height: 10),
-                        LinearCompletionIndicator(
-                          totalAmountToPay:
-                              (widget.purchase.totalAmountToPay ?? 0).toInt(),
-                          totalAmountPaid:
-                              (widget.purchase.totalAmountPaid ?? 0).toInt(),
                         ),
                         const SizedBox(height: 12),
                         Container(
                           width: double.infinity,
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 12),
+                          padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(14),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.04),
-                                blurRadius: 10,
-                                offset: const Offset(0, 8),
-                              )
-                            ],
+                            color: const Color(0xFFF7F9FC),
+                            borderRadius: BorderRadius.circular(18),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              CustomText(
-                                "Payment methods",
-                                fontWeight: FontWeight.w700,
-                                fontSize: 12.sp,
-                                color: deepBlue,
-                              ),
-                              const SizedBox(height: 10),
                               Row(
                                 children: [
                                   Expanded(
-                                    child: ElevatedButton(
-                                      onPressed: _showPaymentMethodDialog,
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.white,
-                                        foregroundColor: accent,
-                                        elevation: 0,
-                                        side: BorderSide(color: accent),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(12),
-                                        ),
-                                        padding: const EdgeInsets.symmetric(
-                                            vertical: 12),
-                                      ),
-                                      child: CustomText(
-                                        "Pay Installments",
-                                        fontWeight: FontWeight.w700,
-                                        fontSize: 12.sp,
-                                        color: accent,
+                                    child: Text(
+                                      'Payment completion',
+                                      style: GoogleFonts.manrope(
+                                        fontSize: 12.5,
+                                        fontWeight: FontWeight.w800,
+                                        color: Colors.grey.shade700,
                                       ),
                                     ),
                                   ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: ElevatedButton(
-                                      onPressed: _handleCardPayment,
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: deepBlue,
-                                        foregroundColor: Colors.white,
-                                        elevation: 0,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(12),
-                                        ),
-                                        padding: const EdgeInsets.symmetric(
-                                            vertical: 12),
-                                      ),
-                                      child: CustomText(
-                                        "One-time card",
-                                        fontWeight: FontWeight.w700,
-                                        fontSize: 12.sp,
-                                        color: Colors.white,
-                                      ),
+                                  Text(
+                                    '${(progress * 100).round()}%',
+                                    style: GoogleFonts.spaceGrotesk(
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.w700,
+                                      color: deepBlue,
                                     ),
                                   ),
                                 ],
+                              ),
+                              const SizedBox(height: 10),
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(999),
+                                child: LinearProgressIndicator(
+                                  value: progress,
+                                  minHeight: 8,
+                                  backgroundColor: Colors.white,
+                                  valueColor:
+                                      const AlwaysStoppedAnimation<Color>(
+                                    deepBlue,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: _buildStatCard(
+                                      label: 'Next payment',
+                                      value: nextPaymentAmount,
+                                      caption: nextPaymentDate,
+                                      backgroundColor: Colors.white,
+                                      valueColor: deepBlue,
+                                      icon:
+                                          Icons.account_balance_wallet_outlined,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: _buildStatCard(
+                                      label: 'Status',
+                                      value: nextPaymentStatus,
+                                      backgroundColor: Colors.white,
+                                      valueColor: accent,
+                                      icon: Icons.info_outline_rounded,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(
+                              color: Colors.black.withValues(alpha: 0.05),
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Payment actions',
+                                style: GoogleFonts.spaceGrotesk(
+                                  fontSize: 19,
+                                  fontWeight: FontWeight.w700,
+                                  color: deepBlue,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                'Choose how you want to continue with this purchase.',
+                                style: GoogleFonts.manrope(
+                                  fontSize: 13,
+                                  height: 1.45,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.black.withValues(alpha: 0.64),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              LayoutBuilder(
+                                builder: (context, constraints) {
+                                  final verticalLayout =
+                                      constraints.maxWidth < 430;
+                                  final walletButton = OutlinedButton(
+                                    onPressed: _isLoading
+                                        ? null
+                                        : () {
+                                            _showPaymentConfirmationSheet(
+                                              title: 'Confirm wallet payment',
+                                              message:
+                                                  'You are about to pay $nextPaymentAmount from your Retilda wallet for this installment. Continue?',
+                                              confirmLabel: 'Confirm and pay',
+                                              icon: Icons
+                                                  .account_balance_wallet_outlined,
+                                              onConfirm: _handleWalletPayment,
+                                            );
+                                          },
+                                    style: OutlinedButton.styleFrom(
+                                      minimumSize: const Size.fromHeight(52),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                    ),
+                                    child: _activeAction == 'wallet_payment'
+                                        ? const SizedBox(
+                                            height: 18,
+                                            width: 18,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                            ),
+                                          )
+                                        : Text(
+                                            "Wallet payment",
+                                            style: GoogleFonts.manrope(
+                                              fontWeight: FontWeight.w800,
+                                              color: deepBlue,
+                                            ),
+                                          ),
+                                  );
+
+                                  final cardButton = FilledButton(
+                                    onPressed: _isLoading
+                                        ? null
+                                        : () {
+                                            _showPaymentConfirmationSheet(
+                                              title: 'Confirm card payment',
+                                              message:
+                                                  'You are about to continue this installment payment with your card for $nextPaymentAmount. Continue?',
+                                              confirmLabel: 'Confirm and pay',
+                                              icon: Icons.credit_card_rounded,
+                                              onConfirm: _handleCardPayment,
+                                            );
+                                          },
+                                    style: FilledButton.styleFrom(
+                                      backgroundColor: deepBlue,
+                                      minimumSize: const Size.fromHeight(52),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                    ),
+                                    child: _activeAction == 'card_payment'
+                                        ? const SizedBox(
+                                            height: 18,
+                                            width: 18,
+                                            child: CircularProgressIndicator(
+                                              color: Colors.white,
+                                              strokeWidth: 2,
+                                            ),
+                                          )
+                                        : Text(
+                                            "Card payment",
+                                            style: GoogleFonts.manrope(
+                                              fontWeight: FontWeight.w800,
+                                            ),
+                                          ),
+                                  );
+
+                                  if (verticalLayout) {
+                                    return Column(
+                                      children: [
+                                        SizedBox(
+                                          width: double.infinity,
+                                          child: walletButton,
+                                        ),
+                                        const SizedBox(height: 10),
+                                        SizedBox(
+                                          width: double.infinity,
+                                          child: cardButton,
+                                        ),
+                                      ],
+                                    );
+                                  }
+
+                                  return Row(
+                                    children: [
+                                      Expanded(child: walletButton),
+                                      const SizedBox(width: 10),
+                                      Expanded(child: cardButton),
+                                    ],
+                                  );
+                                },
                               ),
                             ],
                           ),
@@ -658,15 +1026,14 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
                   const SizedBox(height: 14),
                   Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 12),
+                    padding: const EdgeInsets.all(18),
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(24),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.04),
-                          blurRadius: 10,
+                          color: Colors.black.withValues(alpha: 0.04),
+                          blurRadius: 14,
                           offset: const Offset(0, 8),
                         )
                       ],
@@ -674,58 +1041,119 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        CustomText(
-                          "Payments Breakdown",
-                          fontWeight: FontWeight.w700,
-                          fontSize: 13.sp,
-                          color: deepBlue,
+                        Text(
+                          "Payment breakdown",
+                          style: GoogleFonts.spaceGrotesk(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w700,
+                            color: deepBlue,
+                            letterSpacing: -0.5,
+                          ),
                         ),
-                        const SizedBox(height: 8),
-                        PaymentBreakdownWidget(
-                          title: 'Total Amount:',
-                          amount: formattedAmount,
-                          index: null,
+                        const SizedBox(height: 6),
+                        Text(
+                          'A simple summary of this plan and what is left to pay.',
+                          style: GoogleFonts.manrope(
+                            fontSize: 13,
+                            height: 1.45,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black.withValues(alpha: 0.64),
+                          ),
                         ),
-                        PaymentBreakdownWidget(
-                          title: 'Total Amount Paid:',
-                          amount: formattedAmount2,
-                          index: null,
+                        const SizedBox(height: 14),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF7F9FC),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Column(
+                            children: [
+                              _buildDetailRow(
+                                label: 'Total amount',
+                                value: _formatMoney(totalToPay),
+                              ),
+                              _buildDetailRow(
+                                label: 'Total paid',
+                                value: _formatMoney(totalPaid),
+                              ),
+                              _buildDetailRow(
+                                label: 'Payment plan',
+                                value:
+                                    widget.purchase.paymentPlan?.toString() ??
+                                        'N/A',
+                              ),
+                              _buildDetailRow(
+                                label: 'Purchase type',
+                                value: widget.purchase.purchaseType ?? 'N/A',
+                              ),
+                              _buildDetailRow(
+                                label: 'Down payment',
+                                value: _formatMoney(
+                                  widget.purchase.downPaymentAmount ?? 0,
+                                ),
+                              ),
+                              _buildDetailRow(
+                                label: 'Payment duration',
+                                value: durationLabel,
+                              ),
+                              _buildDetailRow(
+                                label: 'Next payment date',
+                                value: nextPaymentDate,
+                              ),
+                              _buildDetailRow(
+                                label: 'Next payment amount',
+                                value: nextPaymentAmount,
+                              ),
+                              if (nextPendingPayment != null) ...[
+                                _buildDetailRow(
+                                  label: 'Installment target',
+                                  value: _formatMoney(nextAmountToPay),
+                                ),
+                                _buildDetailRow(
+                                  label: 'Paid on installment',
+                                  value: _formatMoney(nextAmountPaid),
+                                ),
+                                _buildDetailRow(
+                                  label: 'Current outstanding',
+                                  value: _formatMoney(nextOutstanding),
+                                ),
+                                _buildDetailRow(
+                                  label: 'Late fees',
+                                  value:
+                                      '${_formatMoney(nextLateFee)} over $nextLateFeeWeeks week${nextLateFeeWeeks == 1 ? '' : 's'}',
+                                ),
+                              ],
+                              _buildDetailRow(
+                                label: 'Shipping status',
+                                value: deliveryStatus,
+                              ),
+                            ],
+                          ),
                         ),
-                        PaymentBreakdownWidget(
-                          title: 'Payment Plan:',
-                          amount: '${widget.purchase.paymentPlan}',
-                          index: null,
-                        ),
-                        PaymentBreakdownWidget(
-                          title: 'Purchase Type:',
-                          amount: '${widget.purchase.purchaseType ?? "N/A"}',
-                          index: null,
-                        ),
-                        PaymentBreakdownWidget(
-                          title: 'Down Payment:',
-                          amount:
-                              'N${NumberFormat('#,##0').format(widget.purchase.downPaymentAmount ?? 0)}',
-                          index: null,
-                        ),
-                        PaymentBreakdownWidget(
-                          title: 'Payment Duration:',
-                          amount: durationLabel,
-                          index: null,
-                        ),
-                        PaymentBreakdownWidget(
-                          title: 'Next payment Date:',
-                          amount: getNextPaymentDate(payments),
-                          index: 0,
-                        ),
-                        PaymentBreakdownWidget(
-                          title: 'Next payment Amount:',
-                          amount: getNextPaymentAmount(payments),
-                          index: 0,
-                        ),
-                        PaymentBreakdownWidget(
-                          title: 'Shipping Status:',
-                          amount: widget.purchase.deliveryStatus.toString(),
-                          index: 0,
+                        const SizedBox(height: 14),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFF7ED),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: const Color(0xFFF6D2B0),
+                            ),
+                          ),
+                          child: Text(
+                            widget.purchase.paymentPlan == 'once'
+                                ? 'This purchase is expected to be cleared in one payment.'
+                                : 'You still have ${_formatMoney(remainingBalance)} left on this plan. Pending installment amounts may include backend-applied late fees when payments are overdue.',
+                            style: GoogleFonts.manrope(
+                              fontSize: 13.5,
+                              height: 1.5,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.black.withValues(alpha: 0.72),
+                            ),
+                          ),
                         ),
                       ],
                     ),

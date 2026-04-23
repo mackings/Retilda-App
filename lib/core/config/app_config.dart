@@ -53,6 +53,11 @@ class AppConfig {
         .toSet();
     return {
       Uri.parse(baseUrl).host.toLowerCase(),
+      'checkout.paystack.com',
+      'standard.paystack.co',
+      'link.paystack.co',
+      'paystack.co',
+      'paystack.com',
       ...configured,
     };
   }

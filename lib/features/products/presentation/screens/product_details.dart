@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:retilda/Views/Auth/kyc.dart';
 import 'package:retilda/Views/Products/Connect/views/connect.dart';
 import 'package:retilda/Views/Products/cartpage.dart';
 import 'package:retilda/Views/Products/terms.dart';
@@ -11,6 +12,7 @@ import 'package:retilda/Views/Widgets/paymentoption.dart';
 import 'package:retilda/Views/Widgets/webview.dart';
 import 'package:retilda/Views/Widgets/widgets.dart';
 import 'package:retilda/core/network/api_client.dart';
+import 'package:retilda/core/presentation/widgets/dialogs.dart';
 import 'package:retilda/core/security/app_session.dart';
 import 'package:retilda/model/cartmodel.dart';
 import 'package:retilda/model/products.dart';
@@ -45,14 +47,13 @@ class _ProductDetailsState extends State<ProductDetails> {
 
   // API Call Function
   Future<void> _calculateDeliveryFee(BuildContext context) async {
-    final data = {
-      "deliveryAddress": _addressController.text,
-      "phoneNumber": _phoneController.text,
-      "deliveryTime": _timeController.text,
-      "deliveryDate": _selectedDate?.toIso8601String(),
-      "category": _selectedCategory,
-      "distance": _selectedCategory, // Assuming distance = category
-    };
+    final address = _addressController.text.trim();
+    if (address.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Enter a delivery address first.")),
+      );
+      return;
+    }
 
     setState(() {
       _isLoading = true;
@@ -60,13 +61,20 @@ class _ProductDetailsState extends State<ProductDetails> {
 
     try {
       final response = await _apiClient.post(
-        'deliveryFeeCalculation/$productId',
-        body: data,
+        'geo/delivery-quote',
+        body: {
+          "address": address,
+        },
       );
       if (response.statusCode == 200) {
         final responseData = json.decode(response.body);
         if (responseData['success']) {
-          final deliveryFee = responseData['data']['deliveryFee'];
+          final deliveryFee = responseData['data']?['quote']?['deliveryFee'];
+          final formattedAddress =
+              responseData['data']?['formattedAddress'] ?? address;
+          if (deliveryFee == null) {
+            throw Exception('Courier delivery fee not available');
+          }
           final formattedFee = deliveryFee.toString().replaceAllMapped(
                 RegExp(r'\B(?=(\d{3})+(?!\d))'),
                 (match) => ',',
@@ -74,7 +82,10 @@ class _ProductDetailsState extends State<ProductDetails> {
 
           Navigator.of(context).pop();
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text("Delivery Fee: ₦$formattedFee")),
+            SnackBar(
+              content:
+                  Text("Courier fee for $formattedAddress: ₦$formattedFee"),
+            ),
           );
         } else {
           throw Exception(responseData['message']);
@@ -127,7 +138,7 @@ class _ProductDetailsState extends State<ProductDetails> {
                         ),
                       ),
                       Text(
-                        "Delivery Details",
+                        "Courier Delivery Quote",
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w700,
@@ -273,7 +284,7 @@ class _ProductDetailsState extends State<ProductDetails> {
                                   ),
                                 )
                               : const Text(
-                                  "Calculate Delivery Fee",
+                                  "Calculate Courier Fee",
                                   style: TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w600,
@@ -301,6 +312,7 @@ class _ProductDetailsState extends State<ProductDetails> {
   String? Insurance;
   bool loading = false;
   bool? Activated;
+  bool _isKycVerified = false;
   bool termsAccepted = false;
 
   List<CartItem> cartItems = [];
@@ -378,22 +390,6 @@ class _ProductDetailsState extends State<ProductDetails> {
       // Handle exceptions
       _showErrorDialog(context, "An error occurred: $e");
     }
-  }
-
-  void _showErrorDialog(BuildContext context, String message) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text("Error"),
-        content: Text(message),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: Text("Okay"),
-          ),
-        ],
-      ),
-    );
   }
 
   void addToCart() async {
@@ -488,6 +484,7 @@ class _ProductDetailsState extends State<ProductDetails> {
       final String? loadedUserId = user?['_id'] as String?;
       final String? loadedWallet = userWallet?['accountNumber'] as String?;
       final bool? userDirectdebit = user?['isDirectDebit'] as bool?;
+      final bool isKycUploaded = user?['isKycUploaded'] == true;
 
       if (!mounted) return;
       setState(() {
@@ -496,6 +493,7 @@ class _ProductDetailsState extends State<ProductDetails> {
         productId = widget.product.id;
         wallet = loadedWallet;
         Activated = userDirectdebit;
+        _isKycVerified = isKycUploaded;
       });
     }
   }
@@ -506,6 +504,154 @@ class _ProductDetailsState extends State<ProductDetails> {
   String? userOptions;
   dynamic wallet;
   String? balance;
+
+  bool get _isOutrightSelection => selectedPurchaseType == 'outright';
+
+  bool get _isInstallmentSelection =>
+      selectedPurchaseType != null && !_isOutrightSelection;
+
+  bool get _isPlanFullySelected {
+    if (_isOutrightSelection) {
+      return true;
+    }
+    return selectedPurchaseType != null &&
+        selectedDurationMonths != null &&
+        selectedRepaymentFrequency != null;
+  }
+
+  String get _selectionSummary {
+    if (selectedPurchaseType == null) {
+      return 'Start by choosing outright or an installment plan. The matching payment options will become easier to follow.';
+    }
+
+    if (_isOutrightSelection) {
+      return 'Outright plan selected. Next, use one-time card payment to complete checkout without direct debit.';
+    }
+
+    if (selectedDurationMonths == null || selectedRepaymentFrequency == null) {
+      return 'Installment plan selected. Finish choosing duration and repayment frequency to unlock installment payment options.';
+    }
+
+    final duration = selectedDurationMonths != null
+        ? '$selectedDurationMonths months'
+        : 'pick a duration';
+    final frequency =
+        selectedRepaymentFrequency ?? 'pick a repayment frequency';
+    if (!_isKycVerified) {
+      return 'Installment plan selected for $duration with $frequency repayments. Verify BVN before you can continue with installment checkout.';
+    }
+    return 'Installment plan selected for $duration with $frequency repayments. Next, choose wallet checkout or installment card. Card checkout does not require direct debit for down_40/down_50 plans.';
+  }
+
+  void _handleWalletCheckout() {
+    if (_isOutrightSelection) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: CustomText('Use One Time Pay for outright purchases'),
+        ),
+      );
+      return;
+    }
+
+    if (!_isKycVerified) {
+      _showKycRequiredDialog();
+      return;
+    }
+
+    if (Activated == false) {
+      _showConnectDialog(context);
+      return;
+    }
+
+    purchaseProduct();
+  }
+
+  Future<void> _showPaymentActionSheet({
+    required String title,
+    required String summary,
+    required String detail,
+    required String continueLabel,
+    required VoidCallback onContinue,
+    required IconData icon,
+    Color accentColor = const Color(0xFF103C57),
+  }) async {
+    await showAppNoticeSheet<void>(
+      context: context,
+      title: title,
+      message: '$summary\n\n$detail',
+      tone: accentColor == const Color(0xFFFB9324)
+          ? AppFeedbackTone.warning
+          : AppFeedbackTone.info,
+      primaryLabel: continueLabel,
+      onPrimaryPressed: () {
+        Navigator.of(context).pop();
+        onContinue();
+      },
+      icon: icon,
+      isDismissible: true,
+    );
+  }
+
+  bool _isKycRequiredResponse(int statusCode, String? message) {
+    if (statusCode != 400 || message == null) {
+      return false;
+    }
+    final normalized = message.toLowerCase();
+    return normalized.contains('bvn') ||
+        normalized.contains('kyc') ||
+        normalized.contains('verification');
+  }
+
+  void _showKycRequiredDialog([String? message]) {
+    showAppAlert(
+      context: context,
+      title: 'BVN verification required',
+      message:
+          message ?? 'Complete BVN verification before you buy on installment.',
+      tone: AppFeedbackTone.warning,
+      buttonText: 'Verify BVN',
+      icon: Icons.verified_user_outlined,
+      onButtonPressed: () {
+        Navigator.of(context).pop();
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const KYC(),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showErrorDialog(BuildContext context, String message) {
+    showAppAlert(
+      context: context,
+      title: 'Error',
+      message: message,
+      tone: AppFeedbackTone.error,
+      buttonText: 'Okay',
+      icon: Icons.error_outline_rounded,
+    );
+  }
+
+  void _showSuccessDialog({
+    required String title,
+    required String message,
+    VoidCallback? onContinue,
+  }) {
+    showAppAlert(
+      context: context,
+      title: title,
+      message: message,
+      tone: AppFeedbackTone.success,
+      buttonText: 'Continue',
+      icon: Icons.check_circle_outline_rounded,
+      onButtonPressed: () {
+        Navigator.of(context).pop();
+        onContinue?.call();
+      },
+    );
+  }
 
   String _formatMoney(num amount) {
     return '₦${NumberFormat('#,##0.00').format(amount)}';
@@ -521,6 +667,28 @@ class _ProductDetailsState extends State<ProductDetails> {
       default:
         return 1.0;
     }
+  }
+
+  double _repaymentFeePercent(String purchaseType, int months) {
+    if (purchaseType == 'down_50') {
+      return switch (months) {
+        2 => 0.05,
+        4 => 0.10,
+        6 => 0.20,
+        _ => 0,
+      };
+    }
+
+    if (purchaseType == 'down_40') {
+      return switch (months) {
+        2 => 0.10,
+        4 => 0.20,
+        6 => 0.30,
+        _ => 0,
+      };
+    }
+
+    return 0;
   }
 
   int _installmentCount(int months, String frequency) {
@@ -568,122 +736,332 @@ class _ProductDetailsState extends State<ProductDetails> {
     final frequency = selectedRepaymentFrequency;
     final months = selectedDurationMonths;
     final count = isOutright ? 0 : _installmentCount(months!, frequency!);
-    final eachInstallment = count > 0 ? (remainingBalance / count) : 0.0;
+    final repaymentFeePercent =
+        isOutright ? 0.0 : _repaymentFeePercent(purchaseType, months!);
+    final repaymentFee = remainingBalance * repaymentFeePercent;
+    final totalRepaymentAmount = remainingBalance + repaymentFee;
+    final totalAmountToPay =
+        isOutright ? totalPrice : downPayment + totalRepaymentAmount;
+    final eachInstallment = count > 0 ? (totalRepaymentAmount / count) : 0.0;
+    final purchaseTypeLabel = switch (purchaseType) {
+      'outright' => 'Outright payment',
+      'down_50' => 'Pay 50% now',
+      'down_40' => 'Pay 40% now',
+      _ => purchaseType.replaceAll('_', ' '),
+    };
+    final frequencyLabel = switch (frequency) {
+      'weekly' => 'Weekly',
+      'biweekly' => 'Every 2 weeks',
+      'monthly' => 'Monthly',
+      _ => frequency ?? 'Not selected',
+    };
+    final planExplanation = isOutright
+        ? 'You are paying the full product price once. There will be no follow-up installment payments for this order.'
+        : 'You will pay ${_formatMoney(downPayment)} today, then complete ${_formatMoney(totalRepaymentAmount)} with $count $frequencyLabel payments of ${_formatMoney(eachInstallment)}.';
+    final nextStepText = isOutright
+        ? 'After this, you can continue to payment and complete checkout immediately.'
+        : 'After this, choose your preferred payment method to continue with this installment plan.';
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.transparent,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (_) {
         return SafeArea(
           child: FractionallySizedBox(
-            heightFactor: 0.8,
+            heightFactor: 0.86,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 22),
-              child: Column(
-                mainAxisSize: MainAxisSize.max,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 58,
-                      height: 6,
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade300,
-                        borderRadius: BorderRadius.circular(10),
+              padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(30),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.14),
+                      blurRadius: 34,
+                      offset: const Offset(0, 18),
+                    ),
+                  ],
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 22),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.max,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Center(
+                        child: Container(
+                          width: 58,
+                          height: 6,
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade300,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-                  Text(
-                    'Payment Plan Breakdown',
-                    style: GoogleFonts.dmSans(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w800,
-                      color: const Color(0xFF103C57),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    widget.product.name,
-                    style: GoogleFonts.dmSans(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.grey.shade700,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Expanded(
-                    child: SingleChildScrollView(
-                      child: Column(
-                        children: [
-                          _planRow('Product price', _formatMoney(totalPrice)),
-                          _planRow('Purchase type',
-                              purchaseType.replaceAll('_', ' ')),
-                          _planRow(
-                              'Down payment now', _formatMoney(downPayment)),
-                          if (!isOutright) ...[
-                            _planRow('Remaining balance',
-                                _formatMoney(remainingBalance)),
-                            _planRow('Repayment frequency', frequency!),
-                            _planRow('Duration', '$months months'),
-                            _planRow('No. of installments', '$count'),
-                            _planRow(
-                              'Each ${frequency == 'biweekly' ? '2 weeks' : frequency}',
-                              _formatMoney(eachInstallment),
+                      const SizedBox(height: 18),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(18),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [
+                              Color(0xFF103C57),
+                              Color(0xFF1C6A98),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(24),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              height: 52,
+                              width: 52,
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.14),
+                                borderRadius: BorderRadius.circular(18),
+                              ),
+                              child: const Icon(
+                                Icons.receipt_long_rounded,
+                                color: Colors.white,
+                                size: 28,
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+                            Text(
+                              'Payment plan summary',
+                              style: GoogleFonts.spaceGrotesk(
+                                fontSize: 28,
+                                fontWeight: FontWeight.w700,
+                                height: 1.0,
+                                color: Colors.white,
+                                letterSpacing: -0.8,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              widget.product.name,
+                              style: GoogleFonts.manrope(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white.withValues(alpha: 0.82),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              planExplanation,
+                              style: GoogleFonts.manrope(
+                                fontSize: 14,
+                                height: 1.55,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white.withValues(alpha: 0.86),
+                              ),
                             ),
                           ],
-                          const SizedBox(height: 14),
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 14, vertical: 14),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF5F8FA),
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            child: Text(
-                              isOutright
-                                  ? 'You will pay ${_formatMoney(totalPrice)} once.'
-                                  : 'You will pay ${_formatMoney(downPayment)} now, then $count payments of ${_formatMoney(eachInstallment)}.',
-                              style: GoogleFonts.dmSans(
-                                fontSize: 15,
-                                height: 1.4,
-                                fontWeight: FontWeight.w600,
-                                color: const Color(0xFF103C57),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF5F8FA),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    isOutright ? 'Pay now' : 'Down payment now',
+                                    style: GoogleFonts.manrope(
+                                      fontSize: 12.5,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.grey.shade700,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    _formatMoney(
+                                        isOutright ? totalPrice : downPayment),
+                                    style: GoogleFonts.spaceGrotesk(
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.w700,
+                                      color: const Color(0xFF103C57),
+                                      letterSpacing: -0.5,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ),
+                          if (!isOutright) ...[
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFFF7ED),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Next payments',
+                                      style: GoogleFonts.manrope(
+                                        fontSize: 12.5,
+                                        fontWeight: FontWeight.w700,
+                                        color: Colors.grey.shade700,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      _formatMoney(eachInstallment),
+                                      style: GoogleFonts.spaceGrotesk(
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.w700,
+                                        color: const Color(0xFF103C57),
+                                        letterSpacing: -0.5,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      frequencyLabel,
+                                      style: GoogleFonts.manrope(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                        color: const Color(0xFFFB9324),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
                         ],
                       ),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () => Navigator.pop(context),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF103C57),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
+                      const SizedBox(height: 16),
+                      Expanded(
+                        child: SingleChildScrollView(
+                          child: Column(
+                            children: [
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF7F9FC),
+                                  borderRadius: BorderRadius.circular(22),
+                                ),
+                                child: Column(
+                                  children: [
+                                    _planRow('Product price',
+                                        _formatMoney(totalPrice)),
+                                    _planRow(
+                                        'Plan selected', purchaseTypeLabel),
+                                    _planRow(
+                                      isOutright
+                                          ? 'Amount to pay'
+                                          : 'Down payment now',
+                                      _formatMoney(isOutright
+                                          ? totalPrice
+                                          : downPayment),
+                                    ),
+                                    if (!isOutright) ...[
+                                      _planRow('Remaining before fee',
+                                          _formatMoney(remainingBalance)),
+                                      _planRow(
+                                        'Installment fee',
+                                        '${(repaymentFeePercent * 100).round()}% (${_formatMoney(repaymentFee)})',
+                                      ),
+                                      _planRow('Repayment total',
+                                          _formatMoney(totalRepaymentAmount)),
+                                      _planRow('Repayment frequency',
+                                          frequencyLabel),
+                                      _planRow('Repayment duration',
+                                          '$months months'),
+                                      _planRow('Number of payments', '$count'),
+                                      _planRow('Amount per payment',
+                                          _formatMoney(eachInstallment)),
+                                    ],
+                                    _planRow('Total to pay',
+                                        _formatMoney(totalAmountToPay)),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 14),
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFFF7ED),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                    color: const Color(0xFFF6D2B0),
+                                  ),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'What this means',
+                                      style: GoogleFonts.spaceGrotesk(
+                                        fontSize: 19,
+                                        fontWeight: FontWeight.w700,
+                                        color: const Color(0xFF103C57),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      nextStepText,
+                                      style: GoogleFonts.manrope(
+                                        fontSize: 14,
+                                        height: 1.55,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.black
+                                            .withValues(alpha: 0.74),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                        padding: const EdgeInsets.symmetric(vertical: 16),
                       ),
-                      child: Text(
-                        'Continue',
-                        style: GoogleFonts.dmSans(
-                          fontSize: 17,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
+                      const SizedBox(height: 14),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton(
+                          onPressed: () => Navigator.pop(context),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: const Color(0xFF103C57),
+                            minimumSize: const Size.fromHeight(56),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(18),
+                            ),
+                          ),
+                          child: Text(
+                            'Continue',
+                            style: GoogleFonts.manrope(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                            ),
+                          ),
                         ),
                       ),
-                    ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
           ),
@@ -694,16 +1072,18 @@ class _ProductDetailsState extends State<ProductDetails> {
 
   Widget _planRow(String label, String value) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(vertical: 10),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            label,
-            style: GoogleFonts.dmSans(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey.shade700,
+          Expanded(
+            child: Text(
+              label,
+              style: GoogleFonts.manrope(
+                fontSize: 13.5,
+                fontWeight: FontWeight.w700,
+                color: Colors.grey.shade700,
+              ),
             ),
           ),
           const SizedBox(width: 12),
@@ -711,8 +1091,8 @@ class _ProductDetailsState extends State<ProductDetails> {
             child: Text(
               value,
               textAlign: TextAlign.right,
-              style: GoogleFonts.dmSans(
-                fontSize: 17,
+              style: GoogleFonts.spaceGrotesk(
+                fontSize: 17.5,
                 fontWeight: FontWeight.w700,
                 color: const Color(0xFF103C57),
               ),
@@ -744,48 +1124,28 @@ class _ProductDetailsState extends State<ProductDetails> {
       );
 
       if (response.statusCode == 200) {
-        showDialog(
-          context: context,
-          builder: (BuildContext context) {
-            return AlertDialog(
-              title: Text('Success'),
-              content: Text('Purchase successful!'),
-              actions: <Widget>[
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                    Navigator.of(context).pop();
-                  },
-                  child: Text('OK'),
-                ),
-              ],
-            );
+        _showSuccessDialog(
+          title: 'Success',
+          message: 'Purchase successful!',
+          onContinue: () {
+            Navigator.of(context).pop();
           },
         );
       } else {
-        showDialog(
+        final Map<String, dynamic> responseData = jsonDecode(response.body);
+        final String errorMessage =
+            responseData['message'] ?? 'Purchase could not be completed.';
+        if (_isKycRequiredResponse(response.statusCode, errorMessage)) {
+          _showKycRequiredDialog(errorMessage);
+          return;
+        }
+        showAppAlert(
           context: context,
-          builder: (BuildContext context) {
-            Map<String, dynamic> responseData = jsonDecode(response.body);
-            String errorMessage = responseData['message'];
-
-            return AlertDialog(
-              title: Text('Failed'),
-              content: Text(errorMessage),
-              actions: <Widget>[
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                      content: CustomText(
-                          'Please complete  your KYC on your profile page'),
-                    ));
-                  },
-                  child: Text('OK'),
-                ),
-              ],
-            );
-          },
+          title: 'Unable to continue',
+          message: errorMessage,
+          tone: AppFeedbackTone.error,
+          buttonText: 'Okay',
+          icon: Icons.error_outline_rounded,
         );
       }
     } catch (_) {}
@@ -842,6 +1202,11 @@ class _ProductDetailsState extends State<ProductDetails> {
       return;
     }
 
+    if (!_isKycVerified) {
+      _showKycRequiredDialog();
+      return;
+    }
+
     if (token == null ||
         productId == null ||
         selectedPurchaseType == null ||
@@ -881,8 +1246,17 @@ class _ProductDetailsState extends State<ProductDetails> {
               context, responseData['message'] ?? 'Payment link not available');
         }
       } else {
-        _showErrorDialog(
-            context, "Failed to initialize payment. Please try again.");
+        Map<String, dynamic>? responseData;
+        String errorMessage = "Failed to initialize payment. Please try again.";
+        try {
+          responseData = json.decode(response.body) as Map<String, dynamic>;
+          errorMessage = responseData['message']?.toString() ?? errorMessage;
+        } catch (_) {}
+        if (_isKycRequiredResponse(response.statusCode, errorMessage)) {
+          _showKycRequiredDialog(errorMessage);
+          return;
+        }
+        _showErrorDialog(context, errorMessage);
       }
     } catch (e) {
       _showErrorDialog(context, "An error occurred: $e");
@@ -910,6 +1284,141 @@ class _ProductDetailsState extends State<ProductDetails> {
           ),
           child: Icon(icon, size: 18, color: const Color(0xFF103C57)),
         ),
+      ),
+    );
+  }
+
+  Widget _buildPaymentMethodCard({
+    required String title,
+    required String subtitle,
+    required String badge,
+    required Color badgeColor,
+    required Color backgroundColor,
+    required String actionLabel,
+    required VoidCallback? onPressed,
+    required bool isPrimary,
+    required IconData icon,
+  }) {
+    final Color textColor = isPrimary ? Colors.white : const Color(0xFF103C57);
+    final Color secondaryColor =
+        isPrimary ? Colors.white.withValues(alpha: 0.84) : Colors.grey.shade700;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(20),
+        border: isPrimary
+            ? null
+            : Border.all(
+                color: Colors.black.withValues(alpha: 0.05),
+              ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                height: 46,
+                width: 46,
+                decoration: BoxDecoration(
+                  color: isPrimary
+                      ? Colors.white.withValues(alpha: 0.14)
+                      : const Color(0xFF103C57).withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(
+                  icon,
+                  color: isPrimary ? Colors.white : const Color(0xFF103C57),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: badgeColor.withValues(alpha: 0.14),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        badge,
+                        style: GoogleFonts.poppins(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: isPrimary ? Colors.white : badgeColor,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      title,
+                      style: GoogleFonts.poppins(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w700,
+                        color: textColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            subtitle,
+            style: GoogleFonts.poppins(
+              fontSize: 13,
+              height: 1.5,
+              fontWeight: FontWeight.w500,
+              color: secondaryColor,
+            ),
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: onPressed,
+              style: ElevatedButton.styleFrom(
+                elevation: 0,
+                minimumSize: const Size.fromHeight(52),
+                backgroundColor:
+                    isPrimary ? Colors.white : const Color(0xFF103C57),
+                disabledBackgroundColor: isPrimary
+                    ? Colors.white.withValues(alpha: 0.25)
+                    : Colors.grey.shade300,
+                foregroundColor:
+                    isPrimary ? const Color(0xFF103C57) : Colors.white,
+                disabledForegroundColor: Colors.grey.shade600,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+              child: Text(
+                actionLabel,
+                style: GoogleFonts.poppins(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1119,10 +1628,10 @@ class _ProductDetailsState extends State<ProductDetails> {
                 Container(
                   width: double.infinity,
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(18),
+                    borderRadius: BorderRadius.circular(22),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withOpacity(0.05),
@@ -1135,12 +1644,18 @@ class _ProductDetailsState extends State<ProductDetails> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       CustomText(
-                        "Select your payment plan",
+                        "Step 1: Choose how you want to buy",
                         fontSize: 15.sp,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.w700,
                         color: deepBlue,
                       ),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 4),
+                      CustomText(
+                        "Pick a plan first. Retilda will then show the payment routes that match it.",
+                        fontSize: 11.sp,
+                        color: Colors.grey[700],
+                      ),
+                      const SizedBox(height: 14),
                       DropdownButtonFormField<String>(
                         value: selectedPurchaseType,
                         decoration: InputDecoration(
@@ -1229,193 +1744,189 @@ class _ProductDetailsState extends State<ProductDetails> {
                                 _onPlanSelectionUpdated();
                               },
                       ),
-                      if (selectedPurchaseType != null ||
-                          selectedDurationMonths != null ||
-                          selectedRepaymentFrequency != null)
-                        Padding(
-                          padding:
-                              const EdgeInsets.only(top: 10, left: 4, right: 4),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Container(
+                  width: double.infinity,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(22),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 12,
+                        offset: const Offset(0, 10),
+                      )
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      CustomText(
+                        "Step 2: Select a payment method",
+                        fontSize: 15.sp,
+                        fontWeight: FontWeight.w700,
+                        color: deepBlue,
+                      ),
+                      const SizedBox(height: 6),
+                      CustomText(
+                        "Choose one option. A short explanation will appear before you continue.",
+                        fontSize: 11.sp,
+                        color: Colors.grey[700],
+                      ),
+                      if (_isInstallmentSelection && !_isKycVerified) ...[
+                        const SizedBox(height: 12),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 14,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFF5E8),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: const Color(0xFFF6C26B),
+                            ),
+                          ),
                           child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               const Icon(
-                                Icons.info_outline,
-                                color: Colors.grey,
+                                Icons.verified_user_outlined,
+                                color: Color(0xFFB26A00),
                               ),
-                              const SizedBox(width: 8),
-                              Flexible(
+                              const SizedBox(width: 10),
+                              Expanded(
                                 child: CustomText(
-                                  'Selection: ${selectedPurchaseType ?? "Select purchase type"}, '
-                                  '${selectedDurationMonths != null ? "${selectedDurationMonths} months" : "Select duration"}, '
-                                  '${selectedRepaymentFrequency ?? "Select frequency"}.',
-                                  fontSize: 11.sp,
-                                  color: Colors.grey[700],
+                                  "Installment checkout is locked until BVN verification is complete.",
+                                  fontSize: 10.5.sp,
+                                  color: const Color(0xFF7A4A00),
                                 ),
                               ),
                             ],
                           ),
                         ),
+                      ],
+                      const SizedBox(height: 14),
+                      _buildPaymentMethodCard(
+                        title: "Installment card payment",
+                        subtitle: "Use card for installment checkout.",
+                        badge: _isKycVerified
+                            ? 'Card alternative'
+                            : 'KYC required',
+                        badgeColor:
+                            _isKycVerified ? accent : const Color(0xFFB26A00),
+                        backgroundColor: const Color(0xFFFFFAF4),
+                        actionLabel:
+                            _isInstallmentSelection && _isPlanFullySelected
+                                ? (_isKycVerified ? 'Select' : 'Verify BVN')
+                                : 'Choose installment plan',
+                        onPressed: _isInstallmentSelection &&
+                                _isPlanFullySelected
+                            ? () {
+                                _showPaymentActionSheet(
+                                  title: 'Installment card payment',
+                                  summary: _isKycVerified
+                                      ? 'This starts installment checkout with your card. Down_40 and down_50 card checkout does not require direct debit.'
+                                      : 'BVN verification must be completed before installment card checkout can start.',
+                                  detail: _isKycVerified
+                                      ? 'Choose this if you want to pay the required down payment by card and continue without connecting a bank account for direct debit.'
+                                      : 'The backend blocks installment checkout until KYC is complete. Verify BVN first, then return here to continue.',
+                                  continueLabel: _isKycVerified
+                                      ? 'Continue to card payment'
+                                      : 'Verify BVN',
+                                  onContinue: _isKycVerified
+                                      ? () => initializeInstallmentCardPayment(
+                                            context,
+                                          )
+                                      : _showKycRequiredDialog,
+                                  icon: Icons.payments_outlined,
+                                  accentColor: accent,
+                                );
+                              }
+                            : null,
+                        isPrimary: false,
+                        icon: Icons.payments_outlined,
+                      ),
+                      const SizedBox(height: 12),
+                      _buildPaymentMethodCard(
+                        title: "One-time card payment",
+                        subtitle: "Pay once with your card.",
+                        badge: 'No direct debit',
+                        badgeColor: const Color(0xFF0E7C66),
+                        backgroundColor: deepBlue,
+                        actionLabel: 'Select',
+                        onPressed: () {
+                          _showPaymentActionSheet(
+                            title: 'One-time card payment',
+                            summary:
+                                'This pays the full amount now with your card and does not use direct debit.',
+                            detail:
+                                'Choose this if you want the fastest single-payment checkout. Retilda will open the secure card payment page next.',
+                            continueLabel: 'Continue to card payment',
+                            onContinue: () => initializePayment(context),
+                            icon: Icons.credit_card_rounded,
+                          );
+                        },
+                        isPrimary: true,
+                        icon: Icons.credit_card_rounded,
+                      ),
+                      const SizedBox(height: 12),
+                      _buildPaymentMethodCard(
+                        title: "Wallet installment checkout",
+                        subtitle: "For installment purchases.",
+                        badge: !_isKycVerified
+                            ? 'KYC required'
+                            : Activated == true
+                                ? 'Connected'
+                                : 'Needs setup',
+                        badgeColor: !_isKycVerified
+                            ? const Color(0xFFB26A00)
+                            : Activated == true
+                                ? const Color(0xFF0E7C66)
+                                : accent,
+                        backgroundColor: const Color(0xFFF7F9FC),
+                        actionLabel:
+                            _isInstallmentSelection && _isPlanFullySelected
+                                ? (_isKycVerified ? 'Select' : 'Verify BVN')
+                                : 'Choose installment plan',
+                        onPressed: _isInstallmentSelection &&
+                                _isPlanFullySelected
+                            ? () {
+                                _showPaymentActionSheet(
+                                  title: 'Wallet installment checkout',
+                                  summary: !_isKycVerified
+                                      ? 'BVN verification must be completed before wallet installment checkout can start.'
+                                      : Activated == true
+                                          ? 'This continues your wallet installment flow.'
+                                          : 'This option needs bank connection before checkout can continue.',
+                                  detail: !_isKycVerified
+                                      ? 'The backend blocks installment checkout until KYC is complete. Verify BVN first, then return here to continue.'
+                                      : Activated == true
+                                          ? 'Your account is already connected. Continue to proceed with wallet installment checkout for this product.'
+                                          : 'Wallet installment checkout may use direct debit for scheduled repayments. You will connect your account before continuing.',
+                                  continueLabel: !_isKycVerified
+                                      ? 'Verify BVN'
+                                      : Activated == true
+                                          ? 'Continue'
+                                          : 'Connect account',
+                                  onContinue: !_isKycVerified
+                                      ? _showKycRequiredDialog
+                                      : _handleWalletCheckout,
+                                  icon: Icons.account_balance_wallet_outlined,
+                                );
+                              }
+                            : null,
+                        isPrimary: false,
+                        icon: Icons.account_balance_wallet_outlined,
+                      ),
                     ],
                   ),
-                ),
-                const SizedBox(height: 14),
-                Row(
-                  children: [
-                    Expanded(
-                      flex: 1,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 14),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
-                              blurRadius: 12,
-                              offset: const Offset(0, 10),
-                            )
-                          ],
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            CustomText(
-                              "Wallet checkout",
-                              fontSize: 13.sp,
-                              fontWeight: FontWeight.w700,
-                              color: deepBlue,
-                            ),
-                            const SizedBox(height: 6),
-                            CustomText(
-                              "Secure, instant payment from your Retilda wallet.",
-                              fontSize: 11.sp,
-                              color: Colors.grey[700],
-                            ),
-                            const SizedBox(height: 10),
-                            loading
-                                ? const Center(
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: accent,
-                                    ),
-                                  )
-                                : ElevatedButton(
-                                    onPressed: () {
-                                      if (Activated == false) {
-                                        _showConnectDialog(context);
-                                      } else {
-                                        purchaseProduct();
-                                      }
-                                    },
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.white,
-                                      foregroundColor: accent,
-                                      elevation: 0,
-                                      side: const BorderSide(
-                                          color: accent, width: 1),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      padding: const EdgeInsets.symmetric(
-                                          vertical: 12),
-                                    ),
-                                    child: CustomText(
-                                      "Pay Now",
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 12.sp,
-                                      color: accent,
-                                    ),
-                                  ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      flex: 2,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 16),
-                        decoration: BoxDecoration(
-                          color: deepBlue,
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
-                              blurRadius: 12,
-                              offset: const Offset(0, 10),
-                            )
-                          ],
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            CustomText(
-                              "One-time card",
-                              fontSize: 13.sp,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white,
-                            ),
-                            const SizedBox(height: 6),
-                            CustomText(
-                              "Quick card payment with instant confirmation.",
-                              fontSize: 11.sp,
-                              color: Colors.white70,
-                            ),
-                            const SizedBox(height: 12),
-                            SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton(
-                                onPressed: () => initializePayment(context),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.white,
-                                  foregroundColor: deepBlue,
-                                  elevation: 0,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 14),
-                                ),
-                                child: CustomText(
-                                  "One Time Pay",
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 12.sp,
-                                  color: deepBlue,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton(
-                                onPressed: () =>
-                                    initializeInstallmentCardPayment(context),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.transparent,
-                                  foregroundColor: Colors.white,
-                                  elevation: 0,
-                                  side: const BorderSide(
-                                      color: Colors.white, width: 1),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 12),
-                                ),
-                                child: CustomText(
-                                  "Installment Card",
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 12.sp,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
                 ),
                 const SizedBox(height: 16),
                 Container(
@@ -1476,126 +1987,191 @@ class _ProductDetailsState extends State<ProductDetails> {
   }
 
   void _showConnectDialog(BuildContext context) {
-    showDialog(
+    showModalBottomSheet<void>(
       context: context,
-      builder: (context) {
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (sheetContext) {
         bool termsAccepted = false;
 
         return StatefulBuilder(
           builder: (context, setState) {
-            return AlertDialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-              titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
-              contentPadding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
-              title: Text(
-                'Connect',
-                style: GoogleFonts.poppins(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'To proceed, please consent to connect your bank account and read our privacy policy for more details.',
-                    style: GoogleFonts.poppins(
-                      fontSize: 14,
-                      color: Colors.grey[800],
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(30),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.16),
+                      blurRadius: 34,
+                      offset: const Offset(0, 18),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Checkbox(
-                        value: termsAccepted,
-                        onChanged: (value) {
-                          setState(() {
-                            termsAccepted = value ?? false;
-                          });
-                        },
-                      ),
-                      Expanded(
-                        child: Wrap(
-                          crossAxisAlignment: WrapCrossAlignment.center,
-                          children: [
-                            Text(
-                              'I agree to the ',
-                              style: GoogleFonts.poppins(fontSize: 14),
+                  ],
+                ),
+                child: SafeArea(
+                  top: false,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(22, 14, 22, 22),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Center(
+                          child: Container(
+                            height: 5,
+                            width: 56,
+                            decoration: BoxDecoration(
+                              color: Colors.black12,
+                              borderRadius: BorderRadius.circular(999),
                             ),
-                            TextButton(
-                              onPressed: () {
-                                // Navigator.push(
-                                //   context,
-                                //   MaterialPageRoute(
-                                //     builder: (_) => InAppWebViewPage(
-                                //       url:
-                                //           'https://docs.google.com/document/d/17afb6dSPPh2RVRodtq-r7v16eEAjZ6SVHOUb6h_edFs/edit?usp=sharing',
-                                //       title: 'Terms and Policy',
-                                //     ),
-                                //   ),
-                                // );
-                              },
-                              style: TextButton.styleFrom(
-                                  padding: EdgeInsets.zero),
-                              child: Text(
-                                'Terms and Policy',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 14,
-                                  color: Colors.blue,
-                                  fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: 18),
+                        Container(
+                          height: 58,
+                          width: 58,
+                          decoration: BoxDecoration(
+                            color:
+                                const Color(0xFF103C57).withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: const Icon(
+                            Icons.account_balance_rounded,
+                            color: Color(0xFF103C57),
+                            size: 28,
+                          ),
+                        ),
+                        const SizedBox(height: 18),
+                        Text(
+                          'Connect account',
+                          style: GoogleFonts.spaceGrotesk(
+                            fontSize: 28,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF0F172A),
+                            letterSpacing: -0.8,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          'To continue with wallet installment checkout, connect your bank account and approve the terms below.',
+                          style: GoogleFonts.manrope(
+                            fontSize: 15,
+                            height: 1.6,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black.withValues(alpha: 0.72),
+                          ),
+                        ),
+                        const SizedBox(height: 18),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF7F9FC),
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                          child: CheckboxListTile(
+                            value: termsAccepted,
+                            onChanged: (value) {
+                              setState(() {
+                                termsAccepted = value ?? false;
+                              });
+                            },
+                            title: Wrap(
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              children: [
+                                Text(
+                                  'I agree to the ',
+                                  style: GoogleFonts.manrope(
+                                    fontSize: 13.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: const Color(0xFF0F172A),
+                                  ),
+                                ),
+                                TextButton(
+                                  onPressed: () {},
+                                  style: TextButton.styleFrom(
+                                    padding: EdgeInsets.zero,
+                                    minimumSize: Size.zero,
+                                    tapTargetSize:
+                                        MaterialTapTargetSize.shrinkWrap,
+                                  ),
+                                  child: Text(
+                                    'Terms and Policy',
+                                    style: GoogleFonts.manrope(
+                                      fontSize: 13.5,
+                                      fontWeight: FontWeight.w800,
+                                      color: const Color(0xFF103C57),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            controlAffinity: ListTileControlAffinity.leading,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(18),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 18),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: () => Navigator.pop(sheetContext),
+                                style: OutlinedButton.styleFrom(
+                                  minimumSize: const Size.fromHeight(52),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(18),
+                                  ),
+                                ),
+                                child: Text(
+                                  'Cancel',
+                                  style: GoogleFonts.manrope(
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: FilledButton(
+                                onPressed: termsAccepted
+                                    ? () {
+                                        Navigator.pop(sheetContext);
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) => ConnectAccount(),
+                                          ),
+                                        );
+                                      }
+                                    : null,
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: const Color(0xFF103C57),
+                                  minimumSize: const Size.fromHeight(52),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(18),
+                                  ),
+                                ),
+                                child: Text(
+                                  'Connect',
+                                  style: GoogleFonts.manrope(
+                                    fontWeight: FontWeight.w800,
+                                  ),
                                 ),
                               ),
                             ),
                           ],
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ],
+                ),
               ),
-              actionsPadding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: Text(
-                    'Cancel',
-                    style: GoogleFonts.poppins(),
-                  ),
-                ),
-                ElevatedButton(
-                  onPressed: termsAccepted
-                      ? () {
-                          Navigator.pop(context);
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => ConnectAccount(),
-                            ),
-                          );
-                        }
-                      : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    disabledBackgroundColor: Colors.grey.shade400,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  child: Text(
-                    'Connect',
-                    style: GoogleFonts.poppins(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              ],
             );
           },
         );

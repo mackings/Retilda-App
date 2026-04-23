@@ -1,5 +1,3 @@
-
-
 class PurchaseResponse {
   final bool? success;
   final String? message;
@@ -10,7 +8,6 @@ class PurchaseResponse {
     this.message,
     this.data,
   });
-
 
   factory PurchaseResponse.fromJson(Map<String, dynamic> json) {
     return PurchaseResponse(
@@ -76,6 +73,7 @@ class Purchase {
   final num? totalRepaymentAmount;
   final num? basePrice;
   final String? deliveryStatus;
+  final bool? duePaymentCompleted;
   final num? totalAmountToPay;
   final num? totalAmountPaid;
   final List<Payment>? payments;
@@ -97,6 +95,7 @@ class Purchase {
     this.totalRepaymentAmount,
     this.basePrice,
     this.deliveryStatus,
+    this.duePaymentCompleted,
     this.totalAmountToPay,
     this.totalAmountPaid,
     this.payments,
@@ -127,11 +126,29 @@ class Purchase {
 
   num get totalToPayComputed {
     if (totalAmountToPay != null) return totalAmountToPay!;
+    if ((purchaseType == 'down_40' || purchaseType == 'down_50') &&
+        totalRepaymentAmount != null) {
+      return resolvedDownPaymentAmount + totalRepaymentAmount!;
+    }
     if (totalRepaymentAmount != null) return totalRepaymentAmount!;
     if (basePrice != null) return basePrice!;
     if (product?.price != null) return product!.price!;
     return 0;
   }
+
+  num get totalOutstandingComputed {
+    if (payments != null && payments!.isNotEmpty) {
+      return payments!
+          .map((payment) => payment.outstandingAmount)
+          .fold<num>(0, (sum, value) => sum + value);
+    }
+    final total = totalToPayComputed;
+    final paid = totalPaidComputed;
+    return (total - paid).clamp(0, total);
+  }
+
+  bool get isNewDownPaymentPlan =>
+      purchaseType == 'down_40' || purchaseType == 'down_50';
 
   bool get hasPaidDownPayment {
     final required = resolvedDownPaymentAmount;
@@ -157,9 +174,8 @@ class Purchase {
 
     return Purchase(
       id: json['id'] ?? json['_id'],
-      product: json['product'] != null
-          ? Product.fromJson(json['product'])
-          : null,
+      product:
+          json['product'] != null ? Product.fromJson(json['product']) : null,
       paymentPlan: json['paymentPlan'],
       userId: resolvedUserId,
       userName: resolvedUserName,
@@ -174,6 +190,7 @@ class Purchase {
       totalRepaymentAmount: json['totalRepaymentAmount'],
       basePrice: json['basePrice'],
       deliveryStatus: json['deliveryStatus'],
+      duePaymentCompleted: json['duePaymentCompleted'],
       totalAmountToPay: json['totalAmountToPay'],
       totalAmountPaid: json['totalAmountPaid'],
       payments: json['payments'] != null
@@ -201,6 +218,7 @@ class Purchase {
       'totalRepaymentAmount': totalRepaymentAmount,
       'basePrice': basePrice,
       'deliveryStatus': deliveryStatus,
+      'duePaymentCompleted': duePaymentCompleted,
       'totalAmountToPay': totalAmountToPay,
       'totalAmountPaid': totalAmountPaid,
       'payments': payments != null
@@ -229,11 +247,10 @@ class Product {
     return Product(
       id: json['id'] ?? json['_id'],
       name: json['name'],
-      price: json['price'] is num ? (json['price'] as num).toInt() : json['price'],
+      price:
+          json['price'] is num ? (json['price'] as num).toInt() : json['price'],
       description: json['description'],
-      images: json['images'] != null
-          ? List<String>.from(json['images'])
-          : null,
+      images: json['images'] != null ? List<String>.from(json['images']) : null,
     );
   }
 
@@ -253,15 +270,27 @@ class Payment {
   final String? nextPaymentDate;
   final num? amountPaid;
   final num? amountToPay;
+  final num? lateFeeTotal;
+  final int? lateFeeAppliedWeeks;
   final String? status;
+  final bool? isDownPayment;
 
   Payment({
     this.paymentDate,
     this.nextPaymentDate,
     this.amountPaid,
     this.amountToPay,
+    this.lateFeeTotal,
+    this.lateFeeAppliedWeeks,
     this.status,
+    this.isDownPayment,
   });
+
+  num get outstandingAmount {
+    final target = amountToPay ?? 0;
+    final paid = amountPaid ?? 0;
+    return (target - paid).clamp(0, target);
+  }
 
   factory Payment.fromJson(Map<String, dynamic> json) {
     return Payment(
@@ -269,7 +298,10 @@ class Payment {
       nextPaymentDate: json['nextPaymentDate'],
       amountPaid: json['amountPaid'],
       amountToPay: json['amountToPay'],
+      lateFeeTotal: json['lateFeeTotal'],
+      lateFeeAppliedWeeks: json['lateFeeAppliedWeeks'],
       status: json['status'],
+      isDownPayment: json['isDownPayment'],
     );
   }
 
@@ -279,7 +311,10 @@ class Payment {
       'nextPaymentDate': nextPaymentDate,
       'amountPaid': amountPaid,
       'amountToPay': amountToPay,
+      'lateFeeTotal': lateFeeTotal,
+      'lateFeeAppliedWeeks': lateFeeAppliedWeeks,
       'status': status,
+      'isDownPayment': isDownPayment,
     };
   }
 }

@@ -1,117 +1,232 @@
 import 'package:flutter/material.dart';
-import 'package:retilda/Views/Widgets/widgets.dart';
-import 'package:sizer/sizer.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:retilda/core/theme/app_theme.dart';
 
 class OrderTimeline extends StatelessWidget {
+  const OrderTimeline({
+    super.key,
+    required this.currentStatus,
+  });
+
   final String currentStatus;
 
-  const OrderTimeline({super.key, required this.currentStatus});
-
-  static const List<String> steps = [
-    'processing',
-    'ready',
-    'out_for_delivery',
-    'delivered',
+  static const List<_TimelineStep> _steps = [
+    _TimelineStep(
+      status: 'processing',
+      label: 'Processing',
+      description: 'Your order has been confirmed and is being prepared.',
+      icon: Icons.inventory_2_outlined,
+    ),
+    _TimelineStep(
+      status: 'ready',
+      label: 'Ready',
+      description: 'Everything is packed and queued for dispatch.',
+      icon: Icons.check_circle_outline_rounded,
+    ),
+    _TimelineStep(
+      status: 'out_for_delivery',
+      label: 'Out for Delivery',
+      description: 'Your order is currently with the delivery team.',
+      icon: Icons.local_shipping_outlined,
+    ),
+    _TimelineStep(
+      status: 'delivered',
+      label: 'Delivered',
+      description: 'The delivery has been completed successfully.',
+      icon: Icons.home_work_outlined,
+    ),
   ];
 
   int _currentIndex() {
-    final idx = steps.indexOf(currentStatus);
-    return idx < 0 ? 0 : idx;
-  }
-
-  String _labelFor(String status) {
-    switch (status) {
-      case 'processing':
-        return 'Processing';
-      case 'ready':
-        return 'Ready';
-      case 'out_for_delivery':
-        return 'Out for delivery';
-      case 'delivered':
-        return 'Delivered';
-      default:
-        return 'Processing';
-    }
+    final index = _steps.indexWhere((step) => step.status == currentStatus);
+    return index < 0 ? 0 : index;
   }
 
   @override
   Widget build(BuildContext context) {
-    const Color accent = Color(0xFFFB9324);
-    const Color deepBlue = Color(0xFF103C57);
     final currentIndex = _currentIndex();
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(28),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 12,
-            offset: const Offset(0, 10),
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 18,
+            offset: const Offset(0, 12),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          CustomText(
-            'Order status',
-            fontSize: 13.sp,
-            fontWeight: FontWeight.w700,
-            color: deepBlue,
+          Text(
+            'Tracking timeline',
+            style: GoogleFonts.spaceGrotesk(
+              fontSize: 22,
+              fontWeight: FontWeight.w700,
+              color: AppTheme.ink,
+              letterSpacing: -0.5,
+            ),
           ),
-          const SizedBox(height: 14),
-          Column(
-            children: List.generate(steps.length, (index) {
-              final isDone = index <= currentIndex;
-              final isLast = index == steps.length - 1;
-              return Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Column(
-                    children: [
+          const SizedBox(height: 6),
+          Text(
+            'A clear view of where this order is right now.',
+            style: GoogleFonts.manrope(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: Colors.black.withValues(alpha: 0.62),
+            ),
+          ),
+          const SizedBox(height: 18),
+          ...List.generate(_steps.length, (index) {
+            final step = _steps[index];
+            final isCompleted = index <= currentIndex;
+            final isCurrent = index == currentIndex;
+            final isLast = index == _steps.length - 1;
+
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Column(
+                  children: [
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 240),
+                      height: 44,
+                      width: 44,
+                      decoration: BoxDecoration(
+                        color: isCompleted
+                            ? AppTheme.ocean
+                            : const Color(0xFFF1F4F8),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: isCurrent
+                            ? [
+                                BoxShadow(
+                                  color: AppTheme.ocean.withValues(alpha: 0.22),
+                                  blurRadius: 18,
+                                  offset: const Offset(0, 10),
+                                ),
+                              ]
+                            : null,
+                      ),
+                      child: Icon(
+                        step.icon,
+                        color: isCompleted ? Colors.white : Colors.black45,
+                        size: 22,
+                      ),
+                    ),
+                    if (!isLast)
                       Container(
-                        width: 14,
-                        height: 14,
+                        width: 2,
+                        height: 52,
+                        margin: const EdgeInsets.symmetric(vertical: 8),
                         decoration: BoxDecoration(
-                          color: isDone ? accent : Colors.grey[300],
-                          shape: BoxShape.circle,
+                          color: isCompleted
+                              ? AppTheme.ocean.withValues(alpha: 0.32)
+                              : const Color(0xFFE6EBF1),
+                          borderRadius: BorderRadius.circular(999),
                         ),
                       ),
-                      if (!isLast)
-                        Container(
-                          width: 2,
-                          height: 34,
-                          color: isDone ? accent : Colors.grey[300],
+                  ],
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Container(
+                      margin: EdgeInsets.only(bottom: isLast ? 0 : 10),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: isCurrent
+                            ? const Color(0xFFF5FAFE)
+                            : const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: isCurrent
+                              ? AppTheme.ocean.withValues(alpha: 0.24)
+                              : Colors.black.withValues(alpha: 0.04),
                         ),
-                    ],
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.only(top: 0),
+                      ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          CustomText(
-                            _labelFor(steps[index]),
-                            fontWeight: FontWeight.w600,
-                            fontSize: 11.5.sp,
-                            color: isDone ? deepBlue : Colors.grey[600],
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  step.label,
+                                  style: GoogleFonts.manrope(
+                                    fontSize: 14.5,
+                                    fontWeight: FontWeight.w800,
+                                    color: AppTheme.ink,
+                                  ),
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 6,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: isCompleted
+                                      ? AppTheme.accent.withValues(alpha: 0.14)
+                                      : Colors.white,
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
+                                child: Text(
+                                  isCurrent
+                                      ? 'Current'
+                                      : isCompleted
+                                          ? 'Done'
+                                          : 'Pending',
+                                  style: GoogleFonts.manrope(
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w800,
+                                    color: isCompleted
+                                        ? AppTheme.accent
+                                        : Colors.black45,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                          if (!isLast) const SizedBox(height: 16),
+                          const SizedBox(height: 6),
+                          Text(
+                            step.description,
+                            style: GoogleFonts.manrope(
+                              fontSize: 12.5,
+                              height: 1.45,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black.withValues(alpha: 0.62),
+                            ),
+                          ),
                         ],
                       ),
                     ),
                   ),
-                ],
-              );
-            }),
-          ),
+                ),
+              ],
+            );
+          }),
         ],
       ),
     );
   }
+}
+
+class _TimelineStep {
+  const _TimelineStep({
+    required this.status,
+    required this.label,
+    required this.description,
+    required this.icon,
+  });
+
+  final String status;
+  final String label;
+  final String description;
+  final IconData icon;
 }

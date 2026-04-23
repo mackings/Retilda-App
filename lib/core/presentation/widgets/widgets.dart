@@ -10,18 +10,18 @@ class CustomText extends StatelessWidget {
 
   const CustomText(
     this.text, {
-    Key? key,
+    super.key,
     this.fontSize,
     this.fontWeight,
     this.color,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
     return Text(
       text,
       softWrap: true,
-      style: GoogleFonts.poppins(
+      style: GoogleFonts.manrope(
         fontSize: fontSize,
         fontWeight: fontWeight,
         color: color,
@@ -64,7 +64,8 @@ class CustomTextFormField extends StatelessWidget {
   final VoidCallback? onSuffixIconTap;
   final bool isPasswordField;
 
-  CustomTextFormField({
+  const CustomTextFormField({
+    super.key,
     required this.hintText,
     this.controller,
     this.keyboardType = TextInputType.text,
@@ -81,7 +82,7 @@ class CustomTextFormField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    ValueNotifier<bool> obscureText = ValueNotifier<bool>(isPasswordField);
+    final obscureText = ValueNotifier<bool>(isPasswordField);
 
     return ValueListenableBuilder<bool>(
       valueListenable: obscureText,
@@ -102,7 +103,10 @@ class CustomTextFormField extends StatelessWidget {
             onEditingComplete: onEditingComplete,
             onFieldSubmitted: onFieldSubmitted,
             validator: validator,
-            style: GoogleFonts.poppins(),
+            style: GoogleFonts.manrope(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+            ),
             inputFormatters: [
               FilteringTextInputFormatter.deny(
                   RegExp(r'\s{2,}')), // No multiple spaces
@@ -148,6 +152,7 @@ class CustomBtn extends StatelessWidget {
   final double height;
 
   const CustomBtn({
+    super.key,
     required this.text,
     this.onPressed,
     this.backgroundColor = Colors.blue,
@@ -159,9 +164,6 @@ class CustomBtn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final adjustedWidth = width - 16.0;
-
     return Padding(
       padding: const EdgeInsets.only(left: 5, right: 5),
       child: Container(

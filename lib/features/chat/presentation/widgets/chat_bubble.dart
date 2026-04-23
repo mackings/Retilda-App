@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:retilda/Views/Widgets/widgets.dart';
+import 'package:retilda/core/theme/app_theme.dart';
 import 'package:sizer/sizer.dart';
 
 class ChatBubble extends StatelessWidget {
@@ -24,30 +25,28 @@ class ChatBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const Color deepBlue = Color(0xFF103C57);
-    const Color accent = Color(0xFFFB9324);
     final timeLabel = _formatTimestamp(timestamp);
 
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        margin: const EdgeInsets.symmetric(vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        margin: const EdgeInsets.symmetric(vertical: 5),
         constraints:
             BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.72),
         decoration: BoxDecoration(
-          color: isMe ? accent : Colors.white,
+          color: isMe ? AppTheme.accent : Colors.white,
           borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(14),
-            topRight: const Radius.circular(14),
-            bottomLeft: Radius.circular(isMe ? 14 : 2),
-            bottomRight: Radius.circular(isMe ? 2 : 14),
+            topLeft: const Radius.circular(18),
+            topRight: const Radius.circular(18),
+            bottomLeft: Radius.circular(isMe ? 18 : 4),
+            bottomRight: Radius.circular(isMe ? 4 : 18),
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 8,
-              offset: const Offset(0, 6),
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 8),
             )
           ],
         ),
@@ -57,14 +56,15 @@ class ChatBubble extends StatelessWidget {
           children: [
             CustomText(
               message,
-              fontSize: 13.sp,
-              color: isMe ? Colors.white : deepBlue,
+              fontSize: 13.2.sp,
+              fontWeight: FontWeight.w600,
+              color: isMe ? Colors.white : AppTheme.ink,
             ),
             if (timeLabel != null) ...[
               const SizedBox(height: 4),
               CustomText(
                 timeLabel,
-                fontSize: 9.5.sp,
+                fontSize: 10.sp,
                 color: isMe ? Colors.white70 : Colors.grey[600],
               ),
             ],

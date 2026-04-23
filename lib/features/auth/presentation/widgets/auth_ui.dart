@@ -222,6 +222,8 @@ class AuthTextField extends StatefulWidget {
     this.maxLength,
     this.textInputAction,
     this.onTap,
+    this.suffixIcon,
+    this.onSuffixTap,
   });
 
   final String label;
@@ -235,6 +237,8 @@ class AuthTextField extends StatefulWidget {
   final int? maxLength;
   final TextInputAction? textInputAction;
   final VoidCallback? onTap;
+  final IconData? suffixIcon;
+  final VoidCallback? onSuffixTap;
 
   @override
   State<AuthTextField> createState() => _AuthTextFieldState();
@@ -288,9 +292,14 @@ class _AuthTextFieldState extends State<AuthTextField> {
                           : Icons.visibility_rounded,
                     ),
                   )
-                : widget.readOnly
-                    ? const Icon(Icons.lock_outline_rounded)
-                    : null,
+                : widget.suffixIcon != null
+                    ? IconButton(
+                        onPressed: widget.onSuffixTap,
+                        icon: Icon(widget.suffixIcon),
+                      )
+                    : widget.readOnly
+                        ? const Icon(Icons.lock_outline_rounded)
+                        : null,
             hintStyle: GoogleFonts.manrope(
               fontSize: 14,
               fontWeight: FontWeight.w500,

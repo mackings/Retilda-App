@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:retilda/core/network/api_client.dart';
 import 'package:retilda/core/security/app_session.dart';
 import 'package:retilda/core/web/safe_webview.dart';
+import 'package:retilda/features/auth/presentation/screens/signin.dart';
 
 class ConnectAccount extends StatefulWidget {
   const ConnectAccount({super.key});
@@ -141,45 +142,92 @@ class _ConnectAccountState extends State<ConnectAccount>
       _isLoading = true;
     });
 
-    final response = await _apiClient.post(
-      'direct-debit',
-      body: {
-        'account': {
-          'number': _accountNumberController.text,
-          'bank_code': _selectedBankCode,
+    try {
+      final response = await _apiClient.post(
+        'direct-debit',
+        body: {
+          'account': {
+            'number': _accountNumberController.text,
+            'bank_code': _selectedBankCode,
+          },
+          'address': {
+            'state': _stateController.text,
+            'city': _cityController.text,
+            'street': _streetController.text,
+          }
         },
-        'address': {
-          'state': _stateController.text,
-          'city': _cityController.text,
-          'street': _streetController.text,
+      );
+
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+      });
+
+      if (response.statusCode == 200) {
+        final decoded = jsonDecode(response.body);
+        final redirectUrl = _extractRedirectUrl(decoded);
+        final redirectUri =
+            redirectUrl == null ? null : Uri.tryParse(redirectUrl);
+
+        if (redirectUri != null && redirectUri.scheme == 'https') {
+          final checkoutUrl = redirectUri.toString();
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => WebViewPage(url: checkoutUrl),
+            ),
+          );
+        } else if (redirectUrl != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Checkout link is not secure')),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to initialize authorization')),
+          );
         }
-      },
-    );
-
-    setState(() {
-      _isLoading = false;
-    });
-
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      if (data['status'] == 'success' && data['data']['status'] == true) {
-        final redirectUrl = data['data']['data']['redirect_url'];
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => WebViewPage(url: redirectUrl),
-          ),
-        );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to initialize authorization')),
+          SnackBar(content: Text('An error occurred. Please try again.')),
         );
       }
-    } else {
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+      });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('An error occurred. Please try again.')),
       );
     }
+  }
+
+  String? _extractRedirectUrl(dynamic decoded) {
+    if (decoded is! Map<String, dynamic>) return null;
+
+    final data = decoded['data'];
+    final nestedData = data is Map<String, dynamic> ? data['data'] : null;
+    final maps = [
+      if (nestedData is Map<String, dynamic>) nestedData,
+      if (data is Map<String, dynamic>) data,
+      decoded,
+    ];
+
+    for (final map in maps) {
+      for (final key in const [
+        'redirect_url',
+        'authorization_url',
+        'authorizationUrl',
+        'url',
+      ]) {
+        final value = map[key];
+        if (value is String && value.trim().isNotEmpty) {
+          return value.trim();
+        }
+      }
+    }
+
+    return null;
   }
 
   @override
@@ -322,15 +370,31 @@ class _ConnectAccountState extends State<ConnectAccount>
                         const SizedBox(height: 16),
                         DropdownButtonFormField<String>(
                           value: _selectedBank,
+                          isExpanded: true,
                           items: bankCodes.keys.map((bankName) {
                             return DropdownMenuItem<String>(
                               value: bankName,
                               child: Text(
                                 bankName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                                 style: GoogleFonts.poppins(fontSize: 14),
                               ),
                             );
                           }).toList(),
+                          selectedItemBuilder: (context) {
+                            return bankCodes.keys.map((bankName) {
+                              return Align(
+                                alignment: Alignment.centerLeft,
+                                child: Text(
+                                  bankName,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: GoogleFonts.poppins(fontSize: 14),
+                                ),
+                              );
+                            }).toList();
+                          },
                           onChanged: (value) {
                             setState(() {
                               _selectedBank = value;
@@ -422,19 +486,107 @@ class _ConnectAccountState extends State<ConnectAccount>
 class WebViewPage extends StatefulWidget {
   final String url;
 
-  WebViewPage({required this.url});
+  const WebViewPage({super.key, required this.url});
 
   @override
   State<WebViewPage> createState() => _WebViewPageState();
 }
 
 class _WebViewPageState extends State<WebViewPage> {
+  final AppSession _session = AppSession();
+  bool _hasCompletedAuthorization = false;
+
+  Future<void> _handleNavigation(Uri uri) async {
+    debugPrint('[DirectDebit] WebView navigation: $uri');
+    if (_hasCompletedAuthorization || !_isSuccessfulAuthorizationUrl(uri)) {
+      return;
+    }
+
+    _hasCompletedAuthorization = true;
+    await _session.clearUserSession();
+
+    if (!mounted) return;
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const Signin()),
+      (_) => false,
+    );
+  }
+
+  bool _isSuccessfulAuthorizationUrl(Uri uri) {
+    final query = uri.queryParameters.map(
+      (key, value) => MapEntry(key.toLowerCase(), value.toLowerCase()),
+    );
+    final statusValues = [
+      query['status'],
+      query['authorization_status'],
+      query['mandate_status'],
+      query['state'],
+      query['result'],
+    ].whereType<String>();
+
+    const failureValues = {
+      'failed',
+      'failure',
+      'cancelled',
+      'canceled',
+      'abandoned',
+      'declined',
+      'error',
+    };
+    if (statusValues.any(failureValues.contains)) {
+      return false;
+    }
+
+    const successValues = {
+      'success',
+      'successful',
+      'succeeded',
+      'complete',
+      'completed',
+      'approved',
+      'active',
+    };
+    if (statusValues.any(successValues.contains)) {
+      return true;
+    }
+
+    if (query['active'] == 'true' || query['approved'] == 'true') {
+      return true;
+    }
+
+    final pathSegments =
+        uri.pathSegments.map((segment) => segment.toLowerCase()).toSet();
+    if (pathSegments.any(successValues.contains)) {
+      return true;
+    }
+
+    final path = uri.path.toLowerCase();
+    if (path.contains('/success') ||
+        path.contains('/completed') ||
+        path.contains('/approved')) {
+      return true;
+    }
+
+    final host = uri.host.toLowerCase();
+    final isRetildaCallback =
+        host == 'retildaserver.vercel.app' || host.endsWith('.vercel.app');
+    final hasReference =
+        query.containsKey('reference') || query.containsKey('trxref');
+    final looksLikeAuthorizationCallback = path.contains('direct') ||
+        path.contains('debit') ||
+        path.contains('authorization') ||
+        path.contains('callback');
+
+    return isRetildaCallback && hasReference && looksLikeAuthorizationCallback;
+  }
+
   @override
   Widget build(BuildContext context) {
     return SafeWebViewScreen(
       url: widget.url,
       title: 'Bank Authorization',
       allowJavaScript: true,
+      onAllowedNavigation: _handleNavigation,
     );
   }
 }

@@ -1,13 +1,17 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:retilda/core/config/app_config.dart';
+import 'package:retilda/core/presentation/session_expiry_handler.dart';
 import 'package:retilda/core/security/app_session.dart';
 
 enum AuthScope { none, user, staff, privileged }
 
 class ApiClient {
+  static const bool _verboseSuccessBodyLogging = false;
+
   ApiClient({
     required AppSession session,
     http.Client? httpClient,
@@ -100,11 +104,12 @@ class ApiClient {
       );
     }
 
-    _safeLog('$method $requestUri');
+    _safeLogRequest(method, requestUri);
     try {
       final response = http.Response.fromStream(await request.send());
       final resolved = await response;
       _logResponse(method, requestUri, resolved);
+      _handleExpiredToken(auth, resolved);
       return resolved;
     } catch (error, stackTrace) {
       _logException(method, requestUri, error, stackTrace);
@@ -154,7 +159,7 @@ class ApiClient {
     final headers = await authHeaders(auth: auth);
     final payload = body == null || body is String ? body : jsonEncode(body);
 
-    _safeLog('$method $requestUri');
+    _safeLogRequest(method, requestUri);
 
     try {
       late final http.Response response;
@@ -179,6 +184,7 @@ class ApiClient {
       }
 
       _logResponse(method, requestUri, response);
+      _handleExpiredToken(auth, response);
       return response;
     } catch (error, stackTrace) {
       _logException(method, requestUri, error, stackTrace);
@@ -199,10 +205,46 @@ class ApiClient {
     }
   }
 
-  void _safeLog(String message) {
-    if (kDebugMode) {
-      _debugPrintWrapped('[ApiClient] $message');
+  void _handleExpiredToken(
+    AuthScope auth,
+    http.Response response,
+  ) {
+    if (auth == AuthScope.none) return;
+    if (!SessionExpiryHandler.isExpiredTokenResponse(
+      statusCode: response.statusCode,
+      body: response.body,
+    )) {
+      return;
     }
+
+    unawaited(
+      SessionExpiryHandler.handleExpiredSession(
+        clearSession: () => _clearSessionForAuth(auth),
+      ),
+    );
+  }
+
+  Future<void> _clearSessionForAuth(AuthScope auth) async {
+    switch (auth) {
+      case AuthScope.none:
+        return;
+      case AuthScope.user:
+        return _session.clearUserSession();
+      case AuthScope.staff:
+        return _session.clearStaffSession();
+      case AuthScope.privileged:
+        await _session.clearStaffSession();
+        await _session.clearUserSession();
+        return;
+    }
+  }
+
+  void _safeLogRequest(String method, Uri uri) {
+    if (!kDebugMode || _shouldSuppressSuccessfulListLog(method, uri)) {
+      return;
+    }
+
+    _debugPrintWrapped('[ApiClient] $method $uri');
   }
 
   void _logResponse(String method, Uri uri, http.Response response) {
@@ -210,11 +252,26 @@ class ApiClient {
       return;
     }
 
+    if (response.statusCode < 400 &&
+        _shouldSuppressSuccessfulListLog(method, uri)) {
+      return;
+    }
+
     final statusLine = '[ApiClient] $method $uri -> ${response.statusCode}';
-    final responseBody =
-        response.body.trim().isEmpty ? '<empty>' : response.body;
     _debugPrintWrapped(statusLine);
-    _debugPrintWrapped('[ApiClient][Body] $responseBody');
+
+    final body = response.body.trim();
+    if (body.isEmpty) {
+      return;
+    }
+
+    final shouldLogBody =
+        response.statusCode >= 400 || _verboseSuccessBodyLogging;
+    if (!shouldLogBody) {
+      return;
+    }
+
+    _debugPrintWrapped('[ApiClient][Body] ${_truncateForLog(body)}');
   }
 
   void _logException(
@@ -231,6 +288,18 @@ class ApiClient {
     _debugPrintWrapped('[ApiClient][Stack] $stackTrace');
   }
 
+  bool _shouldSuppressSuccessfulListLog(String method, Uri uri) {
+    if (method != 'GET') {
+      return false;
+    }
+
+    final normalizedPath = uri.path.toLowerCase();
+    return normalizedPath.endsWith('/products') ||
+        normalizedPath.endsWith('/products/allcategory') ||
+        normalizedPath.contains('/products/category/') ||
+        normalizedPath.endsWith('/products/search');
+  }
+
   void _debugPrintWrapped(String message) {
     const int chunkSize = 800;
     if (message.length <= chunkSize) {
@@ -244,5 +313,12 @@ class ApiClient {
           : message.length;
       debugPrint(message.substring(index, end));
     }
+  }
+
+  String _truncateForLog(String value, {int maxLength = 1200}) {
+    if (value.length <= maxLength) {
+      return value;
+    }
+    return '${value.substring(0, maxLength)}...[truncated ${value.length - maxLength} chars]';
   }
 }

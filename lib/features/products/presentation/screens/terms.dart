@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:retilda/Views/Widgets/widgets.dart';
+import 'package:retilda/core/theme/app_theme.dart';
 import 'package:sizer/sizer.dart';
 
 class TermsAndPolicyPage extends StatelessWidget {
+  const TermsAndPolicyPage({super.key});
+
   @override
   Widget build(BuildContext context) {
     const Color pageBg = Color(0xFFF6F7FB);
-    const Color deepBlue = Color(0xFF103C57);
 
     return Scaffold(
       backgroundColor: pageBg,
@@ -17,7 +20,7 @@ class TermsAndPolicyPage extends StatelessWidget {
           'Terms & Policy',
           fontSize: 17.sp,
           fontWeight: FontWeight.w800,
-          color: deepBlue,
+          color: AppTheme.ink,
         ),
       ),
       body: SingleChildScrollView(
@@ -33,29 +36,48 @@ class TermsAndPolicyPage extends StatelessWidget {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(24),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.08),
-                    blurRadius: 16,
+                    color: Colors.black.withValues(alpha: 0.08),
+                    blurRadius: 20,
                     offset: const Offset(0, 12),
                   )
                 ],
               ),
-              padding: const EdgeInsets.all(18),
+              padding: const EdgeInsets.all(20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      'Read before using Retilda',
+                      style: GoogleFonts.manrope(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
                   CustomText(
                     'Please read carefully',
-                    fontSize: 16.sp,
+                    fontSize: 17.sp,
                     fontWeight: FontWeight.w800,
                     color: Colors.white,
                   ),
                   const SizedBox(height: 6),
                   CustomText(
                     'These terms outline how Retilda protects your data, payments, and purchases.',
-                    fontSize: 13.sp,
+                    fontSize: 13.5.sp,
                     color: Colors.white70,
                   ),
                 ],
@@ -133,11 +155,11 @@ class _SectionCard extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 12,
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 14,
             offset: const Offset(0, 10),
           ),
         ],
@@ -147,17 +169,16 @@ class _SectionCard extends StatelessWidget {
         children: [
           CustomText(
             title,
-            fontSize: 14.sp,
+            fontSize: 15.sp,
             fontWeight: FontWeight.w800,
-            color: const Color(0xFF103C57),
+            color: AppTheme.ink,
           ),
           const SizedBox(height: 8),
           if (body != null)
             CustomText(
               body!,
-              fontSize: 12.sp,
-              color: Colors.grey[800],
-              //textAlign: TextAlign.start,
+              fontSize: 12.5.sp,
+              color: Colors.black.withValues(alpha: 0.72),
             ),
           if (bulletPoints != null) ...[
             const SizedBox(height: 6),
@@ -170,13 +191,15 @@ class _SectionCard extends StatelessWidget {
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text("• ",
-                              style: TextStyle(color: Colors.black87)),
+                          const Text(
+                            "• ",
+                            style: TextStyle(color: AppTheme.ocean),
+                          ),
                           Expanded(
                             child: CustomText(
                               point,
-                              fontSize: 12.sp,
-                              color: Colors.grey[800],
+                              fontSize: 12.5.sp,
+                              color: Colors.black.withValues(alpha: 0.72),
                             ),
                           ),
                         ],

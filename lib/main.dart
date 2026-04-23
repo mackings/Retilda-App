@@ -3,6 +3,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:retilda/Views/Auth/Signup.dart';
 import 'package:retilda/features/auth/presentation/screens/onboarding.dart';
+import 'package:retilda/core/presentation/session_expiry_handler.dart';
 import 'package:retilda/core/theme/app_theme.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -31,6 +32,8 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Retilda',
       debugShowCheckedModeBanner: false,
+      navigatorKey: SessionExpiryHandler.navigatorKey,
+      scaffoldMessengerKey: SessionExpiryHandler.scaffoldMessengerKey,
       theme: AppTheme.light,
       home: const _StartupGate(),
     );

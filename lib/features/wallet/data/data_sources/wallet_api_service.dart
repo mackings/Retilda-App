@@ -31,8 +31,8 @@ class WalletApiService {
   }
 
   Future<Map<String, dynamic>> makeInstallmentPaymentUsingWallet(
-    String productId,
-  ) async {
+      String productId,
+      {String? purchaseId}) async {
     String? token = await _getToken();
     if (token == null) {
       return {
@@ -43,6 +43,7 @@ class WalletApiService {
 
     final requestBody = {
       "productId": productId,
+      if (purchaseId != null && purchaseId.isNotEmpty) "purchaseId": purchaseId,
     };
 
     try {
@@ -79,9 +80,8 @@ class WalletApiService {
     }
   }
 
-  Future<Map<String, dynamic>> makeInstallmentPaymentUsingCard(
-    String productId,
-  ) async {
+  Future<Map<String, dynamic>> makeInstallmentPaymentUsingCard(String productId,
+      {String? purchaseId}) async {
     String? token = await _getToken();
     if (token == null) {
       return {
@@ -92,6 +92,7 @@ class WalletApiService {
 
     final Map<String, String> requestBody = {
       'productId': productId,
+      if (purchaseId != null && purchaseId.isNotEmpty) 'purchaseId': purchaseId,
     };
 
     try {
@@ -131,9 +132,8 @@ class WalletApiService {
     }
   }
 
-  Future<Map<String, dynamic>> topUpWalletForDelivery(
-    String productId,
-    dynamic targetAmount,
+  Future<Map<String, dynamic>> calculateDeliveryEligibility(
+    String purchaseId,
   ) async {
     String? token = await _getToken();
     if (token == null) {
@@ -143,9 +143,70 @@ class WalletApiService {
       };
     }
 
+    if (purchaseId.isEmpty) {
+      return {
+        'success': false,
+        'message': 'Purchase details not found.',
+      };
+    }
+
+    try {
+      final response = await _apiClient.post(
+        'requestForGoodsDeliveryCalculation/$purchaseId',
+      );
+
+      final responseData = jsonDecode(response.body);
+      if (response.statusCode == 200 && responseData['success'] == true) {
+        return {
+          'success': true,
+          'message': responseData['message'] ?? 'Delivery eligibility checked.',
+          'data': responseData['data'],
+          'raw': responseData,
+        };
+      }
+
+      return {
+        'success': false,
+        'message':
+            responseData['message'] ?? 'Unable to check delivery eligibility.',
+        'data': responseData['data'],
+        'raw': responseData,
+      };
+    } catch (_) {
+      return {
+        'success': false,
+        'message': 'Network error. Please try again.',
+      };
+    }
+  }
+
+  Future<Map<String, dynamic>> topUpWalletForDelivery({
+    String? purchaseId,
+    String? productId,
+    dynamic targetAmount,
+  }) async {
+    String? token = await _getToken();
+    if (token == null) {
+      return {
+        'success': false,
+        'message': 'Authentication token not found',
+      };
+    }
+
+    if ((purchaseId == null || purchaseId.isEmpty) &&
+        (productId == null || productId.isEmpty)) {
+      return {
+        'success': false,
+        'message': 'Purchase details not found.',
+      };
+    }
+
     final Map<String, dynamic> requestBody = {
-      'productId': productId,
-      'targetAmount': targetAmount,
+      if (purchaseId != null && purchaseId.isNotEmpty)
+        'purchaseId': purchaseId
+      else
+        'productId': productId,
+      if (targetAmount != null) 'targetAmount': targetAmount,
     };
 
     try {
@@ -175,38 +236,5 @@ class WalletApiService {
         'message': 'Network error. Please try again.',
       };
     }
-  }
-
-  Map<String, dynamic> calculateTopUpAmount({
-    required double totalAmount,
-    required double amountPaid,
-  }) {
-    if (totalAmount <= 0) {
-      return {
-        'isValid': false,
-        'message': 'Total amount is invalid.',
-      };
-    }
-
-    final sixtyPercent = totalAmount * 0.6;
-    final amountToTopUp = sixtyPercent - amountPaid;
-
-    if (amountToTopUp <= 0) {
-      return {
-        'isValid': false,
-        'message': "You've already paid enough for delivery.",
-        'alreadyPaid': true,
-      };
-    }
-
-    final topUpPercentage = ((amountToTopUp / totalAmount) * 100).round();
-
-    return {
-      'isValid': true,
-      'amountToTopUp': amountToTopUp.toInt(),
-      'topUpPercentage': topUpPercentage,
-      'sixtyPercent': sixtyPercent,
-      'alreadyPaid': false,
-    };
   }
 }

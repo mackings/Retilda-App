@@ -49,8 +49,34 @@ class WalletRemoteDataSource {
     }
 
     final decoded = jsonDecode(response.body) as Map<String, dynamic>;
-    if (decoded['success'] != true) return null;
-    final value = decoded['data'];
-    return value is num ? value.toDouble() : null;
+    if (decoded['success'] == false || decoded['status'] == false) return null;
+
+    return _extractBalance(decoded);
+  }
+
+  double? _extractBalance(dynamic value) {
+    if (value is num) return value.toDouble();
+    if (value is String) {
+      final normalized = value.replaceAll(RegExp(r'[^0-9.\-]'), '');
+      if (normalized.isEmpty) return null;
+      return double.tryParse(normalized);
+    }
+    if (value is Map<String, dynamic>) {
+      for (final key in const [
+        'balance',
+        'walletBalance',
+        'availableBalance',
+        'amount',
+      ]) {
+        final parsed = _extractBalance(value[key]);
+        if (parsed != null) return parsed;
+      }
+
+      for (final key in const ['data', 'wallet', 'user']) {
+        final parsed = _extractBalance(value[key]);
+        if (parsed != null) return parsed;
+      }
+    }
+    return null;
   }
 }

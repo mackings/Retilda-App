@@ -3,14 +3,19 @@ import 'package:retilda/core/web/safe_webview.dart';
 
 class WebViewScreen extends StatelessWidget {
   final String url;
+  final String title;
 
-  const WebViewScreen({required this.url, super.key});
+  const WebViewScreen({
+    required this.url,
+    this.title = 'Payment',
+    super.key,
+  });
 
   @override
   Widget build(BuildContext context) {
     return SafeWebViewScreen(
       url: url,
-      title: 'Payment',
+      title: title,
       allowJavaScript: true,
     );
   }
