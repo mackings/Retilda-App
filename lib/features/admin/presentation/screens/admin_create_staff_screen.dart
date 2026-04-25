@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:retilda/Views/Admin/api/admin_staff_service.dart';
-import 'package:retilda/Views/Widgets/widgets.dart';
-import 'package:sizer/sizer.dart';
+import 'package:retilda/core/theme/app_theme.dart';
 
 class AdminCreateStaffScreen extends ConsumerStatefulWidget {
   const AdminCreateStaffScreen({super.key});
@@ -60,135 +60,154 @@ class _AdminCreateStaffScreenState
 
   @override
   Widget build(BuildContext context) {
-    const Color pageBg = Color(0xFFF6F7FB);
-    const Color deepBlue = Color(0xFF103C57);
-    const Color accent = Color(0xFFFB9324);
-
-    return Sizer(
-      builder: (context, orientation, deviceType) {
-        return Scaffold(
-          backgroundColor: pageBg,
-          appBar: AppBar(
-            backgroundColor: pageBg,
-            title: CustomText(
-              'Create staff',
-              fontSize: 16.sp,
-              fontWeight: FontWeight.w700,
-              color: deepBlue,
+    return Scaffold(
+      backgroundColor: AppTheme.surface,
+      appBar: AppBar(
+        backgroundColor: AppTheme.surface,
+        surfaceTintColor: AppTheme.surface,
+        titleSpacing: 16,
+        title: Text(
+          'Create staff',
+          style: GoogleFonts.spaceGrotesk(
+            fontSize: 26,
+            fontWeight: FontWeight.w700,
+            color: AppTheme.ink,
+          ),
+        ),
+      ),
+      body: Stack(
+        children: [
+          Positioned(
+            top: -70,
+            right: -25,
+            child: IgnorePointer(
+              child: Container(
+                width: 170,
+                height: 170,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppTheme.accent.withValues(alpha: 0.07),
+                ),
+              ),
             ),
           ),
-          body: ListView(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          Positioned(
+            top: 60,
+            left: -50,
+            child: IgnorePointer(
+              child: Container(
+                width: 150,
+                height: 150,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppTheme.ocean.withValues(alpha: 0.05),
+                ),
+              ),
+            ),
+          ),
+          ListView(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
             children: [
+              _StaffHero(),
+              const SizedBox(height: 18),
+              _SectionHeader(
+                title: 'Staff details',
+                subtitle:
+                    'Create a new staff login for support and operations access.',
+              ),
+              const SizedBox(height: 12),
               Container(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(18),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 12,
-                      offset: const Offset(0, 10),
-                    ),
-                  ],
+                  borderRadius: BorderRadius.circular(26),
+                  border:
+                      Border.all(color: AppTheme.ink.withValues(alpha: 0.08)),
                 ),
                 child: Column(
                   children: [
-                    TextField(
+                    _LabeledField(
+                      label: 'Full name',
                       controller: _fullName,
-                      decoration: InputDecoration(
-                        hintText: 'Full name',
-                        filled: true,
-                        fillColor: Colors.grey[100],
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
-                        ),
-                      ),
+                      hintText: 'Enter full name',
                     ),
-                    const SizedBox(height: 10),
-                    TextField(
+                    const SizedBox(height: 12),
+                    _LabeledField(
+                      label: 'Email address',
                       controller: _email,
-                      decoration: InputDecoration(
-                        hintText: 'Email',
-                        filled: true,
-                        fillColor: Colors.grey[100],
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
-                        ),
-                      ),
+                      hintText: 'staff@retilda.com',
+                      keyboardType: TextInputType.emailAddress,
                     ),
-                    const SizedBox(height: 10),
-                    TextField(
+                    const SizedBox(height: 12),
+                    _LabeledField(
+                      label: 'Phone number',
                       controller: _phone,
-                      decoration: InputDecoration(
-                        hintText: 'Phone',
-                        filled: true,
-                        fillColor: Colors.grey[100],
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
-                        ),
-                      ),
+                      hintText: '08000000000',
+                      keyboardType: TextInputType.phone,
                     ),
-                    const SizedBox(height: 10),
-                    TextField(
+                    const SizedBox(height: 12),
+                    _LabeledField(
+                      label: 'Password',
                       controller: _password,
+                      hintText: 'Create a temporary password',
                       obscureText: true,
-                      decoration: InputDecoration(
-                        hintText: 'Password',
-                        filled: true,
-                        fillColor: Colors.grey[100],
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
-                        ),
-                      ),
                     ),
-                    const SizedBox(height: 10),
-                    DropdownButtonFormField<String>(
-                      value: _role,
-                      items: const [
-                        DropdownMenuItem(value: 'staff', child: Text('staff')),
-                      ],
-                      onChanged: (value) {
-                        if (value == null) return;
-                        setState(() => _role = value);
-                      },
-                      decoration: InputDecoration(
-                        filled: true,
-                        fillColor: Colors.grey[100],
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: _saving ? null : _submit,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: accent,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                    const SizedBox(height: 12),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Role',
+                          style: GoogleFonts.manrope(
+                            fontWeight: FontWeight.w800,
+                            color: AppTheme.ink,
                           ),
                         ),
-                        child: _saving
+                        const SizedBox(height: 8),
+                        DropdownButtonFormField<String>(
+                          initialValue: _role,
+                          items: const [
+                            DropdownMenuItem(
+                              value: 'staff',
+                              child: Text('staff'),
+                            ),
+                          ],
+                          onChanged: (value) {
+                            if (value == null) return;
+                            setState(() => _role = value);
+                          },
+                          decoration: const InputDecoration(
+                            hintText: 'Select role',
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 18),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        onPressed: _saving ? null : _submit,
+                        style: FilledButton.styleFrom(
+                          backgroundColor: AppTheme.accent,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                        ),
+                        icon: _saving
                             ? const SizedBox(
-                                width: 20,
-                                height: 20,
+                                width: 18,
+                                height: 18,
                                 child: CircularProgressIndicator(
                                   color: Colors.white,
                                   strokeWidth: 2,
                                 ),
                               )
-                            : const Text('Create staff'),
+                            : const Icon(Icons.person_add_alt_1_rounded),
+                        label: Text(
+                          _saving ? 'Creating staff...' : 'Create staff',
+                        ),
                       ),
                     ),
                   ],
@@ -196,8 +215,130 @@ class _AdminCreateStaffScreenState
               ),
             ],
           ),
-        );
-      },
+        ],
+      ),
+    );
+  }
+}
+
+class _StaffHero extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF0B3452), Color(0xFF145E8D)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(28),
+      ),
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: const Icon(Icons.badge_rounded, color: Colors.white),
+          ),
+          const SizedBox(height: 18),
+          Text(
+            'Add a new staff account',
+            style: GoogleFonts.spaceGrotesk(
+              fontSize: 30,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Provision support or operations access with a fresh staff login.',
+            style: GoogleFonts.manrope(
+              fontWeight: FontWeight.w600,
+              color: Colors.white.withValues(alpha: 0.76),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  final String title;
+  final String subtitle;
+
+  const _SectionHeader({
+    required this.title,
+    required this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: GoogleFonts.spaceGrotesk(
+            fontSize: 24,
+            fontWeight: FontWeight.w700,
+            color: AppTheme.ink,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          subtitle,
+          style: GoogleFonts.manrope(
+            fontWeight: FontWeight.w600,
+            color: Colors.black.withValues(alpha: 0.52),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _LabeledField extends StatelessWidget {
+  final String label;
+  final TextEditingController controller;
+  final String hintText;
+  final bool obscureText;
+  final TextInputType? keyboardType;
+
+  const _LabeledField({
+    required this.label,
+    required this.controller,
+    required this.hintText,
+    this.obscureText = false,
+    this.keyboardType,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.manrope(
+            fontWeight: FontWeight.w800,
+            color: AppTheme.ink,
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: controller,
+          obscureText: obscureText,
+          keyboardType: keyboardType,
+          decoration: InputDecoration(hintText: hintText),
+        ),
+      ],
     );
   }
 }

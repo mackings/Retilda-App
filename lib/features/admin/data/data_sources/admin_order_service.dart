@@ -17,12 +17,24 @@ class AdminOrderService {
 
   Future<String?> _getAuthToken() => _session.privilegedToken();
 
-  Future<bool> updateOrderStatus({
+  Purchase? _parseUpdatedPurchaseBody(String body) {
+    final decoded = jsonDecode(body);
+    if (decoded is! Map<String, dynamic>) {
+      return null;
+    }
+    final data = decoded['data'];
+    if (data is! Map<String, dynamic>) {
+      return null;
+    }
+    return Purchase.fromJson(data);
+  }
+
+  Future<Purchase?> updateOrderStatus({
     required String purchaseId,
     required String orderStatus,
   }) async {
     final token = await _getAuthToken();
-    if (token == null) return false;
+    if (token == null) return null;
 
     final response = await _apiClient.put(
       'order/status',
@@ -33,18 +45,22 @@ class AdminOrderService {
       },
     );
 
-    return response.statusCode == 200;
+    if (response.statusCode != 200) {
+      return null;
+    }
+
+    return _parseUpdatedPurchaseBody(response.body);
   }
 
-  Future<bool> updateDeliveryStatus({
+  Future<Purchase?> updateDeliveryStatus({
     required String userId,
     required String purchaseId,
     required String deliveryStatus,
   }) async {
     final token = await _getAuthToken();
-    if (token == null) return false;
+    if (token == null) return null;
 
-    final response = await _apiClient.put(
+    final response = await _apiClient.post(
       'products/updatedelivery',
       auth: AuthScope.privileged,
       body: {
@@ -54,19 +70,27 @@ class AdminOrderService {
       },
     );
 
-    return response.statusCode == 200;
+    if (response.statusCode != 200) {
+      return null;
+    }
+
+    return _parseUpdatedPurchaseBody(response.body);
   }
 
-  Future<bool> markDeliveryCompleted(String purchaseId) async {
+  Future<Purchase?> markDeliveryCompleted(String purchaseId) async {
     final token = await _getAuthToken();
-    if (token == null) return false;
+    if (token == null) return null;
 
     final response = await _apiClient.put(
       'updatedPurchasesForDeliveryCompleted/$purchaseId',
       auth: AuthScope.privileged,
     );
 
-    return response.statusCode == 200;
+    if (response.statusCode != 200) {
+      return null;
+    }
+
+    return _parseUpdatedPurchaseBody(response.body);
   }
 
   Future<PurchaseResponse> getReadyTrackingPurchases({

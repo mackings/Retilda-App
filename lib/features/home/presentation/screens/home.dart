@@ -12,6 +12,7 @@ import 'package:retilda/features/wallet/presentation/providers/wallet_providers.
 import 'package:retilda/model/cartmodel.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -74,7 +75,7 @@ class _HomePageState extends State<HomePage> {
         inactiveIcon: Icons.receipt_long_outlined,
       ),
       _NavItemConfig(
-        label: 'Payments',
+        label: 'Wallet',
         activeIcon: Icons.account_balance_wallet_rounded,
         inactiveIcon: Icons.account_balance_wallet_outlined,
       ),

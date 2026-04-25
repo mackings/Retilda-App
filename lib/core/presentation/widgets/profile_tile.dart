@@ -20,22 +20,42 @@ class ProfileListItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      borderRadius: BorderRadius.circular(18),
+      borderRadius: BorderRadius.circular(22),
       onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: AppTheme.ink.withValues(alpha: 0.05)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 12,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
         child: Row(
           children: [
             Container(
-              height: 46,
-              width: 46,
+              height: 50,
+              width: 50,
               decoration: BoxDecoration(
-                color: RButtoncolor.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(14),
+                gradient: LinearGradient(
+                  colors: [
+                    RButtoncolor.withValues(alpha: 0.95),
+                    AppTheme.ocean,
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(16),
               ),
-              child: Icon(icon, color: RButtoncolor, size: 22),
+              child: Icon(icon, color: Colors.white, size: 24),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -43,29 +63,29 @@ class ProfileListItem extends StatelessWidget {
                   CustomText(
                     title,
                     fontWeight: FontWeight.w800,
-                    fontSize: 15,
+                    fontSize: 15.5,
                     color: AppTheme.ink,
                   ),
                   if (subtitle != null) ...[
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 5),
                     CustomText(
                       subtitle!,
                       fontSize: 12.5,
-                      color: Colors.black.withValues(alpha: 0.6),
+                      color: Colors.black.withValues(alpha: 0.58),
                     ),
                   ],
                 ],
               ),
             ),
             Container(
-              height: 34,
-              width: 34,
+              height: 38,
+              width: 38,
               decoration: BoxDecoration(
                 color: const Color(0xFFF4F7FB),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(14),
               ),
               child: const Icon(
-                Icons.chevron_right_rounded,
+                Icons.arrow_forward_rounded,
                 color: Colors.black54,
                 size: 20,
               ),

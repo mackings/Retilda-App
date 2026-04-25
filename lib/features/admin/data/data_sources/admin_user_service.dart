@@ -1,5 +1,5 @@
-// services/api_service.dart
 import 'dart:convert';
+
 import 'package:retilda/Views/Admin/model/model.dart';
 import 'package:retilda/core/network/api_client.dart';
 import 'package:retilda/core/security/app_session.dart';
@@ -10,27 +10,52 @@ class ApiService {
 
   static Future<String?> _getToken() => _session.privilegedToken();
 
-  // Get all users
-  static Future<List<GlanceUser>> fetchUsers() async {
+  static Future<GlanceUsersPage> fetchUsers({
+    int page = 1,
+    int limit = 20,
+    String? search,
+  }) async {
     final token = await _getToken();
     if (token == null) {
       throw Exception('Token not found');
     }
 
-    final response = await _apiClient.get('users', auth: AuthScope.privileged);
+    final response = await _apiClient.get(
+      'users',
+      auth: AuthScope.privileged,
+      queryParameters: {
+        'page': '$page',
+        'limit': '$limit',
+        if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
+      },
+    );
 
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      List usersJson = data['data'];
-      return usersJson.map((json) => GlanceUser.fromJson(json)).toList();
-    } else {
-      throw Exception('Failed to load users');
+    final responseData = jsonDecode(response.body) as Map<String, dynamic>;
+    if (response.statusCode != 200) {
+      throw Exception(responseData['message'] ?? 'Failed to load users');
     }
+
+    final data = responseData['data'] as Map<String, dynamic>? ?? {};
+    final usersJson = data['users'] as List? ?? const [];
+    return GlanceUsersPage(
+      users: usersJson
+          .map((item) => GlanceUser.fromJson(item as Map<String, dynamic>))
+          .toList(),
+      pagination: AdminPagination.fromJson(
+        data['pagination'] as Map<String, dynamic>?,
+        totalItemsKey: 'totalUsers',
+      ),
+      search: (data['filters'] as Map<String, dynamic>? ?? const {})['search']
+              ?.toString() ??
+          '',
+    );
   }
 
-// Get purchases of a specific user
-// Get purchases of a specific user
-  static Future<List<GlancePurchase>> fetchUserPurchases(String userId) async {
+  static Future<GlanceUserPurchasesPage> fetchUserPurchases({
+    required String userId,
+    int page = 1,
+    int limit = 20,
+  }) async {
     final token = await _getToken();
     if (token == null) {
       throw Exception('Token not found');
@@ -39,31 +64,44 @@ class ApiService {
     final response = await _apiClient.get(
       'getUserPurchases',
       auth: AuthScope.privileged,
-      queryParameters: {'userId': userId},
+      queryParameters: {
+        'userId': userId,
+        'page': '$page',
+        'limit': '$limit',
+      },
     );
 
-    final responseData = jsonDecode(response.body);
-
-    // Case: no purchases found (API returns 404 with success: false)
-    if (response.statusCode == 404 && responseData['message'] != null) {
-      throw Exception(responseData['message']); // e.g. "No purchases found..."
+    final responseData = jsonDecode(response.body) as Map<String, dynamic>;
+    if (response.statusCode != 200) {
+      throw Exception(responseData['message'] ?? 'Failed to load purchases');
     }
 
-    if (response.statusCode == 200) {
-      final data = responseData['data'];
+    final data = responseData['data'] as Map<String, dynamic>? ?? {};
+    final productsJson = data['products'] as List? ?? const [];
+    final purchasesJson = data['purchases'] as List? ?? const [];
+    final products = productsJson
+        .map((item) => GlanceProduct.fromJson(item as Map<String, dynamic>))
+        .toList();
 
-      // Map products
-      List productsJson = data['products'] ?? [];
-      List<GlanceProduct> products =
-          productsJson.map((p) => GlanceProduct.fromJson(p)).toList();
-
-      // Map purchases
-      List purchasesJson = data['purchases'] ?? [];
-      return purchasesJson
-          .map((p) => GlancePurchase.fromJson(p, products))
-          .toList();
-    } else {
-      throw Exception('Failed to load purchases');
-    }
+    return GlanceUserPurchasesPage(
+      user: GlanceUser.fromJson(
+        data['user'] as Map<String, dynamic>? ?? const <String, dynamic>{},
+      ),
+      purchases: purchasesJson
+          .map(
+            (item) => GlancePurchase.fromJson(
+              item as Map<String, dynamic>,
+              products,
+            ),
+          )
+          .toList(),
+      summary: GlancePurchasesSummary.fromJson(
+        data['summary'] as Map<String, dynamic>?,
+      ),
+      pagination: AdminPagination.fromJson(
+        data['pagination'] as Map<String, dynamic>?,
+        totalItemsKey: 'totalPurchases',
+      ),
+    );
   }
 }

@@ -3,10 +3,10 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:retilda/Views/Admin/views/glance.dart';
 import 'package:retilda/Views/Auth/Signup.dart';
 import 'package:retilda/Views/Auth/kyc.dart';
-import 'package:retilda/Views/Delivery/views/deliveryhome.dart';
 import 'package:retilda/Views/Merchant/upload.dart';
 import 'package:retilda/Views/Products/Update/ProducUpdate.dart';
 import 'package:retilda/Views/Products/terms.dart';
@@ -131,11 +131,14 @@ class _ProfileState extends ConsumerState<Profile> {
         automaticallyImplyLeading: false,
         backgroundColor: pageBg,
         elevation: 0,
-        title: CustomText(
+        titleSpacing: 16,
+        title: Text(
           'Profile',
-          fontSize: 17.sp,
-          fontWeight: FontWeight.w800,
-          color: AppTheme.ink,
+          style: GoogleFonts.spaceGrotesk(
+            fontSize: 28,
+            fontWeight: FontWeight.w700,
+            color: AppTheme.ink,
+          ),
         ),
       ),
       body: SingleChildScrollView(
@@ -151,25 +154,29 @@ class _ProfileState extends ConsumerState<Profile> {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(24),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.08),
-                    blurRadius: 16,
-                    offset: const Offset(0, 12),
+                    blurRadius: 22,
+                    offset: const Offset(0, 14),
                   )
                 ],
               ),
-              padding: const EdgeInsets.all(18),
+              padding: const EdgeInsets.all(20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      CircleAvatar(
-                        radius: 26,
-                        backgroundColor: Colors.white.withValues(alpha: 0.15),
+                      Container(
+                        width: 58,
+                        height: 58,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.14),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
                         child: Icon(Icons.person,
                             color: Colors.white, size: 26.sp),
                       ),
@@ -178,23 +185,28 @@ class _ProfileState extends ConsumerState<Profile> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            CustomText(
+                            Text(
                               username ?? (isPrivileged ? "Staff" : "User"),
-                              fontSize: 16.sp,
-                              fontWeight: FontWeight.w800,
-                              color: Colors.white,
+                              style: GoogleFonts.spaceGrotesk(
+                                fontSize: 26,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                              ),
                             ),
                             const SizedBox(height: 4),
-                            Row(
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
                               children: [
                                 Container(
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 10, vertical: 6),
                                   decoration: BoxDecoration(
                                     color: Colors.white.withValues(alpha: 0.12),
-                                    borderRadius: BorderRadius.circular(12),
+                                    borderRadius: BorderRadius.circular(14),
                                   ),
                                   child: Row(
+                                    mainAxisSize: MainAxisSize.min,
                                     children: [
                                       Icon(Icons.shield_rounded,
                                           color: Colors.white, size: 16),
@@ -207,15 +219,15 @@ class _ProfileState extends ConsumerState<Profile> {
                                     ],
                                   ),
                                 ),
-                                const SizedBox(width: 8),
                                 Container(
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 10, vertical: 6),
                                   decoration: BoxDecoration(
                                     color: Colors.white.withValues(alpha: 0.12),
-                                    borderRadius: BorderRadius.circular(12),
+                                    borderRadius: BorderRadius.circular(14),
                                   ),
                                   child: Row(
+                                    mainAxisSize: MainAxisSize.min,
                                     children: [
                                       Icon(Icons.grade,
                                           color: Colors.amber.shade300,
@@ -240,9 +252,9 @@ class _ProfileState extends ConsumerState<Profile> {
                   Container(
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(18),
                     ),
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(14),
                     child: Row(
                       children: [
                         Expanded(
@@ -289,16 +301,16 @@ class _ProfileState extends ConsumerState<Profile> {
               width: double.infinity,
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 12,
-                    offset: const Offset(0, 10),
+                    blurRadius: 16,
+                    offset: const Offset(0, 12),
                   )
                 ],
               ),
-              padding: const EdgeInsets.all(14),
+              padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -413,7 +425,7 @@ class _ProfileState extends ConsumerState<Profile> {
             const SizedBox(height: 22),
             CustomText(
               "Account hub",
-              fontSize: 14.sp,
+              fontSize: 15.sp,
               fontWeight: FontWeight.w800,
               color: AppTheme.ink,
             ),
@@ -421,12 +433,12 @@ class _ProfileState extends ConsumerState<Profile> {
             Container(
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 12,
-                    offset: const Offset(0, 10),
+                    blurRadius: 16,
+                    offset: const Offset(0, 12),
                   )
                 ],
               ),
@@ -630,19 +642,6 @@ class _ProfileState extends ConsumerState<Profile> {
                           context,
                           MaterialPageRoute(
                               builder: (context) => const Producupdate()),
-                        );
-                      },
-                    ),
-                  if (isAdmin)
-                    ProfileListItem(
-                      icon: Icons.bike_scooter,
-                      title: 'Delivery Center',
-                      subtitle: 'Manage delivery operations',
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => DeliveryDashboard()),
                         );
                       },
                     ),

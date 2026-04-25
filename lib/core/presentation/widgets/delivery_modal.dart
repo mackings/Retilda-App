@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:retilda/core/network/api_client.dart';
 import 'package:retilda/core/presentation/widgets/dialogs.dart';
+import 'package:retilda/core/presentation/widgets/webview.dart';
 import 'package:retilda/core/security/app_session.dart';
 import 'package:retilda/core/theme/app_theme.dart';
 
@@ -59,10 +60,24 @@ class _DeliveryModalState extends State<DeliveryModal> {
   bool? deliveryAreaOperational;
   String? calculationError;
   bool? deliveryEligible;
+  bool? deliveryRequested;
+  String? deliveryPaymentStatus;
+  String? deliveryPaymentReference;
+  String? deliveryPaymentRequestedAt;
+  String? deliveryPaymentPaidAt;
   bool isQuotationFetched = false;
 
   bool get _hasCourierQuote =>
       courierDeliveryFee != null && quotedAddress != null;
+
+  bool get _deliveryPaymentPending =>
+      deliveryPaymentStatus == 'pending' && deliveryRequested != true;
+
+  bool get _deliveryCompleted =>
+      deliveryRequested == true && deliveryPaymentStatus == 'paid';
+
+  bool get _deliveryPaymentCanStart =>
+      deliveryEligible == true || _deliveryPaymentPending || _deliveryCompleted;
 
   @override
   void initState() {
@@ -105,6 +120,9 @@ class _DeliveryModalState extends State<DeliveryModal> {
   }
 
   void _clearCourierQuote() {
+    if (_deliveryPaymentPending || _deliveryCompleted) {
+      return;
+    }
     if (!_hasCourierQuote &&
         quotedAddress == null &&
         deliveryAreaOperational == null) {
@@ -204,6 +222,19 @@ class _DeliveryModalState extends State<DeliveryModal> {
   }) {
     final amountNeeded =
         _readNum(quoteData['amountNeeded'] ?? quoteData['deliveryFee']) ?? 0;
+    final destination = quoteData['deliveryDestination'] is Map<String, dynamic>
+        ? Map<String, dynamic>.from(quoteData['deliveryDestination'])
+        : const <String, dynamic>{};
+    final quote = quoteData['deliveryQuote'] is Map<String, dynamic>
+        ? Map<String, dynamic>.from(quoteData['deliveryQuote'])
+        : const <String, dynamic>{};
+    final resolvedAddress = destination['formattedAddress']?.toString() ??
+        destination['address']?.toString();
+    final resolvedDeliveryFee = _readNum(
+      quoteData['deliveryFeeAmount'] ??
+          quote['deliveryFee'] ??
+          quoteData['deliveryFee'],
+    );
 
     setState(() {
       deliveryThresholdAmount = amountNeeded;
@@ -220,9 +251,34 @@ class _DeliveryModalState extends State<DeliveryModal> {
       deliveryEligible = quoteData.containsKey('deliveryEligible')
           ? quoteData['deliveryEligible'] == true
           : deliveryEligible;
+      deliveryRequested = quoteData.containsKey('deliveryRequested')
+          ? quoteData['deliveryRequested'] == true
+          : deliveryRequested;
+      deliveryPaymentStatus = quoteData['deliveryPaymentStatus']?.toString() ??
+          deliveryPaymentStatus;
+      deliveryPaymentReference =
+          quoteData['deliveryPaymentReference']?.toString() ??
+              deliveryPaymentReference;
+      deliveryPaymentRequestedAt =
+          quoteData['deliveryPaymentRequestedAt']?.toString() ??
+              deliveryPaymentRequestedAt;
+      deliveryPaymentPaidAt = quoteData['deliveryPaymentPaidAt']?.toString() ??
+          deliveryPaymentPaidAt;
+      quotedAddress = resolvedAddress ?? quotedAddress;
+      deliveryAreaOperational = destination.containsKey('isOperational')
+          ? destination['isOperational'] == true
+          : deliveryAreaOperational;
+      courierDeliveryFee = resolvedDeliveryFee ?? courierDeliveryFee;
       calculationError = null;
       isQuotationFetched = true;
     });
+
+    if (resolvedAddress != null && _addressController.text.trim().isEmpty) {
+      _addressController.text = resolvedAddress;
+    }
+    if (resolvedDeliveryFee != null || resolvedAddress != null) {
+      _revealCourierQuote();
+    }
   }
 
   Future<void> _payDeliveryThreshold() async {
@@ -308,91 +364,92 @@ class _DeliveryModalState extends State<DeliveryModal> {
     }
   }
 
-  Future<void> _fetchCourierQuote() async {
-    final address = _addressController.text.trim();
+  Future<void> _pollDeliveryStatus({
+    int attempts = 6,
+    bool showPendingNotice = true,
+  }) async {
+    for (var index = 0; index < attempts; index++) {
+      try {
+        final response =
+            await _apiClient.get('order/status/${widget.purchaseId}');
+        final decoded = _tryDecodeJson(response.body);
+        final data = decoded?['data'];
+        if (response.statusCode == 200 && data is Map<String, dynamic>) {
+          _applyCalculationData(
+            data,
+            message: decoded?['message']?.toString(),
+          );
 
-    if (address.isEmpty) {
-      showAppAlert(
-        context: context,
-        title: 'Address required',
-        message: 'Enter a delivery address to see the courier fee first.',
-        tone: AppFeedbackTone.info,
-        buttonText: 'Okay',
-      );
-      return;
-    }
+          if (data['deliveryPaymentStatus'] == 'paid' &&
+              data['deliveryRequested'] == true) {
+            if (!mounted) return;
+            await showAppNoticeSheet(
+              context: context,
+              title: 'Delivery request confirmed',
+              message:
+                  'Your delivery fee payment was confirmed and the delivery request has now been recorded successfully.',
+              tone: AppFeedbackTone.success,
+              primaryLabel: 'Done',
+              icon: Icons.local_shipping_outlined,
+            );
+            if (!mounted) return;
+            Navigator.of(context).pop(true);
+            return;
+          }
 
-    setState(() => isLoading = true);
+          if (data['deliveryPaymentStatus'] == 'failed') {
+            if (!mounted) return;
+            showAppAlert(
+              context: context,
+              title: 'Delivery payment failed',
+              message:
+                  'The delivery payment did not complete. You can try again from this screen.',
+              tone: AppFeedbackTone.error,
+              buttonText: 'Okay',
+            );
+            return;
+          }
+        }
+      } catch (_) {}
 
-    try {
-      final response = await _apiClient.post(
-        'geo/delivery-quote',
-        body: {
-          'address': address,
-        },
-      );
-
-      if (!mounted) return;
-      setState(() => isLoading = false);
-
-      if (response.statusCode != 200) {
-        showAppAlert(
-          context: context,
-          title: 'Unable to quote delivery',
-          message:
-              'We could not calculate the courier fee for this address right now.',
-          tone: AppFeedbackTone.warning,
-          buttonText: 'Okay',
-        );
-        return;
+      if (index < attempts - 1) {
+        await Future.delayed(const Duration(seconds: 2));
       }
-
-      final decoded = jsonDecode(response.body);
-      final data = decoded['data'];
-      final location =
-          data is Map<String, dynamic> ? data : const <String, dynamic>{};
-      final isOperational = location['isOperational'] == true;
-      final formattedAddress =
-          location['formattedAddress']?.toString() ?? address;
-      final quote = location['quote'] is Map<String, dynamic>
-          ? Map<String, dynamic>.from(location['quote'])
-          : const <String, dynamic>{};
-      final deliveryFee = _readNum(quote['deliveryFee']);
-
-      setState(() {
-        quotedAddress = formattedAddress;
-        deliveryAreaOperational = isOperational;
-        courierDeliveryFee = deliveryFee;
-      });
-      _revealCourierQuote();
-    } catch (_) {
-      if (!mounted) return;
-      setState(() => isLoading = false);
-      showAppAlert(
-        context: context,
-        title: 'Unable to quote delivery',
-        message:
-            'We could not calculate the courier fee for this address right now.',
-        tone: AppFeedbackTone.warning,
-        buttonText: 'Okay',
-      );
     }
+
+    if (!mounted || !showPendingNotice) return;
+    await showAppNoticeSheet(
+      context: context,
+      title: 'Payment still pending',
+      message:
+          'Your delivery payment link has been created, but we have not received confirmation yet. If you already paid, please wait a moment and check again. You can also reopen the same payment link from this screen.',
+      tone: AppFeedbackTone.info,
+      primaryLabel: 'Okay',
+      icon: Icons.hourglass_top_rounded,
+    );
   }
 
-  Future<void> _requestDelivery() async {
+  Future<void> _initializeDeliveryPayment() async {
     final address = _addressController.text.trim();
-
-    if (!_hasCourierQuote) {
-      await _fetchCourierQuote();
-      return;
-    }
 
     if (address.isEmpty) {
       showAppAlert(
         context: context,
         title: 'Address required',
-        message: 'Enter a delivery address before requesting delivery.',
+        message: 'Enter a delivery address before starting delivery payment.',
         tone: AppFeedbackTone.info,
+        buttonText: 'Okay',
+      );
+      return;
+    }
+
+    if (!_deliveryPaymentCanStart) {
+      showAppAlert(
+        context: context,
+        title: 'Delivery not ready',
+        message:
+            'This purchase is not yet eligible for delivery. Complete the required payment condition first.',
+        tone: AppFeedbackTone.warning,
         buttonText: 'Okay',
       );
       return;
@@ -422,52 +479,68 @@ class _DeliveryModalState extends State<DeliveryModal> {
           data,
           message: decoded['message']?.toString(),
         );
-        final destination = data['deliveryDestination'] is Map<String, dynamic>
-            ? Map<String, dynamic>.from(data['deliveryDestination'])
-            : const <String, dynamic>{};
-        final quote = data['deliveryQuote'] is Map<String, dynamic>
-            ? Map<String, dynamic>.from(data['deliveryQuote'])
-            : const <String, dynamic>{};
-        setState(() {
-          quotedAddress = destination['formattedAddress']?.toString() ??
-              destination['address']?.toString() ??
-              quotedAddress;
-          deliveryAreaOperational = destination.containsKey('isOperational')
-              ? destination['isOperational'] == true
-              : deliveryAreaOperational;
-          courierDeliveryFee =
-              _readNum(quote['deliveryFee']) ?? courierDeliveryFee;
-        });
-        _revealCourierQuote();
-        await showAppNoticeSheet(
-          context: context,
-          title: 'Delivery requested',
-          message:
-              'Your delivery request has been submitted. Courier fee: ${_formatMoney(courierDeliveryFee ?? 0)}.',
-          tone: AppFeedbackTone.success,
-          primaryLabel: 'Done',
-          icon: Icons.local_shipping_outlined,
+        final paymentUrl = data['paymentUrl']?.toString();
+        if (paymentUrl == null || paymentUrl.isEmpty) {
+          showAppAlert(
+            context: context,
+            title: 'Payment link unavailable',
+            message:
+                'The delivery payment was initialized but no payment link was returned.',
+            tone: AppFeedbackTone.error,
+            buttonText: 'Okay',
+          );
+          return;
+        }
+
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => WebViewScreen(
+              url: paymentUrl,
+              title: 'Pay delivery fee',
+            ),
+          ),
         );
         if (!mounted) return;
-        Navigator.of(context).pop();
+        await _pollDeliveryStatus();
         return;
       }
 
       if (decoded is Map<String, dynamic>) {
         if (response.statusCode == 400) {
-          _applyCalculationData(
-            decoded,
-            message: decoded['message']?.toString(),
+          final data = decoded['data'];
+          if (data is Map<String, dynamic>) {
+            _applyCalculationData(
+              data,
+              message: decoded['message']?.toString(),
+            );
+          }
+        }
+
+        if (response.statusCode == 409) {
+          await _pollDeliveryStatus(attempts: 1, showPendingNotice: false);
+          if (!mounted) return;
+          await showAppNoticeSheet(
+            context: context,
+            title: 'Delivery already completed',
+            message: decoded['message']?.toString() ??
+                'Delivery has already been requested for this purchase.',
+            tone: AppFeedbackTone.info,
+            primaryLabel: 'Done',
+            icon: Icons.local_shipping_outlined,
           );
+          if (!mounted) return;
+          Navigator.of(context).pop(true);
+          return;
         }
 
         showAppAlert(
           context: context,
           title: response.statusCode == 404
               ? 'Purchase not found'
-              : 'Unable to request delivery',
+              : 'Unable to start delivery payment',
           message: decoded['message']?.toString() ??
-              'Delivery could not be requested right now.',
+              'Delivery payment could not be initialized right now.',
           tone: AppFeedbackTone.error,
           buttonText: 'Okay',
         );
@@ -476,10 +549,10 @@ class _DeliveryModalState extends State<DeliveryModal> {
 
       showAppAlert(
         context: context,
-        title: 'Unable to request delivery',
+        title: 'Unable to start delivery payment',
         message: response.statusCode == 404
             ? 'The delivery endpoint is not available on the current server deployment yet.'
-            : 'Delivery could not be requested right now.',
+            : 'Delivery payment could not be initialized right now.',
         tone: AppFeedbackTone.error,
         buttonText: 'Okay',
       );
@@ -488,8 +561,8 @@ class _DeliveryModalState extends State<DeliveryModal> {
       setState(() => isLoading = false);
       showAppAlert(
         context: context,
-        title: 'Unable to request delivery',
-        message: 'Delivery could not be requested right now.',
+        title: 'Unable to start delivery payment',
+        message: 'Delivery payment could not be initialized right now.',
         tone: AppFeedbackTone.error,
         buttonText: 'Okay',
       );
@@ -523,26 +596,29 @@ class _DeliveryModalState extends State<DeliveryModal> {
   String _primaryButtonLabel() {
     final amount = deliveryThresholdAmount ?? 0;
     if (isLoading && !isQuotationFetched) return 'Checking delivery...';
-    if (isLoading && _hasCourierQuote) return 'Requesting delivery...';
-    if (isLoading) return 'Getting courier fee...';
+    if (isLoading) return 'Starting delivery payment...';
     if (!isQuotationFetched) return 'Retry delivery check';
+    if (_deliveryCompleted) return 'Delivery already paid';
+    if (_deliveryPaymentPending) return 'Continue delivery payment';
     if (amount > 0 && _canPayDeliveryThreshold) {
       return 'Pay ${_formatMoney(amount)} from wallet';
     }
     if (amount > 0) return 'Complete down payment first';
-    if (!_hasCourierQuote) return 'See delivery fee';
-    return 'Request delivery';
+    if (deliveryEligible != true) return 'Meet delivery conditions first';
+    return 'Pay delivery fee';
   }
 
   IconData _primaryButtonIcon() {
     final amount = deliveryThresholdAmount ?? 0;
     if (!isQuotationFetched) return Icons.refresh_rounded;
+    if (_deliveryCompleted) return Icons.check_circle_outline_rounded;
+    if (_deliveryPaymentPending) return Icons.open_in_new_rounded;
     if (amount > 0 && _canPayDeliveryThreshold) {
       return Icons.account_balance_wallet_outlined;
     }
     if (amount > 0) return Icons.info_outline_rounded;
-    if (!_hasCourierQuote) return Icons.receipt_long_outlined;
-    return Icons.local_shipping_outlined;
+    if (deliveryEligible != true) return Icons.lock_outline_rounded;
+    return Icons.payments_outlined;
   }
 
   bool get _canPayDeliveryThreshold =>
@@ -550,6 +626,18 @@ class _DeliveryModalState extends State<DeliveryModal> {
       (deliveryThresholdAmount ?? 0) > 0;
 
   Future<void> _handlePrimaryAction() async {
+    if (_deliveryCompleted) {
+      await showAppNoticeSheet(
+        context: context,
+        title: 'Delivery already completed',
+        message:
+            'This purchase already has a paid delivery request. There is nothing else to do here.',
+        tone: AppFeedbackTone.success,
+        primaryLabel: 'Done',
+        icon: Icons.check_circle_outline_rounded,
+      );
+      return;
+    }
     if (isQuotationFetched && _canPayDeliveryThreshold) {
       await _payDeliveryThreshold();
       return;
@@ -566,12 +654,22 @@ class _DeliveryModalState extends State<DeliveryModal> {
       );
       return;
     }
+    if (isQuotationFetched &&
+        deliveryEligible != true &&
+        !_deliveryPaymentPending) {
+      await showAppNoticeSheet(
+        context: context,
+        title: 'Delivery not ready',
+        message:
+            'This purchase must first meet the delivery eligibility condition before delivery payment can be started.',
+        tone: AppFeedbackTone.info,
+        primaryLabel: 'Okay',
+        icon: Icons.lock_outline_rounded,
+      );
+      return;
+    }
     if (isQuotationFetched) {
-      if (!_hasCourierQuote) {
-        await _fetchCourierQuote();
-        return;
-      }
-      await _requestDelivery();
+      await _initializeDeliveryPayment();
       return;
     }
     await _fetchQuotation();
@@ -633,7 +731,7 @@ class _DeliveryModalState extends State<DeliveryModal> {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                'See the courier fee before you request delivery.',
+                                'Complete delivery payment for the selected address after purchase eligibility is confirmed.',
                                 style: GoogleFonts.manrope(
                                   fontSize: 13.5,
                                   fontWeight: FontWeight.w600,
@@ -835,6 +933,9 @@ class _DeliveryModalState extends State<DeliveryModal> {
                                 backgroundColor: const Color(0xFFFFF5F5),
                                 borderColor: const Color(0xFFFFD1D1),
                               ),
+                            if (deliveryPaymentStatus != null ||
+                                deliveryRequested != null)
+                              _buildDeliveryPaymentStatusCard(),
                             if (deliveryThresholdAmount != null)
                               _buildEligibilityCard(),
                             if (_hasCourierQuote) ...[
@@ -937,6 +1038,89 @@ class _DeliveryModalState extends State<DeliveryModal> {
     );
   }
 
+  Widget _buildDeliveryPaymentStatusCard() {
+    final status = deliveryPaymentStatus ?? 'not_started';
+    final isPaid = status == 'paid' && deliveryRequested == true;
+    final isPending = status == 'pending' && deliveryRequested != true;
+    final isFailed = status == 'failed';
+
+    final backgroundColor = isPaid
+        ? const Color(0xFFF3FAF7)
+        : isPending
+            ? const Color(0xFFFFF7ED)
+            : isFailed
+                ? const Color(0xFFFFF5F5)
+                : const Color(0xFFF7F9FC);
+    final borderColor = isPaid
+        ? const Color(0xFFB7E8DA)
+        : isPending
+            ? const Color(0xFFF6D2B0)
+            : isFailed
+                ? const Color(0xFFFFD1D1)
+                : const Color(0xFFD8E7F3);
+    final title = isPaid
+        ? 'Delivery request paid'
+        : isPending
+            ? 'Delivery payment pending'
+            : isFailed
+                ? 'Delivery payment failed'
+                : 'Delivery payment not started';
+    final message = isPaid
+        ? 'Your payment has been confirmed and the delivery request has been recorded.'
+        : isPending
+            ? 'A payment link has already been created for this purchase. Reopen it to continue paying for delivery.'
+            : isFailed
+                ? 'The last delivery payment attempt failed. You can start a new one from this screen.'
+                : 'Enter the address and continue to generate the delivery payment link.';
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: borderColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: GoogleFonts.spaceGrotesk(
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              color: AppTheme.ink,
+              letterSpacing: -0.4,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            message,
+            style: GoogleFonts.manrope(
+              fontSize: 13,
+              height: 1.45,
+              fontWeight: FontWeight.w600,
+              color: Colors.black.withValues(alpha: 0.68),
+            ),
+          ),
+          if (deliveryPaymentReference != null &&
+              deliveryPaymentReference!.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Text(
+              'Reference: $deliveryPaymentReference',
+              style: GoogleFonts.manrope(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w700,
+                color: Colors.black.withValues(alpha: 0.62),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   Widget _buildEligibilityCard() {
     final amount = deliveryThresholdAmount ?? 0;
     final isReady = amount <= 0;
@@ -966,7 +1150,7 @@ class _DeliveryModalState extends State<DeliveryModal> {
           const SizedBox(height: 6),
           Text(
             isReady
-                ? 'This purchase can proceed to courier pricing.'
+                ? 'This purchase can proceed to delivery payment for the chosen address.'
                 : 'You need ${_formatMoney(amount)} before delivery can continue.',
             style: GoogleFonts.manrope(
               fontSize: 13,
@@ -1012,7 +1196,7 @@ class _DeliveryModalState extends State<DeliveryModal> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Courier fee',
+            'Delivery fee',
             style: GoogleFonts.manrope(
               fontSize: 13,
               fontWeight: FontWeight.w800,
@@ -1044,7 +1228,7 @@ class _DeliveryModalState extends State<DeliveryModal> {
             const SizedBox(height: 4),
             Text(
               deliveryAreaOperational == true
-                  ? 'Coverage available'
+                  ? 'Coverage available for this address'
                   : 'Area currently not operational',
               style: GoogleFonts.manrope(
                 fontSize: 12.5,

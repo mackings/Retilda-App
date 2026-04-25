@@ -58,32 +58,34 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
     return "Cleared";
   }
 
-  String getNextPaymentAmount(List<Payment> payments) {
-    for (int i = 0; i < payments.length; i++) {
-      if (payments[i].status != 'completed') {
-        final amountToPay = payments[i].amountToPay ?? 0;
-        final amountPaid = payments[i].amountPaid ?? 0;
-        final remainingAmount = amountToPay - amountPaid;
-        return _formatMoney(remainingAmount);
-      }
-    }
-    return _formatMoney(0);
+  String getNextPaymentAmount(
+    Payment? nextPendingPayment,
+    num remainingBalance,
+  ) {
+    return _formatMoney(
+      _displayOutstandingAmount(
+        payment: nextPendingPayment,
+        remainingBalance: remainingBalance,
+      ),
+    );
   }
 
-  String getNextPaymentStatus(List<Payment> payments) {
-    for (int i = 0; i < payments.length; i++) {
-      if (payments[i].status != 'completed') {
-        final amountToPay = payments[i].amountToPay ?? 0;
-        final amountPaid = payments[i].amountPaid ?? 0;
+  String getNextPaymentStatus(
+    Payment? nextPendingPayment,
+    num remainingBalance,
+  ) {
+    if (nextPendingPayment == null) return "Fully Paid";
+    final amountPaid = nextPendingPayment.amountPaid ?? 0;
+    final outstanding = _displayOutstandingAmount(
+      payment: nextPendingPayment,
+      remainingBalance: remainingBalance,
+    );
 
-        if (amountPaid > 0 && amountPaid < amountToPay) {
-          return 'Partially Paid (N${amountPaid.toStringAsFixed(0)} of N${amountToPay.toStringAsFixed(0)})';
-        } else if (amountPaid == 0) {
-          return 'Not Paid';
-        }
-      }
+    if (outstanding <= 0) return 'Fully Paid';
+    if (amountPaid > 0) {
+      return 'Partially Paid (${_formatMoney(amountPaid)} paid, ${_formatMoney(outstanding)} left)';
     }
-    return "Fully Paid";
+    return 'Not Paid (${_formatMoney(outstanding)} due)';
   }
 
   Payment? _nextPendingPayment(List<Payment> payments) {
@@ -91,6 +93,30 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
       if (payment.status != 'completed') return payment;
     }
     return null;
+  }
+
+  num _displayOutstandingAmount({
+    required Payment? payment,
+    required num remainingBalance,
+  }) {
+    if (payment == null) return 0;
+    final rawOutstanding = payment.outstandingAmount;
+    final cappedOutstanding =
+        remainingBalance > 0 ? remainingBalance : rawOutstanding;
+    return rawOutstanding.clamp(0, cappedOutstanding);
+  }
+
+  num _displayInstallmentTarget({
+    required Payment? payment,
+    required num remainingBalance,
+  }) {
+    if (payment == null) return 0;
+    final amountPaid = payment.amountPaid ?? 0;
+    final outstanding = _displayOutstandingAmount(
+      payment: payment,
+      remainingBalance: remainingBalance,
+    );
+    return amountPaid + outstanding;
   }
 
   num? _readNum(dynamic value) {
@@ -110,39 +136,91 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
         _deliveryAmountNeeded(data) > 0;
   }
 
+  bool _deliveryPaymentAvailable(Map<String, dynamic>? data) {
+    if (data == null) return false;
+    if (data['deliveryRequested'] == true &&
+        data['deliveryPaymentStatus'] == 'paid') {
+      return true;
+    }
+    if (data['deliveryPaymentStatus'] == 'pending') {
+      return true;
+    }
+    return data['deliveryEligible'] == true;
+  }
+
+  Map<String, dynamic> get _purchaseDeliveryCalculation =>
+      widget.purchase.deliveryStateSnapshot;
+
+  bool get _purchaseHasResolvedDeliveryState =>
+      widget.purchase.isDeliveryCompleted ||
+      widget.purchase.hasPendingDeliveryPayment;
+
+  Map<String, dynamic>? get _effectiveDeliveryCalculation =>
+      _purchaseHasResolvedDeliveryState
+          ? _purchaseDeliveryCalculation
+          : (_deliveryCalculation == null
+              ? _purchaseDeliveryCalculation
+              : {
+                  ..._purchaseDeliveryCalculation,
+                  ..._deliveryCalculation!,
+                });
+
   bool _shouldShowDeliveryModal(Map<String, dynamic> data) {
-    return data['deliveryEligible'] == true || _deliveryAmountNeeded(data) > 0;
+    return _deliveryPaymentAvailable(data) || _deliveryAmountNeeded(data) > 0;
   }
 
   String _deliveryButtonLabel() {
-    final data = _deliveryCalculation;
+    final data = _effectiveDeliveryCalculation;
     if (_deliveryCheckLoading) return 'Checking delivery...';
     if (data == null) return 'Delivery options';
+    if (data['deliveryRequested'] == true &&
+        data['deliveryPaymentStatus'] == 'paid') {
+      return 'Delivery confirmed';
+    }
+    if (data['deliveryPaymentStatus'] == 'pending') {
+      return 'Continue delivery payment';
+    }
     if (_canPayLegacyDeliveryTopUp(data)) return 'Top up for delivery';
-    if (data['deliveryEligible'] == true || _deliveryAmountNeeded(data) == 0) {
-      return 'Request delivery';
+    if (data['deliveryEligible'] == true) {
+      return 'Pay delivery fee';
     }
     if (_deliveryAmountNeeded(data) > 0) return 'Complete down payment';
-    return 'Delivery options';
+    return 'Meet delivery conditions first';
   }
 
   IconData _deliveryButtonIcon() {
-    final data = _deliveryCalculation;
+    final data = _effectiveDeliveryCalculation;
     if (_deliveryCheckLoading) return Icons.sync_rounded;
     if (data == null) return Icons.local_shipping_outlined;
+    if (data['deliveryRequested'] == true &&
+        data['deliveryPaymentStatus'] == 'paid') {
+      return Icons.check_circle_outline_rounded;
+    }
+    if (data['deliveryPaymentStatus'] == 'pending') {
+      return Icons.open_in_new_rounded;
+    }
     if (_canPayLegacyDeliveryTopUp(data)) {
       return Icons.account_balance_wallet_outlined;
     }
-    if (data['deliveryEligible'] == true || _deliveryAmountNeeded(data) == 0) {
+    if (data['deliveryEligible'] == true) {
       return Icons.local_shipping_outlined;
     }
     if (_deliveryAmountNeeded(data) > 0) return Icons.info_outline_rounded;
-    return Icons.local_shipping_outlined;
+    return Icons.lock_outline_rounded;
   }
 
   Future<void> _checkDeliveryEligibilityInBackground({
     bool showModalIfActionable = false,
   }) async {
+    if (_purchaseHasResolvedDeliveryState) {
+      if (_deliveryCalculation == null && mounted) {
+        setState(() {
+          _deliveryCalculation = _purchaseDeliveryCalculation;
+        });
+      }
+      return;
+    }
+
     final purchaseId = widget.purchase.id;
     if (_deliveryCheckLoading || purchaseId == null || purchaseId.isEmpty) {
       return;
@@ -267,6 +345,10 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
   void initState() {
     super.initState();
     _loadUserData();
+    if (_purchaseHasResolvedDeliveryState) {
+      _deliveryCalculation = _purchaseDeliveryCalculation;
+      return;
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _checkDeliveryEligibilityInBackground(showModalIfActionable: true);
@@ -343,7 +425,7 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
     Map<String, dynamic>? initialCalculation,
     String? initialMessage,
   }) async {
-    await showModalBottomSheet<void>(
+    final refreshed = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -353,6 +435,9 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
         initialMessage: initialMessage,
       ),
     );
+    if (refreshed == true) {
+      await _checkDeliveryEligibilityInBackground();
+    }
   }
 
   Future<void> _showTopUpConfirmationSheet() async {
@@ -367,9 +452,24 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
 
     if (_deliveryCheckLoading) return;
 
+    final data = _effectiveDeliveryCalculation;
+    if (data?['deliveryRequested'] == true ||
+        data?['deliveryPaymentStatus'] == 'paid') {
+      await showAppNoticeSheet(
+        context: context,
+        title: 'Delivery already completed',
+        message:
+            'This purchase already has a completed delivery payment and recorded delivery request.',
+        tone: AppFeedbackTone.success,
+        primaryLabel: 'Done',
+        icon: Icons.check_circle_outline_rounded,
+      );
+      return;
+    }
+
     await _openDeliveryModal(
       purchaseId: purchaseId,
-      initialCalculation: _deliveryCalculation,
+      initialCalculation: data,
       initialMessage: _deliveryCalculationMessage,
     );
   }
@@ -500,14 +600,22 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
     final remainingBalance = widget.purchase.totalOutstandingComputed;
     final progress = _completionRatio(totalPaid, totalToPay);
     final nextPaymentDate = getNextPaymentDate(payments);
-    final nextPaymentAmount = getNextPaymentAmount(payments);
-    final nextPaymentStatus = getNextPaymentStatus(payments);
     final nextPendingPayment = _nextPendingPayment(payments);
+    final nextPaymentAmount =
+        getNextPaymentAmount(nextPendingPayment, remainingBalance);
+    final nextPaymentStatus =
+        getNextPaymentStatus(nextPendingPayment, remainingBalance);
     final nextLateFee = nextPendingPayment?.lateFeeTotal ?? 0;
     final nextLateFeeWeeks = nextPendingPayment?.lateFeeAppliedWeeks ?? 0;
-    final nextAmountToPay = nextPendingPayment?.amountToPay ?? 0;
     final nextAmountPaid = nextPendingPayment?.amountPaid ?? 0;
-    final nextOutstanding = nextPendingPayment?.outstandingAmount ?? 0;
+    final nextOutstanding = _displayOutstandingAmount(
+      payment: nextPendingPayment,
+      remainingBalance: remainingBalance,
+    );
+    final nextInstallmentTarget = _displayInstallmentTarget(
+      payment: nextPendingPayment,
+      remainingBalance: remainingBalance,
+    );
     final deliveryStatus =
         widget.purchase.deliveryStatus?.toString() ?? 'Pending';
     final durationLabel = widget.purchase.durationMonths != null
@@ -1108,15 +1216,15 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
                               ),
                               if (nextPendingPayment != null) ...[
                                 _buildDetailRow(
-                                  label: 'Installment target',
-                                  value: _formatMoney(nextAmountToPay),
+                                  label: 'Next payment target',
+                                  value: _formatMoney(nextInstallmentTarget),
                                 ),
                                 _buildDetailRow(
-                                  label: 'Paid on installment',
+                                  label: 'Paid toward next payment',
                                   value: _formatMoney(nextAmountPaid),
                                 ),
                                 _buildDetailRow(
-                                  label: 'Current outstanding',
+                                  label: 'Left on next payment',
                                   value: _formatMoney(nextOutstanding),
                                 ),
                                 _buildDetailRow(

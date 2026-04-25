@@ -74,6 +74,17 @@ class Purchase {
   final num? basePrice;
   final String? deliveryStatus;
   final bool? duePaymentCompleted;
+  final bool? deliveryRequested;
+  final String? deliveryRequestedAt;
+  final Map<String, dynamic>? deliveryDestination;
+  final Map<String, dynamic>? deliveryQuote;
+  final num? deliveryFeeAmount;
+  final String? deliveryFeeCurrency;
+  final String? deliveryPaymentStatus;
+  final String? deliveryPaymentReference;
+  final String? deliveryPaymentRequestedAt;
+  final String? deliveryPaymentPaidAt;
+  final String? deliveryRequestNotifiedAt;
   final num? totalAmountToPay;
   final num? totalAmountPaid;
   final List<Payment>? payments;
@@ -96,6 +107,17 @@ class Purchase {
     this.basePrice,
     this.deliveryStatus,
     this.duePaymentCompleted,
+    this.deliveryRequested,
+    this.deliveryRequestedAt,
+    this.deliveryDestination,
+    this.deliveryQuote,
+    this.deliveryFeeAmount,
+    this.deliveryFeeCurrency,
+    this.deliveryPaymentStatus,
+    this.deliveryPaymentReference,
+    this.deliveryPaymentRequestedAt,
+    this.deliveryPaymentPaidAt,
+    this.deliveryRequestNotifiedAt,
     this.totalAmountToPay,
     this.totalAmountPaid,
     this.payments,
@@ -137,14 +159,17 @@ class Purchase {
   }
 
   num get totalOutstandingComputed {
+    final total = totalToPayComputed;
+    final paid = totalPaidComputed;
+    if (total > 0) {
+      return (total - paid).clamp(0, total);
+    }
     if (payments != null && payments!.isNotEmpty) {
       return payments!
           .map((payment) => payment.outstandingAmount)
           .fold<num>(0, (sum, value) => sum + value);
     }
-    final total = totalToPayComputed;
-    final paid = totalPaidComputed;
-    return (total - paid).clamp(0, total);
+    return 0;
   }
 
   bool get isNewDownPaymentPlan =>
@@ -155,6 +180,42 @@ class Purchase {
     if (required <= 0) return false;
     final paid = totalPaidComputed;
     return paid >= required;
+  }
+
+  bool get isDeliveryCompleted =>
+      deliveryRequested == true || deliveryPaymentStatus == 'paid';
+
+  bool get hasPendingDeliveryPayment =>
+      deliveryPaymentStatus == 'pending' && deliveryRequested != true;
+
+  Map<String, dynamic> get deliveryStateSnapshot {
+    return {
+      'deliveryEligible': duePaymentCompleted == true,
+      'deliveryRequirement':
+          purchaseType == null ? 'legacy_60_percent' : 'down_payment',
+      'deliveryStatus': deliveryStatus,
+      'orderStatus': orderStatus,
+      'deliveryRequested': deliveryRequested,
+      'deliveryRequestedAt': deliveryRequestedAt,
+      'deliveryDestination': deliveryDestination,
+      'deliveryQuote': deliveryQuote,
+      'deliveryFeeAmount': deliveryFeeAmount,
+      'deliveryFeeCurrency': deliveryFeeCurrency,
+      'deliveryPaymentStatus': deliveryPaymentStatus,
+      'deliveryPaymentReference': deliveryPaymentReference,
+      'deliveryPaymentRequestedAt': deliveryPaymentRequestedAt,
+      'deliveryPaymentPaidAt': deliveryPaymentPaidAt,
+      'deliveryRequestNotifiedAt': deliveryRequestNotifiedAt,
+      'amountNeeded':
+          duePaymentCompleted == true ? 0 : totalOutstandingComputed,
+      'currentAmountPaid': totalPaidComputed,
+      'targetAmountPaid': resolvedDownPaymentAmount,
+      'targetPercent': downPaymentPercent,
+      if (product?.id != null) 'productId': product!.id,
+      if (product?.name != null) 'productName': product!.name,
+      'purchaseId': id,
+      'basePrice': basePrice ?? product?.price,
+    };
   }
 
   factory Purchase.fromJson(Map<String, dynamic> json) {
@@ -191,6 +252,21 @@ class Purchase {
       basePrice: json['basePrice'],
       deliveryStatus: json['deliveryStatus'],
       duePaymentCompleted: json['duePaymentCompleted'],
+      deliveryRequested: json['deliveryRequested'],
+      deliveryRequestedAt: json['deliveryRequestedAt'],
+      deliveryDestination: json['deliveryDestination'] is Map
+          ? Map<String, dynamic>.from(json['deliveryDestination'])
+          : null,
+      deliveryQuote: json['deliveryQuote'] is Map
+          ? Map<String, dynamic>.from(json['deliveryQuote'])
+          : null,
+      deliveryFeeAmount: json['deliveryFeeAmount'],
+      deliveryFeeCurrency: json['deliveryFeeCurrency'],
+      deliveryPaymentStatus: json['deliveryPaymentStatus'],
+      deliveryPaymentReference: json['deliveryPaymentReference'],
+      deliveryPaymentRequestedAt: json['deliveryPaymentRequestedAt'],
+      deliveryPaymentPaidAt: json['deliveryPaymentPaidAt'],
+      deliveryRequestNotifiedAt: json['deliveryRequestNotifiedAt'],
       totalAmountToPay: json['totalAmountToPay'],
       totalAmountPaid: json['totalAmountPaid'],
       payments: json['payments'] != null
@@ -219,6 +295,17 @@ class Purchase {
       'basePrice': basePrice,
       'deliveryStatus': deliveryStatus,
       'duePaymentCompleted': duePaymentCompleted,
+      'deliveryRequested': deliveryRequested,
+      'deliveryRequestedAt': deliveryRequestedAt,
+      'deliveryDestination': deliveryDestination,
+      'deliveryQuote': deliveryQuote,
+      'deliveryFeeAmount': deliveryFeeAmount,
+      'deliveryFeeCurrency': deliveryFeeCurrency,
+      'deliveryPaymentStatus': deliveryPaymentStatus,
+      'deliveryPaymentReference': deliveryPaymentReference,
+      'deliveryPaymentRequestedAt': deliveryPaymentRequestedAt,
+      'deliveryPaymentPaidAt': deliveryPaymentPaidAt,
+      'deliveryRequestNotifiedAt': deliveryRequestNotifiedAt,
       'totalAmountToPay': totalAmountToPay,
       'totalAmountPaid': totalAmountPaid,
       'payments': payments != null

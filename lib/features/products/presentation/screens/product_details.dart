@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -6,9 +7,6 @@ import 'package:intl/intl.dart';
 import 'package:retilda/Views/Auth/kyc.dart';
 import 'package:retilda/Views/Products/Connect/views/connect.dart';
 import 'package:retilda/Views/Products/cartpage.dart';
-import 'package:retilda/Views/Products/terms.dart';
-import 'package:retilda/Views/Widgets/components.dart';
-import 'package:retilda/Views/Widgets/paymentoption.dart';
 import 'package:retilda/Views/Widgets/webview.dart';
 import 'package:retilda/Views/Widgets/widgets.dart';
 import 'package:retilda/core/network/api_client.dart';
@@ -17,10 +15,7 @@ import 'package:retilda/core/security/app_session.dart';
 import 'package:retilda/model/cartmodel.dart';
 import 'package:retilda/model/products.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert';
 import 'package:sizer/sizer.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'package:webview_flutter/webview_flutter.dart';
 
 class ProductDetails extends StatefulWidget {
   final Product product;
@@ -32,276 +27,131 @@ class ProductDetails extends StatefulWidget {
 }
 
 class _ProductDetailsState extends State<ProductDetails> {
-//DeliveryModal
   late final AppSession _session = AppSession();
   late final ApiClient _apiClient = ApiClient(session: _session);
 
-  final TextEditingController _addressController = TextEditingController();
-  final TextEditingController _phoneController = TextEditingController();
-  final TextEditingController _timeController = TextEditingController();
+  final TextEditingController _deliveryQuoteAddressController =
+      TextEditingController();
   Timer? _kycGuardTimer;
-  DateTime? _selectedDate;
-  String? _selectedCategory;
+  bool _deliveryQuoteLoading = false;
+  String? _deliveryQuoteError;
+  num? _quotedDeliveryFee;
+  num? _estimatedDeliveredTotal;
+  String? _quotedDeliveryAddress;
+  String? _quotedDeliveryState;
+  bool? _deliveryAreaOperational;
 
-  bool _isLoading = false;
+  void _clearDeliveryQuote() {
+    if (_quotedDeliveryFee == null &&
+        _estimatedDeliveredTotal == null &&
+        _quotedDeliveryAddress == null &&
+        _deliveryQuoteError == null &&
+        _deliveryAreaOperational == null &&
+        _quotedDeliveryState == null) {
+      return;
+    }
 
-  // API Call Function
-  Future<void> _calculateDeliveryFee(BuildContext context) async {
-    final address = _addressController.text.trim();
+    setState(() {
+      _deliveryQuoteError = null;
+      _quotedDeliveryFee = null;
+      _estimatedDeliveredTotal = null;
+      _quotedDeliveryAddress = null;
+      _quotedDeliveryState = null;
+      _deliveryAreaOperational = null;
+    });
+  }
+
+  Future<void> _quoteProductDeliveryBeforePurchase() async {
+    final address = _deliveryQuoteAddressController.text.trim();
     if (address.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Enter a delivery address first.")),
+      showAppAlert(
+        context: context,
+        title: 'Address required',
+        message:
+            'Enter a delivery address to estimate this product delivery fee.',
+        tone: AppFeedbackTone.info,
+        buttonText: 'Okay',
+        icon: Icons.location_on_outlined,
+      );
+      return;
+    }
+
+    await _loadUserData();
+    if (token == null) {
+      showAppAlert(
+        context: context,
+        title: 'Sign in required',
+        message:
+            'Sign in before checking a delivery estimate for this product.',
+        tone: AppFeedbackTone.warning,
+        buttonText: 'Okay',
+        icon: Icons.lock_outline_rounded,
       );
       return;
     }
 
     setState(() {
-      _isLoading = true;
+      _deliveryQuoteLoading = true;
+      _deliveryQuoteError = null;
     });
 
     try {
       final response = await _apiClient.post(
-        'geo/delivery-quote',
+        'products/${widget.product.id}/delivery-quote',
         body: {
-          "address": address,
+          'address': address,
         },
       );
-      if (response.statusCode == 200) {
-        final responseData = json.decode(response.body);
-        if (responseData['success']) {
-          final deliveryFee = responseData['data']?['quote']?['deliveryFee'];
-          final formattedAddress =
-              responseData['data']?['formattedAddress'] ?? address;
-          if (deliveryFee == null) {
-            throw Exception('Courier delivery fee not available');
-          }
-          final formattedFee = deliveryFee.toString().replaceAllMapped(
-                RegExp(r'\B(?=(\d{3})+(?!\d))'),
-                (match) => ',',
-              );
 
-          Navigator.of(context).pop();
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content:
-                  Text("Courier fee for $formattedAddress: ₦$formattedFee"),
-            ),
+      final decoded = jsonDecode(response.body);
+      if (!mounted) return;
+
+      if (response.statusCode == 200 && decoded['success'] == true) {
+        final data = decoded['data'] is Map<String, dynamic>
+            ? Map<String, dynamic>.from(decoded['data'])
+            : const <String, dynamic>{};
+        final destination = data['deliveryDestination'] is Map<String, dynamic>
+            ? Map<String, dynamic>.from(data['deliveryDestination'])
+            : const <String, dynamic>{};
+        final quote = data['deliveryQuote'] is Map<String, dynamic>
+            ? Map<String, dynamic>.from(data['deliveryQuote'])
+            : const <String, dynamic>{};
+        final checkoutEstimate =
+            data['checkoutEstimate'] is Map<String, dynamic>
+                ? Map<String, dynamic>.from(data['checkoutEstimate'])
+                : const <String, dynamic>{};
+
+        setState(() {
+          _quotedDeliveryFee = _readNum(
+            quote['deliveryFee'] ?? checkoutEstimate['deliveryFee'],
           );
-        } else {
-          throw Exception(responseData['message']);
-        }
+          _estimatedDeliveredTotal = _readNum(
+            checkoutEstimate['totalPayableNow'],
+          );
+          _quotedDeliveryAddress =
+              destination['formattedAddress']?.toString() ??
+                  destination['address']?.toString() ??
+                  address;
+          _quotedDeliveryState = destination['state']?.toString();
+          _deliveryAreaOperational = destination['isOperational'] == true;
+        });
       } else {
-        throw Exception("Delivery fee request failed");
+        setState(() {
+          _deliveryQuoteError = decoded['message']?.toString() ??
+              'Unable to calculate delivery fee.';
+        });
       }
-    } catch (e) {
-      Navigator.of(context).pop();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Unable to calculate delivery fee.")),
-      );
-    } finally {
+    } catch (_) {
+      if (!mounted) return;
       setState(() {
-        _isLoading = false;
+        _deliveryQuoteError =
+            'We could not calculate the delivery fee for this product right now.';
       });
+    } finally {
+      if (mounted) {
+        setState(() => _deliveryQuoteLoading = false);
+      }
     }
-  }
-
-  // Modal to collect delivery details
-  void _showDeliveryModal(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            return Padding(
-              padding: MediaQuery.of(context).viewInsets,
-              child: SingleChildScrollView(
-                child: Padding(
-                  padding: const EdgeInsets.all(20.0),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Center(
-                        child: Container(
-                          width: 50,
-                          height: 5,
-                          margin: const EdgeInsets.only(bottom: 20),
-                          decoration: BoxDecoration(
-                            color: Colors.grey[300],
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                      ),
-                      Text(
-                        "Courier Delivery Quote",
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.black87,
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-
-                      // Address
-                      TextFormField(
-                        controller: _addressController,
-                        decoration: InputDecoration(
-                          labelText: "Delivery Address",
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          prefixIcon: Icon(Icons.location_on_outlined),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Phone
-                      TextFormField(
-                        controller: _phoneController,
-                        keyboardType: TextInputType.phone,
-                        decoration: InputDecoration(
-                          labelText: "Phone Number",
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          prefixIcon: Icon(Icons.phone_outlined),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Time
-                      TextFormField(
-                        controller: _timeController,
-                        decoration: InputDecoration(
-                          labelText: "Delivery Time",
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          prefixIcon: Icon(Icons.access_time_outlined),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Date Picker
-                      GestureDetector(
-                        onTap: () async {
-                          final DateTime? pickedDate = await showDatePicker(
-                            context: context,
-                            initialDate: DateTime.now(),
-                            firstDate: DateTime.now(),
-                            lastDate: DateTime(2100),
-                          );
-                          if (pickedDate != null) {
-                            setState(() {
-                              _selectedDate = pickedDate;
-                            });
-                          }
-                        },
-                        child: Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(
-                              vertical: 16, horizontal: 12),
-                          decoration: BoxDecoration(
-                            border: Border.all(color: Colors.grey.shade400),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(Icons.calendar_today_outlined,
-                                  size: 20, color: Colors.grey[600]),
-                              const SizedBox(width: 12),
-                              Text(
-                                _selectedDate == null
-                                    ? "Select Delivery Date"
-                                    : "${_selectedDate!.toLocal()}"
-                                        .split(' ')[0],
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: Colors.black87,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Category Dropdown
-                      DropdownButtonFormField<String>(
-                        value: _selectedCategory,
-                        decoration: InputDecoration(
-                          labelText: "Category",
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          prefixIcon: Icon(Icons.category_outlined),
-                        ),
-                        items:
-                            ["local", "regional", "interstate"].map((category) {
-                          return DropdownMenuItem(
-                            value: category,
-                            child: Text(category[0].toUpperCase() +
-                                category.substring(1)),
-                          );
-                        }).toList(),
-                        onChanged: (value) {
-                          setState(() {
-                            _selectedCategory = value;
-                          });
-                        },
-                      ),
-                      const SizedBox(height: 24),
-
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: _isLoading
-                              ? null
-                              : () async {
-                                  setModalState(() => _isLoading = true);
-                                  await _calculateDeliveryFee(context);
-                                  setModalState(() => _isLoading = false);
-                                },
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            backgroundColor: Colors.orangeAccent,
-                          ),
-                          child: _isLoading
-                              ? const SizedBox(
-                                  height: 24,
-                                  width: 24,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: Colors.white,
-                                  ),
-                                )
-                              : const Text(
-                                  "Calculate Courier Fee",
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
   }
 
   String? selectedPurchaseType;
@@ -338,9 +188,7 @@ class _ProductDetailsState extends State<ProductDetails> {
   @override
   void dispose() {
     _kycGuardTimer?.cancel();
-    _addressController.dispose();
-    _phoneController.dispose();
-    _timeController.dispose();
+    _deliveryQuoteAddressController.dispose();
     super.dispose();
   }
 
@@ -453,7 +301,7 @@ class _ProductDetailsState extends State<ProductDetails> {
 
   Future<void> getWalletBalance(String walletAccountNumber) async {
     Map<String, String> requestBody = {
-      'walletAccountNumber': wallet,
+      'walletAccountNumber': walletAccountNumber,
     };
 
     try {
@@ -485,6 +333,8 @@ class _ProductDetailsState extends State<ProductDetails> {
       final String? loadedWallet = userWallet?['accountNumber'] as String?;
       final bool? userDirectdebit = user?['isDirectDebit'] as bool?;
       final bool isKycUploaded = user?['isKycUploaded'] == true;
+      final num? sessionBalance =
+          _readNum(user?['balance'] ?? userWallet?['balance']);
 
       if (!mounted) return;
       setState(() {
@@ -494,7 +344,12 @@ class _ProductDetailsState extends State<ProductDetails> {
         wallet = loadedWallet;
         Activated = userDirectdebit;
         _isKycVerified = isKycUploaded;
+        balance = sessionBalance?.toString() ?? balance;
       });
+
+      if (loadedWallet != null && loadedWallet.isNotEmpty) {
+        await getWalletBalance(loadedWallet);
+      }
     }
   }
 
@@ -510,6 +365,18 @@ class _ProductDetailsState extends State<ProductDetails> {
   bool get _isInstallmentSelection =>
       selectedPurchaseType != null && !_isOutrightSelection;
 
+  double? get _walletBalanceAmount => _readNum(balance)?.toDouble();
+
+  num? get _requiredWalletCheckoutAmount =>
+      _isInstallmentSelection ? _currentProductChargeEstimate() : null;
+
+  bool get _walletCanCoverCurrentPurchase {
+    final available = _walletBalanceAmount;
+    final required = _requiredWalletCheckoutAmount;
+    if (available == null || required == null) return false;
+    return available >= required;
+  }
+
   bool get _isPlanFullySelected {
     if (_isOutrightSelection) {
       return true;
@@ -519,31 +386,7 @@ class _ProductDetailsState extends State<ProductDetails> {
         selectedRepaymentFrequency != null;
   }
 
-  String get _selectionSummary {
-    if (selectedPurchaseType == null) {
-      return 'Start by choosing outright or an installment plan. The matching payment options will become easier to follow.';
-    }
-
-    if (_isOutrightSelection) {
-      return 'Outright plan selected. Next, use one-time card payment to complete checkout without direct debit.';
-    }
-
-    if (selectedDurationMonths == null || selectedRepaymentFrequency == null) {
-      return 'Installment plan selected. Finish choosing duration and repayment frequency to unlock installment payment options.';
-    }
-
-    final duration = selectedDurationMonths != null
-        ? '$selectedDurationMonths months'
-        : 'pick a duration';
-    final frequency =
-        selectedRepaymentFrequency ?? 'pick a repayment frequency';
-    if (!_isKycVerified) {
-      return 'Installment plan selected for $duration with $frequency repayments. Verify BVN before you can continue with installment checkout.';
-    }
-    return 'Installment plan selected for $duration with $frequency repayments. Next, choose wallet checkout or installment card. Card checkout does not require direct debit for down_40/down_50 plans.';
-  }
-
-  void _handleWalletCheckout() {
+  Future<void> _handleWalletCheckout() async {
     if (_isOutrightSelection) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -558,12 +401,15 @@ class _ProductDetailsState extends State<ProductDetails> {
       return;
     }
 
-    if (Activated == false) {
+    await _loadUserData();
+    if (!mounted) return;
+
+    if (Activated != true && !_walletCanCoverCurrentPurchase) {
       _showConnectDialog(context);
       return;
     }
 
-    purchaseProduct();
+    await purchaseProduct();
   }
 
   Future<void> _showPaymentActionSheet({
@@ -653,8 +499,257 @@ class _ProductDetailsState extends State<ProductDetails> {
     );
   }
 
+  num? _readNum(dynamic value) {
+    if (value is num) return value;
+    if (value is String) return num.tryParse(value);
+    return null;
+  }
+
   String _formatMoney(num amount) {
     return '₦${NumberFormat('#,##0.00').format(amount)}';
+  }
+
+  num? _currentProductChargeEstimate() {
+    final price = widget.product.price.toDouble();
+    switch (selectedPurchaseType) {
+      case 'outright':
+        return price;
+      case 'down_50':
+        return price * 0.5;
+      case 'down_40':
+        return price * 0.4;
+      default:
+        return null;
+    }
+  }
+
+  String _currentProductChargeLabel() {
+    switch (selectedPurchaseType) {
+      case 'outright':
+        return 'Product payment now';
+      case 'down_50':
+        return 'Down payment now';
+      case 'down_40':
+        return 'Down payment now';
+      default:
+        return 'Choose a plan first';
+    }
+  }
+
+  Widget _buildDeliveryEstimateSection({
+    required Color deepBlue,
+    required Color accent,
+  }) {
+    final currentProductCharge = _currentProductChargeEstimate();
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 12,
+            offset: const Offset(0, 10),
+          )
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEAF3FB),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Icon(
+                  Icons.local_shipping_outlined,
+                  color: deepBlue,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    CustomText(
+                      "Step 2: Estimate delivery before purchase",
+                      fontSize: 15.sp,
+                      fontWeight: FontWeight.w700,
+                      color: deepBlue,
+                    ),
+                    const SizedBox(height: 4),
+                    CustomText(
+                      "Check the delivery fee for this exact product and address before you pay for it.",
+                      fontSize: 11.sp,
+                      color: Colors.grey[700],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          TextFormField(
+            controller: _deliveryQuoteAddressController,
+            maxLines: 2,
+            onChanged: (_) => _clearDeliveryQuote(),
+            decoration: InputDecoration(
+              labelText: "Delivery address",
+              hintText: "e.g. Ikeja, Lagos, Nigeria",
+              prefixIcon: const Icon(Icons.location_on_outlined),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: _deliveryQuoteLoading
+                  ? null
+                  : _quoteProductDeliveryBeforePurchase,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: accent,
+                foregroundColor: Colors.white,
+                minimumSize: const Size.fromHeight(52),
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+              icon: _deliveryQuoteLoading
+                  ? const SizedBox(
+                      height: 18,
+                      width: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Icon(Icons.calculate_outlined),
+              label: Text(
+                _deliveryQuoteLoading
+                    ? 'Checking delivery estimate...'
+                    : 'Estimate delivery',
+                style: GoogleFonts.poppins(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF7ED),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFF6D2B0)),
+            ),
+            child: CustomText(
+              "Delivery is not charged during product checkout. This estimate shows the courier fee for the chosen address so the customer knows the full expected cost before buying. The delivery fee is paid later when delivery is requested for the completed purchase.",
+              fontSize: 10.8.sp,
+              color: const Color(0xFF7A4A00),
+            ),
+          ),
+          if (_deliveryQuoteError != null) ...[
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF5F5),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFFFFD1D1)),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(
+                    Icons.error_outline_rounded,
+                    color: Colors.redAccent,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: CustomText(
+                      _deliveryQuoteError!,
+                      fontSize: 10.8.sp,
+                      color: const Color(0xFF7A1F1F),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          if (_quotedDeliveryFee != null &&
+              _estimatedDeliveredTotal != null) ...[
+            const SizedBox(height: 14),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF7F9FC),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Column(
+                children: [
+                  _planRow('Product price', _formatMoney(widget.product.price)),
+                  if (currentProductCharge != null)
+                    _planRow(
+                      _currentProductChargeLabel(),
+                      _formatMoney(currentProductCharge),
+                    ),
+                  _planRow('Estimated delivery fee',
+                      _formatMoney(_quotedDeliveryFee!)),
+                  _planRow(
+                    'Estimated product + delivery total',
+                    _formatMoney(_estimatedDeliveredTotal!),
+                  ),
+                  if (_quotedDeliveryAddress != null)
+                    _planRow('Destination', _quotedDeliveryAddress!),
+                  if (_quotedDeliveryState != null)
+                    _planRow('Operational state', _quotedDeliveryState!),
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Icon(
+                  _deliveryAreaOperational == true
+                      ? Icons.verified_rounded
+                      : Icons.info_outline_rounded,
+                  size: 16,
+                  color: _deliveryAreaOperational == true
+                      ? const Color(0xFF0E7C66)
+                      : const Color(0xFFB54708),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: CustomText(
+                    _deliveryAreaOperational == true
+                        ? "This location is currently operational for delivery."
+                        : "This location may not be operational for delivery yet.",
+                    fontSize: 10.8.sp,
+                    color: _deliveryAreaOperational == true
+                        ? const Color(0xFF0E7C66)
+                        : const Color(0xFFB54708),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
   }
 
   double _downPaymentPercent(String purchaseType) {
@@ -1748,6 +1843,11 @@ class _ProductDetailsState extends State<ProductDetails> {
                   ),
                 ),
                 const SizedBox(height: 14),
+                _buildDeliveryEstimateSection(
+                  deepBlue: deepBlue,
+                  accent: accent,
+                ),
+                const SizedBox(height: 14),
                 Container(
                   width: double.infinity,
                   padding:
@@ -1767,7 +1867,7 @@ class _ProductDetailsState extends State<ProductDetails> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       CustomText(
-                        "Step 2: Select a payment method",
+                        "Step 3: Select a payment method",
                         fontSize: 15.sp,
                         fontWeight: FontWeight.w700,
                         color: deepBlue,
@@ -1879,17 +1979,22 @@ class _ProductDetailsState extends State<ProductDetails> {
                       const SizedBox(height: 12),
                       _buildPaymentMethodCard(
                         title: "Wallet installment checkout",
-                        subtitle: "For installment purchases.",
+                        subtitle:
+                            "Use wallet balance first. Direct debit is only needed when wallet funds cannot cover the required upfront amount.",
                         badge: !_isKycVerified
                             ? 'KYC required'
-                            : Activated == true
-                                ? 'Connected'
-                                : 'Needs setup',
+                            : _walletCanCoverCurrentPurchase
+                                ? 'Wallet funded'
+                                : Activated == true
+                                    ? 'Connected'
+                                    : 'Needs setup',
                         badgeColor: !_isKycVerified
                             ? const Color(0xFFB26A00)
-                            : Activated == true
+                            : _walletCanCoverCurrentPurchase
                                 ? const Color(0xFF0E7C66)
-                                : accent,
+                                : Activated == true
+                                    ? const Color(0xFF0E7C66)
+                                    : accent,
                         backgroundColor: const Color(0xFFF7F9FC),
                         actionLabel:
                             _isInstallmentSelection && _isPlanFullySelected
@@ -1902,22 +2007,30 @@ class _ProductDetailsState extends State<ProductDetails> {
                                   title: 'Wallet installment checkout',
                                   summary: !_isKycVerified
                                       ? 'BVN verification must be completed before wallet installment checkout can start.'
-                                      : Activated == true
-                                          ? 'This continues your wallet installment flow.'
-                                          : 'This option needs bank connection before checkout can continue.',
+                                      : _walletCanCoverCurrentPurchase
+                                          ? 'Your wallet balance can cover the required upfront payment for this plan.'
+                                          : Activated == true
+                                              ? 'This continues your wallet installment flow.'
+                                              : 'This option needs bank connection before checkout can continue.',
                                   detail: !_isKycVerified
                                       ? 'The backend blocks installment checkout until KYC is complete. Verify BVN first, then return here to continue.'
-                                      : Activated == true
-                                          ? 'Your account is already connected. Continue to proceed with wallet installment checkout for this product.'
-                                          : 'Wallet installment checkout may use direct debit for scheduled repayments. You will connect your account before continuing.',
+                                      : _walletCanCoverCurrentPurchase
+                                          ? 'Available wallet balance: ${_formatMoney(_walletBalanceAmount ?? 0)}. Required now: ${_formatMoney(_requiredWalletCheckoutAmount ?? 0)}. You can continue without setting up direct debit.'
+                                          : Activated == true
+                                              ? 'Your account is already connected. Continue to proceed with wallet installment checkout for this product.'
+                                              : 'Available wallet balance: ${_formatMoney(_walletBalanceAmount ?? 0)}. Required now: ${_formatMoney(_requiredWalletCheckoutAmount ?? 0)}. Wallet installment checkout may use direct debit for scheduled repayments when wallet funds are not enough, so you will connect your account before continuing.',
                                   continueLabel: !_isKycVerified
                                       ? 'Verify BVN'
-                                      : Activated == true
-                                          ? 'Continue'
-                                          : 'Connect account',
+                                      : _walletCanCoverCurrentPurchase
+                                          ? 'Pay with wallet'
+                                          : Activated == true
+                                              ? 'Continue'
+                                              : 'Connect account',
                                   onContinue: !_isKycVerified
                                       ? _showKycRequiredDialog
-                                      : _handleWalletCheckout,
+                                      : () {
+                                          _handleWalletCheckout();
+                                        },
                                   icon: Icons.account_balance_wallet_outlined,
                                 );
                               }
@@ -1955,7 +2068,7 @@ class _ProductDetailsState extends State<ProductDetails> {
                       ),
                       const SizedBox(height: 8),
                       _buildExpandableText(
-                        widget.product.description?.toString() ?? "",
+                        widget.product.description.toString(),
                         expanded: _showFullDescription,
                         onToggle: () => setState(
                             () => _showFullDescription = !_showFullDescription),
@@ -1969,8 +2082,7 @@ class _ProductDetailsState extends State<ProductDetails> {
                       ),
                       const SizedBox(height: 8),
                       _buildExpandableText(
-                        widget.product.specification ??
-                            "No Product Specifications",
+                        widget.product.specification,
                         expanded: _showFullSpecs,
                         onToggle: () =>
                             setState(() => _showFullSpecs = !_showFullSpecs),
