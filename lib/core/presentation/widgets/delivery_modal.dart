@@ -8,6 +8,7 @@ import 'package:retilda/core/presentation/widgets/dialogs.dart';
 import 'package:retilda/core/presentation/widgets/webview.dart';
 import 'package:retilda/core/security/app_session.dart';
 import 'package:retilda/core/theme/app_theme.dart';
+import 'package:retilda/core/utils/delivery_coverage.dart';
 
 class DeliveryModal extends StatefulWidget {
   final String purchaseId;
@@ -214,13 +215,16 @@ class _DeliveryModalState extends State<DeliveryModal> {
         Navigator.of(context).pop(true);
       } else {
         if (!mounted) return;
-        final error =
-            message ?? 'Unable to calculate the delivery threshold right now.';
+        final error = DeliveryCoverage.userMessage(
+          message ?? 'Unable to calculate the delivery threshold right now.',
+        );
         setState(() => calculationError = error);
         if (showError) {
           showAppAlert(
             context: context,
-            title: 'Calculation failed',
+            title: DeliveryCoverage.isUnsupportedStateMessage(error)
+                ? 'Delivery unavailable in this state'
+                : 'Calculation failed',
             message: error,
             tone: AppFeedbackTone.error,
             buttonText: 'Okay',
@@ -560,9 +564,15 @@ class _DeliveryModalState extends State<DeliveryModal> {
           context: context,
           title: response.statusCode == 404
               ? 'Purchase not found'
-              : 'Unable to start delivery payment',
-          message: decoded['message']?.toString() ??
-              'Delivery payment could not be initialized right now.',
+              : DeliveryCoverage.isUnsupportedStateMessage(
+                  decoded['message']?.toString(),
+                )
+                  ? 'Delivery unavailable in this state'
+                  : 'Unable to start delivery payment',
+          message: DeliveryCoverage.userMessage(
+            decoded['message']?.toString() ??
+                'Delivery payment could not be initialized right now.',
+          ),
           tone: AppFeedbackTone.error,
           buttonText: 'Okay',
         );
@@ -784,6 +794,15 @@ class _DeliveryModalState extends State<DeliveryModal> {
                                   borderRadius: BorderRadius.circular(16),
                                 ),
                               ),
+                            ),
+                            const SizedBox(height: 10),
+                            _buildInfoBanner(
+                              icon: Icons.location_city_outlined,
+                              title: 'Available delivery states',
+                              message:
+                                  '${DeliveryCoverage.supportedStatesMessage} Local: ${DeliveryCoverage.localStates.join(', ')}. Regional: ${DeliveryCoverage.regionalStates.join(', ')}.',
+                              backgroundColor: const Color(0xFFF4F8FC),
+                              borderColor: const Color(0xFFD8E7F3),
                             ),
                             const SizedBox(height: 12),
                             Theme(

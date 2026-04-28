@@ -12,6 +12,7 @@ import 'package:retilda/Views/Widgets/widgets.dart';
 import 'package:retilda/core/network/api_client.dart';
 import 'package:retilda/core/presentation/widgets/dialogs.dart';
 import 'package:retilda/core/security/app_session.dart';
+import 'package:retilda/core/utils/delivery_coverage.dart';
 import 'package:retilda/model/cartmodel.dart';
 import 'package:retilda/model/products.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -159,8 +160,10 @@ class _ProductDetailsState extends State<ProductDetails> {
         });
       } else {
         setState(() {
-          _deliveryQuoteError = decoded['message']?.toString() ??
-              'Unable to calculate delivery fee.';
+          _deliveryQuoteError = DeliveryCoverage.userMessage(
+            decoded['message']?.toString() ??
+                'Unable to calculate delivery fee.',
+          );
         });
       }
     } catch (_) {
@@ -821,7 +824,7 @@ class _ProductDetailsState extends State<ProductDetails> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    "Delivery is paid later after purchase. This estimate shows the expected courier fee for the address you enter.",
+                    "Delivery is paid later after purchase. This estimate shows the expected courier fee for the address you enter.\n\n${DeliveryCoverage.supportedStatesMessage}",
                     style: GoogleFonts.manrope(
                       fontSize: 13,
                       height: 1.4,
@@ -852,10 +855,14 @@ class _ProductDetailsState extends State<ProductDetails> {
                   ),
                   const SizedBox(width: 10),
                   Expanded(
-                    child: CustomText(
+                    child: Text(
                       _deliveryQuoteError!,
-                      fontSize: 10.8.sp,
-                      color: const Color(0xFF7A1F1F),
+                      style: GoogleFonts.manrope(
+                        fontSize: 13,
+                        height: 1.45,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF7A1F1F),
+                      ),
                     ),
                   ),
                 ],
