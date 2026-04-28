@@ -42,9 +42,13 @@ class _AdminOrderUpdateScreenState
     }).toList();
   }
 
-  int get _deliveryPaidCount => _purchases
-      .where((purchase) => purchase.deliveryPaymentStatus == 'paid')
-      .length;
+  bool _hasConfirmedDeliveryRequest(Purchase purchase) {
+    return purchase.deliveryPaymentStatus == 'paid' &&
+        purchase.deliveryRequested == true;
+  }
+
+  int get _deliveryPaidCount =>
+      _purchases.where(_hasConfirmedDeliveryRequest).length;
 
   int get _deliveryRequestedCount =>
       _purchases.where((purchase) => purchase.deliveryRequested == true).length;
@@ -177,9 +181,9 @@ class _AdminOrderUpdateScreenState
 
     if ((action == _TrackingAction.deliveryProcessing ||
             action == _TrackingAction.deliveryCompleted) &&
-        purchase.deliveryPaymentStatus != 'paid') {
+        !_hasConfirmedDeliveryRequest(purchase)) {
       _showUpdateFeedback(
-        'Delivery payment must be paid before moving beyond pending',
+        'Delivery payment must be paid and requested before moving beyond pending',
       );
       return;
     }
@@ -362,9 +366,9 @@ class _AdminOrderUpdateScreenState
                       ),
                       _StatusOptionTile(
                         label: 'Delivery processing',
-                        subtitle: purchase.deliveryPaymentStatus == 'paid'
+                        subtitle: _hasConfirmedDeliveryRequest(purchase)
                             ? 'Move delivery into active processing'
-                            : 'Requires paid delivery before processing',
+                            : 'Requires confirmed delivery payment before processing',
                         selected:
                             selected == _TrackingAction.deliveryProcessing,
                         onTap: () => setModalState(
@@ -373,9 +377,9 @@ class _AdminOrderUpdateScreenState
                       ),
                       _StatusOptionTile(
                         label: 'Mark delivery completed',
-                        subtitle: purchase.deliveryPaymentStatus == 'paid'
+                        subtitle: _hasConfirmedDeliveryRequest(purchase)
                             ? 'Complete the delivery lifecycle for this purchase'
-                            : 'Requires paid delivery before completion',
+                            : 'Requires confirmed delivery payment before completion',
                         selected: selected == _TrackingAction.deliveryCompleted,
                         onTap: () => setModalState(
                           () => selected = _TrackingAction.deliveryCompleted,

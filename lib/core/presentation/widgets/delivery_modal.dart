@@ -61,10 +61,14 @@ class _DeliveryModalState extends State<DeliveryModal> {
   String? calculationError;
   bool? deliveryEligible;
   bool? deliveryRequested;
+  String? deliveryStatus;
   String? deliveryPaymentStatus;
   String? deliveryPaymentReference;
   String? deliveryPaymentRequestedAt;
   String? deliveryPaymentPaidAt;
+  String? deliveryPaymentUrl;
+  Map<String, num>? deliveryCoordinates;
+  Map<String, dynamic>? deliveryQuoteDetails;
   bool isQuotationFetched = false;
 
   bool get _hasCourierQuote =>
@@ -74,7 +78,8 @@ class _DeliveryModalState extends State<DeliveryModal> {
       deliveryPaymentStatus == 'pending' && deliveryRequested != true;
 
   bool get _deliveryCompleted =>
-      deliveryRequested == true && deliveryPaymentStatus == 'paid';
+      deliveryStatus == 'completed' ||
+      (deliveryRequested == true && deliveryPaymentStatus == 'paid');
 
   bool get _deliveryPaymentCanStart =>
       deliveryEligible == true || _deliveryPaymentPending || _deliveryCompleted;
@@ -132,6 +137,8 @@ class _DeliveryModalState extends State<DeliveryModal> {
       courierDeliveryFee = null;
       quotedAddress = null;
       deliveryAreaOperational = null;
+      deliveryCoordinates = null;
+      deliveryQuoteDetails = null;
     });
   }
 
@@ -172,19 +179,43 @@ class _DeliveryModalState extends State<DeliveryModal> {
         'requestForGoodsDeliveryCalculation/${widget.purchaseId}',
       );
 
+      final decoded = _tryDecodeJson(response.body);
+      final responseData = decoded ?? const <String, dynamic>{};
+      final data = responseData['data'];
+      final quoteData = data is Map<String, dynamic>
+          ? data
+          : Map<String, dynamic>.from(responseData);
+      final message = responseData['message']?.toString();
+      final isCompletedDelivery = response.statusCode == 409 &&
+          ((message ?? '').toLowerCase().contains(
+                    'delivery has already been completed',
+                  ) ||
+              quoteData['deliveryStatus'] == 'completed');
+
       if (response.statusCode == 200) {
-        final decoded = jsonDecode(response.body);
-        final data = decoded['data'];
-        final quoteData =
-            data is Map<String, dynamic> ? data : const <String, dynamic>{};
         if (!mounted) return;
         _applyCalculationData(
           quoteData,
-          message: decoded['message']?.toString(),
+          message: message,
         );
+      } else if (isCompletedDelivery) {
+        if (!mounted) return;
+        _applyCalculationData(quoteData, message: message);
+        await showAppNoticeSheet(
+          context: context,
+          title: 'Delivery already completed',
+          message: message ??
+              'Delivery has already been completed for this purchase.',
+          tone: AppFeedbackTone.success,
+          primaryLabel: 'Done',
+          icon: Icons.check_circle_outline_rounded,
+        );
+        if (!mounted) return;
+        Navigator.of(context).pop(true);
       } else {
         if (!mounted) return;
-        const error = 'Unable to calculate the delivery threshold right now.';
+        final error =
+            message ?? 'Unable to calculate the delivery threshold right now.';
         setState(() => calculationError = error);
         if (showError) {
           showAppAlert(
@@ -230,11 +261,24 @@ class _DeliveryModalState extends State<DeliveryModal> {
         : const <String, dynamic>{};
     final resolvedAddress = destination['formattedAddress']?.toString() ??
         destination['address']?.toString();
-    final resolvedDeliveryFee = _readNum(
-      quoteData['deliveryFeeAmount'] ??
-          quote['deliveryFee'] ??
-          quoteData['deliveryFee'],
-    );
+    final incomingStatus =
+        quoteData['deliveryPaymentStatus']?.toString() ?? deliveryPaymentStatus;
+    final incomingRequested = quoteData.containsKey('deliveryRequested')
+        ? quoteData['deliveryRequested'] == true
+        : deliveryRequested;
+    final hasLockedDeliveryFee =
+        incomingStatus == 'paid' && incomingRequested == true;
+    final incomingPaymentUrl = quoteData['paymentUrl']?.toString();
+    final hasFreshPaymentUrl =
+        incomingPaymentUrl != null && incomingPaymentUrl.isNotEmpty;
+    final shouldDisplayDeliveryFee = hasLockedDeliveryFee || hasFreshPaymentUrl;
+    final resolvedDeliveryFee = shouldDisplayDeliveryFee
+        ? _readNum(
+            quoteData['deliveryFeeAmount'] ??
+                quote['deliveryFee'] ??
+                quoteData['deliveryFee'],
+          )
+        : null;
 
     setState(() {
       deliveryThresholdAmount = amountNeeded;
@@ -248,14 +292,13 @@ class _DeliveryModalState extends State<DeliveryModal> {
       quoteMessage = message ?? quoteMessage;
       deliveryRequirement =
           quoteData['deliveryRequirement']?.toString() ?? deliveryRequirement;
+      deliveryStatus =
+          quoteData['deliveryStatus']?.toString() ?? deliveryStatus;
       deliveryEligible = quoteData.containsKey('deliveryEligible')
           ? quoteData['deliveryEligible'] == true
           : deliveryEligible;
-      deliveryRequested = quoteData.containsKey('deliveryRequested')
-          ? quoteData['deliveryRequested'] == true
-          : deliveryRequested;
-      deliveryPaymentStatus = quoteData['deliveryPaymentStatus']?.toString() ??
-          deliveryPaymentStatus;
+      deliveryRequested = incomingRequested;
+      deliveryPaymentStatus = incomingStatus;
       deliveryPaymentReference =
           quoteData['deliveryPaymentReference']?.toString() ??
               deliveryPaymentReference;
@@ -264,104 +307,91 @@ class _DeliveryModalState extends State<DeliveryModal> {
               deliveryPaymentRequestedAt;
       deliveryPaymentPaidAt = quoteData['deliveryPaymentPaidAt']?.toString() ??
           deliveryPaymentPaidAt;
-      quotedAddress = resolvedAddress ?? quotedAddress;
-      deliveryAreaOperational = destination.containsKey('isOperational')
-          ? destination['isOperational'] == true
-          : deliveryAreaOperational;
-      courierDeliveryFee = resolvedDeliveryFee ?? courierDeliveryFee;
+      deliveryPaymentUrl = incomingPaymentUrl ?? deliveryPaymentUrl;
+      if (shouldDisplayDeliveryFee) {
+        quotedAddress = resolvedAddress ?? quotedAddress;
+        deliveryAreaOperational = destination.containsKey('isOperational')
+            ? destination['isOperational'] == true
+            : deliveryAreaOperational;
+        deliveryCoordinates =
+            _coordinatesFromDestination(destination) ?? deliveryCoordinates;
+        courierDeliveryFee = resolvedDeliveryFee ?? courierDeliveryFee;
+        deliveryQuoteDetails = quote.isNotEmpty ? quote : deliveryQuoteDetails;
+      } else {
+        quotedAddress = null;
+        deliveryAreaOperational = null;
+        deliveryCoordinates = null;
+        courierDeliveryFee = null;
+        deliveryQuoteDetails = null;
+      }
       calculationError = null;
       isQuotationFetched = true;
     });
 
-    if (resolvedAddress != null && _addressController.text.trim().isEmpty) {
+    if (shouldDisplayDeliveryFee &&
+        resolvedAddress != null &&
+        _addressController.text.trim().isEmpty) {
       _addressController.text = resolvedAddress;
     }
-    if (resolvedDeliveryFee != null || resolvedAddress != null) {
+    if (shouldDisplayDeliveryFee &&
+        (resolvedDeliveryFee != null || resolvedAddress != null)) {
       _revealCourierQuote();
     }
   }
 
-  Future<void> _payDeliveryThreshold() async {
-    if (token == null) {
-      showAppAlert(
-        context: context,
-        title: 'Session unavailable',
-        message: 'Unable to fetch your session details right now.',
-        tone: AppFeedbackTone.error,
-        buttonText: 'Okay',
-      );
-      return;
-    }
+  Map<String, num>? _coordinatesFromDestination(Map<String, dynamic> data) {
+    if (data['coordinateSource']?.toString() != 'request') return null;
+    final coordinates = data['coordinates'];
+    if (coordinates is! Map) return null;
+    final lat = _readNum(coordinates['lat']);
+    final lng = _readNum(coordinates['lng']);
+    if (lat == null || lng == null) return null;
+    return {'lat': lat, 'lng': lng};
+  }
 
-    setState(() => isLoading = true);
+  Map<String, dynamic> _deliveryPaymentPayload(String address) {
+    return {
+      'address': address,
+      if (deliveryCoordinates != null) 'coordinates': deliveryCoordinates,
+    };
+  }
 
-    try {
-      final response = await _apiClient.post(
-        'installmentRepaymentUsingWalletByPercentage',
-        body: {
-          'purchaseId': widget.purchaseId,
-        },
-      );
+  Future<void> _openDeliveryPaymentUrl(String paymentUrl) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => WebViewScreen(
+          url: paymentUrl,
+          title: 'Pay delivery fee',
+        ),
+      ),
+    );
+    if (!mounted) return;
+    await _pollDeliveryStatus();
+  }
 
-      final decoded = jsonDecode(response.body);
-      if (response.statusCode == 200 && decoded['success'] == true) {
-        final responseData = decoded['data'] is Map<String, dynamic>
-            ? Map<String, dynamic>.from(decoded['data'])
-            : Map<String, dynamic>.from(decoded);
-        final amountDeducted = _readNum(responseData['amountDeducted']) ?? 0;
-        final requirement = responseData['deliveryRequirement']?.toString() ??
-            deliveryRequirement;
-        final eligible = responseData['deliveryEligible'] == true;
-
-        if (!mounted) return;
-        _applyCalculationData(
-          {
-            'amountNeeded': responseData['amountNeeded'] ?? 0,
-            'currentAmountPaid':
-                responseData['currentAmountPaid'] ?? responseData['amountPaid'],
-            'targetAmountPaid': responseData['targetAmountPaid'],
-            'targetPercent': responseData['targetPercent'],
-            'productName': responseData['productName'],
-            'deliveryRequirement': requirement,
-            'deliveryEligible': responseData['deliveryEligible'],
-          },
-          message: decoded['message']?.toString(),
-        );
-        await showAppNoticeSheet(
-          context: context,
-          title: amountDeducted > 0 ? 'Top-up paid' : 'Delivery updated',
-          message: eligible && requirement == 'down_payment'
-              ? 'No extra delivery top-up was charged. This purchase is now using the completed down-payment rule for delivery.'
-              : 'Your wallet payment was successful. You can now submit your delivery details.',
-          tone: eligible ? AppFeedbackTone.success : AppFeedbackTone.info,
-          primaryLabel: 'Continue',
-          icon: Icons.local_shipping_outlined,
-        );
-      } else {
-        if (!mounted) return;
-        showAppAlert(
-          context: context,
-          title: 'Payment failed',
-          message:
-              decoded['message']?.toString() ?? 'Unable to complete payment.',
-          tone: AppFeedbackTone.error,
-          buttonText: 'Okay',
-        );
-      }
-    } catch (_) {
-      if (!mounted) return;
-      showAppAlert(
-        context: context,
-        title: 'Payment failed',
-        message: 'Unable to complete payment right now.',
-        tone: AppFeedbackTone.error,
-        buttonText: 'Okay',
-      );
-    } finally {
-      if (mounted) {
-        setState(() => isLoading = false);
-      }
-    }
+  Future<bool> _confirmDeliveryPaymentStart({
+    required String paymentUrl,
+  }) async {
+    final amount = courierDeliveryFee;
+    final address = quotedAddress ?? _addressController.text.trim();
+    final result = await showAppNoticeSheet<bool>(
+      context: context,
+      title: amount == null
+          ? 'Continue to delivery payment'
+          : 'Delivery fee: ${_formatMoney(amount)}',
+      message: [
+        if (address.isNotEmpty) 'Address: $address',
+        'Review this delivery fee before continuing to Paystack.',
+      ].join('\n\n'),
+      tone: AppFeedbackTone.info,
+      primaryLabel: 'Proceed to payment',
+      secondaryLabel: 'Change address',
+      icon: Icons.local_shipping_outlined,
+      onPrimaryPressed: () => Navigator.of(context).pop(true),
+      onSecondaryPressed: () => Navigator.of(context).pop(false),
+    );
+    return result == true;
   }
 
   Future<void> _pollDeliveryStatus({
@@ -460,9 +490,7 @@ class _DeliveryModalState extends State<DeliveryModal> {
     try {
       final response = await _apiClient.post(
         'requestForGoodsDelivery/${widget.purchaseId}',
-        body: {
-          'address': address,
-        },
+        body: _deliveryPaymentPayload(address),
       );
 
       final decoded = _tryDecodeJson(response.body);
@@ -479,7 +507,7 @@ class _DeliveryModalState extends State<DeliveryModal> {
           data,
           message: decoded['message']?.toString(),
         );
-        final paymentUrl = data['paymentUrl']?.toString();
+        final paymentUrl = data['paymentUrl']?.toString() ?? deliveryPaymentUrl;
         if (paymentUrl == null || paymentUrl.isEmpty) {
           showAppAlert(
             context: context,
@@ -492,17 +520,11 @@ class _DeliveryModalState extends State<DeliveryModal> {
           return;
         }
 
-        await Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => WebViewScreen(
-              url: paymentUrl,
-              title: 'Pay delivery fee',
-            ),
-          ),
+        final shouldContinue = await _confirmDeliveryPaymentStart(
+          paymentUrl: paymentUrl,
         );
-        if (!mounted) return;
-        await _pollDeliveryStatus();
+        if (!mounted || !shouldContinue) return;
+        await _openDeliveryPaymentUrl(paymentUrl);
         return;
       }
 
@@ -571,7 +593,7 @@ class _DeliveryModalState extends State<DeliveryModal> {
 
   num? _readNum(dynamic value) {
     if (value is num) return value;
-    if (value is String) return num.tryParse(value);
+    if (value is String) return num.tryParse(value.replaceAll(',', '').trim());
     return null;
   }
 
@@ -599,11 +621,8 @@ class _DeliveryModalState extends State<DeliveryModal> {
     if (isLoading) return 'Starting delivery payment...';
     if (!isQuotationFetched) return 'Retry delivery check';
     if (_deliveryCompleted) return 'Delivery already paid';
-    if (_deliveryPaymentPending) return 'Continue delivery payment';
-    if (amount > 0 && _canPayDeliveryThreshold) {
-      return 'Pay ${_formatMoney(amount)} from wallet';
-    }
-    if (amount > 0) return 'Complete down payment first';
+    if (_deliveryPaymentPending) return 'Update delivery payment';
+    if (amount > 0) return 'Complete payment condition first';
     if (deliveryEligible != true) return 'Meet delivery conditions first';
     return 'Pay delivery fee';
   }
@@ -612,18 +631,11 @@ class _DeliveryModalState extends State<DeliveryModal> {
     final amount = deliveryThresholdAmount ?? 0;
     if (!isQuotationFetched) return Icons.refresh_rounded;
     if (_deliveryCompleted) return Icons.check_circle_outline_rounded;
-    if (_deliveryPaymentPending) return Icons.open_in_new_rounded;
-    if (amount > 0 && _canPayDeliveryThreshold) {
-      return Icons.account_balance_wallet_outlined;
-    }
+    if (_deliveryPaymentPending) return Icons.edit_location_alt_outlined;
     if (amount > 0) return Icons.info_outline_rounded;
     if (deliveryEligible != true) return Icons.lock_outline_rounded;
     return Icons.payments_outlined;
   }
-
-  bool get _canPayDeliveryThreshold =>
-      deliveryRequirement != 'down_payment' &&
-      (deliveryThresholdAmount ?? 0) > 0;
 
   Future<void> _handlePrimaryAction() async {
     if (_deliveryCompleted) {
@@ -638,16 +650,12 @@ class _DeliveryModalState extends State<DeliveryModal> {
       );
       return;
     }
-    if (isQuotationFetched && _canPayDeliveryThreshold) {
-      await _payDeliveryThreshold();
-      return;
-    }
     if (isQuotationFetched && (deliveryThresholdAmount ?? 0) > 0) {
       await showAppNoticeSheet(
         context: context,
-        title: 'Down payment required',
+        title: 'Payment condition required',
         message:
-            'This purchase is eligible for delivery only after the selected down payment has been completed. Use the payment actions on the purchase summary to continue.',
+            'This purchase is eligible for delivery only after the required purchase payment condition has been completed. Use the payment actions on the purchase summary to continue.',
         tone: AppFeedbackTone.info,
         primaryLabel: 'Okay',
         icon: Icons.info_outline_rounded,
@@ -1068,7 +1076,7 @@ class _DeliveryModalState extends State<DeliveryModal> {
     final message = isPaid
         ? 'Your payment has been confirmed and the delivery request has been recorded.'
         : isPending
-            ? 'A payment link has already been created for this purchase. Reopen it to continue paying for delivery.'
+            ? 'A previous delivery payment was started but has not been paid. Enter the delivery address again to calculate the current fee and replace the old payment link.'
             : isFailed
                 ? 'The last delivery payment attempt failed. You can start a new one from this screen.'
                 : 'Enter the address and continue to generate the delivery payment link.';
@@ -1184,6 +1192,17 @@ class _DeliveryModalState extends State<DeliveryModal> {
   }
 
   Widget _buildCourierQuoteCard() {
+    final quote = deliveryQuoteDetails ?? const <String, dynamic>{};
+    final zoneLabel = quote['deliveryZoneLabel']?.toString() ??
+        quote['deliveryZone']?.toString();
+    final roadDistance = _readNum(quote['estimatedRoadDistanceKm']);
+    final weightKg = _readNum(quote['weightKg']);
+    final baseFee = _readNum(quote['baseFee']);
+    final costPerKm = _readNum(quote['costPerKm']);
+    final distanceFee = _readNum(quote['distanceFee']);
+    final weightSurcharge = _readNum(quote['weightSurcharge']);
+    final pricingModel = quote['pricingModel']?.toString();
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -1239,6 +1258,89 @@ class _DeliveryModalState extends State<DeliveryModal> {
               ),
             ),
           ],
+          if (zoneLabel != null ||
+              roadDistance != null ||
+              weightKg != null ||
+              baseFee != null ||
+              distanceFee != null ||
+              weightSurcharge != null) ...[
+            const SizedBox(height: 14),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: Colors.black.withValues(alpha: 0.05),
+                ),
+              ),
+              child: Column(
+                children: [
+                  if (zoneLabel != null) _quoteRow('Zone', zoneLabel),
+                  if (roadDistance != null)
+                    _quoteRow(
+                      'Road distance',
+                      '${roadDistance.toStringAsFixed(1)} km',
+                    ),
+                  if (weightKg != null)
+                    _quoteRow(
+                      'Product weight',
+                      '${weightKg.toStringAsFixed(weightKg % 1 == 0 ? 0 : 1)} kg',
+                    ),
+                  if (baseFee != null)
+                    _quoteRow('Base fee', _formatMoney(baseFee)),
+                  if (costPerKm != null)
+                    _quoteRow('Cost per km', _formatMoney(costPerKm)),
+                  if (distanceFee != null)
+                    _quoteRow('Distance fee', _formatMoney(distanceFee)),
+                  if (weightSurcharge != null)
+                    _quoteRow(
+                      'Weight surcharge',
+                      _formatMoney(weightSurcharge),
+                    ),
+                  if (pricingModel != null)
+                    _quoteRow(
+                      'Pricing',
+                      pricingModel.replaceAll('_', ' '),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _quoteRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: GoogleFonts.manrope(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w700,
+                color: Colors.black.withValues(alpha: 0.58),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Flexible(
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              style: GoogleFonts.manrope(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w800,
+                color: AppTheme.ink,
+              ),
+            ),
+          ),
         ],
       ),
     );

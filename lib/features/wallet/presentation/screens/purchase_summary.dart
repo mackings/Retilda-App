@@ -35,7 +35,7 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
     final userData = await _walletService.getUserData();
     if (userData != null) {
       setState(() {
-        productId = widget.purchase.product!.id;
+        productId = widget.purchase.product?.id;
       });
     }
   }
@@ -130,16 +130,9 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
     return _readNum(data['amountNeeded'] ?? data['deliveryFee']) ?? 0;
   }
 
-  bool _canPayLegacyDeliveryTopUp(Map<String, dynamic>? data) {
-    if (data == null) return false;
-    return data['deliveryRequirement']?.toString() != 'down_payment' &&
-        _deliveryAmountNeeded(data) > 0;
-  }
-
   bool _deliveryPaymentAvailable(Map<String, dynamic>? data) {
     if (data == null) return false;
-    if (data['deliveryRequested'] == true &&
-        data['deliveryPaymentStatus'] == 'paid') {
+    if (_isDeliveryCompleted(data)) {
       return true;
     }
     if (data['deliveryPaymentStatus'] == 'pending') {
@@ -152,8 +145,7 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
       widget.purchase.deliveryStateSnapshot;
 
   bool get _purchaseHasResolvedDeliveryState =>
-      widget.purchase.isDeliveryCompleted ||
-      widget.purchase.hasPendingDeliveryPayment;
+      widget.purchase.isDeliveryCompleted;
 
   Map<String, dynamic>? get _effectiveDeliveryCalculation =>
       _purchaseHasResolvedDeliveryState
@@ -169,22 +161,36 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
     return _deliveryPaymentAvailable(data) || _deliveryAmountNeeded(data) > 0;
   }
 
+  bool _isDeliveryCompleted(Map<String, dynamic>? data) {
+    if (data == null) return false;
+    return data['deliveryStatus'] == 'completed' ||
+        (data['deliveryRequested'] == true &&
+            data['deliveryPaymentStatus'] == 'paid');
+  }
+
+  bool _isCompletedDeliveryCalculationResponse(
+    Map<String, dynamic>? data,
+    String? message,
+  ) {
+    final lowerMessage = (message ?? '').toLowerCase();
+    return lowerMessage.contains('delivery has already been completed') ||
+        _isDeliveryCompleted(data);
+  }
+
   String _deliveryButtonLabel() {
     final data = _effectiveDeliveryCalculation;
     if (_deliveryCheckLoading) return 'Checking delivery...';
     if (data == null) return 'Delivery options';
-    if (data['deliveryRequested'] == true &&
-        data['deliveryPaymentStatus'] == 'paid') {
+    if (_isDeliveryCompleted(data)) {
       return 'Delivery confirmed';
     }
     if (data['deliveryPaymentStatus'] == 'pending') {
-      return 'Continue delivery payment';
+      return 'Pay delivery fee';
     }
-    if (_canPayLegacyDeliveryTopUp(data)) return 'Top up for delivery';
     if (data['deliveryEligible'] == true) {
       return 'Pay delivery fee';
     }
-    if (_deliveryAmountNeeded(data) > 0) return 'Complete down payment';
+    if (_deliveryAmountNeeded(data) > 0) return 'Complete payment condition';
     return 'Meet delivery conditions first';
   }
 
@@ -192,15 +198,11 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
     final data = _effectiveDeliveryCalculation;
     if (_deliveryCheckLoading) return Icons.sync_rounded;
     if (data == null) return Icons.local_shipping_outlined;
-    if (data['deliveryRequested'] == true &&
-        data['deliveryPaymentStatus'] == 'paid') {
+    if (_isDeliveryCompleted(data)) {
       return Icons.check_circle_outline_rounded;
     }
     if (data['deliveryPaymentStatus'] == 'pending') {
-      return Icons.open_in_new_rounded;
-    }
-    if (_canPayLegacyDeliveryTopUp(data)) {
-      return Icons.account_balance_wallet_outlined;
+      return Icons.local_shipping_outlined;
     }
     if (data['deliveryEligible'] == true) {
       return Icons.local_shipping_outlined;
@@ -236,14 +238,30 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
     final data = result['data'];
     final calculation = data is Map ? Map<String, dynamic>.from(data) : null;
     final message = result['message']?.toString();
+    final isCompletedDelivery =
+        _isCompletedDeliveryCalculationResponse(calculation, message);
 
     setState(() {
       _deliveryCheckLoading = false;
-      if (result['success'] == true && calculation != null) {
+      if ((result['success'] == true || isCompletedDelivery) &&
+          calculation != null) {
         _deliveryCalculation = calculation;
         _deliveryCalculationMessage = message;
       }
     });
+
+    if (isCompletedDelivery && showModalIfActionable) {
+      await showAppNoticeSheet(
+        context: context,
+        title: 'Delivery already completed',
+        message:
+            message ?? 'Delivery has already been completed for this purchase.',
+        tone: AppFeedbackTone.success,
+        primaryLabel: 'Done',
+        icon: Icons.check_circle_outline_rounded,
+      );
+      return;
+    }
 
     if (result['success'] == true &&
         calculation != null &&
@@ -265,7 +283,10 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
     Future<void> Function(Map<String, dynamic> result) onSuccess,
     String fallbackError,
   ) async {
-    if (_isLoading || productId == null) return;
+    final purchaseId = widget.purchase.id;
+    final hasRepaymentTarget = (purchaseId != null && purchaseId.isNotEmpty) ||
+        (productId != null && productId!.isNotEmpty);
+    if (_isLoading || !hasRepaymentTarget) return;
 
     setState(() {
       _isLoading = true;
@@ -296,7 +317,7 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
     await _runLoadingAction(
       'wallet_payment',
       () => _walletService.makeInstallmentPaymentUsingWallet(
-        productId!,
+        productId,
         purchaseId: purchaseId,
       ),
       (result) async {
@@ -322,7 +343,7 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
     await _runLoadingAction(
       'card_payment',
       () => _walletService.makeInstallmentPaymentUsingCard(
-        productId!,
+        productId,
         purchaseId: purchaseId,
       ),
       (result) async {
@@ -453,13 +474,11 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
     if (_deliveryCheckLoading) return;
 
     final data = _effectiveDeliveryCalculation;
-    if (data?['deliveryRequested'] == true ||
-        data?['deliveryPaymentStatus'] == 'paid') {
+    if (_isDeliveryCompleted(data)) {
       await showAppNoticeSheet(
         context: context,
         title: 'Delivery already completed',
-        message:
-            'This purchase already has a completed delivery payment and recorded delivery request.',
+        message: 'Delivery has already been completed for this purchase.',
         tone: AppFeedbackTone.success,
         primaryLabel: 'Done',
         icon: Icons.check_circle_outline_rounded,
@@ -608,6 +627,7 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
     final nextLateFee = nextPendingPayment?.lateFeeTotal ?? 0;
     final nextLateFeeWeeks = nextPendingPayment?.lateFeeAppliedWeeks ?? 0;
     final nextAmountPaid = nextPendingPayment?.amountPaid ?? 0;
+    final isLegacyFlow = widget.purchase.isLegacyFlow;
     final nextOutstanding = _displayOutstandingAmount(
       payment: nextPendingPayment,
       remainingBalance: remainingBalance,
@@ -620,9 +640,14 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
         widget.purchase.deliveryStatus?.toString() ?? 'Pending';
     final durationLabel = widget.purchase.durationMonths != null
         ? '${widget.purchase.durationMonths} ${widget.purchase.repaymentFrequency ?? 'months'}'
-        : '${payments.length} ${widget.purchase.paymentPlan == "monthly" ? 'Months' : "weeks"}';
-    final planLabel =
-        (widget.purchase.purchaseType ?? widget.purchase.paymentPlan ?? 'Plan')
+        : isLegacyFlow
+            ? '${widget.purchase.numberOfInstallments ?? payments.length} installments'
+            : '${payments.length} ${widget.purchase.paymentPlan == "monthly" ? 'Months' : "weeks"}';
+    final planLabel = isLegacyFlow
+        ? 'LGC ${widget.purchase.paymentPlan ?? 'installment'}'
+        : (widget.purchase.purchaseType ??
+                widget.purchase.paymentPlan ??
+                'Plan')
             .replaceAll('_', ' ');
 
     return Sizer(
@@ -852,6 +877,29 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
                     ),
                   ),
                   const SizedBox(height: 14),
+                  if (widget.purchase.purchaseRuleMismatch == true) ...[
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFF4E8),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: const Color(0xFFF6D2B0),
+                        ),
+                      ),
+                      child: Text(
+                        'This purchase was created with the previous purchase model.',
+                        style: GoogleFonts.manrope(
+                          fontSize: 13,
+                          height: 1.45,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFFB26A00),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                  ],
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(18),
@@ -1193,14 +1241,26 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
                                         'N/A',
                               ),
                               _buildDetailRow(
-                                label: 'Purchase type',
-                                value: widget.purchase.purchaseType ?? 'N/A',
+                                label: 'Purchase flow',
+                                value: isLegacyFlow
+                                    ? 'LGC'
+                                    : (widget.purchase.purchaseFlowVersion ??
+                                        'new_update'),
                               ),
-                              _buildDetailRow(
-                                label: 'Down payment',
-                                value: _formatMoney(
-                                  widget.purchase.downPaymentAmount ?? 0,
+                              if (!isLegacyFlow)
+                                _buildDetailRow(
+                                  label: 'Purchase type',
+                                  value: widget.purchase.purchaseType ?? 'N/A',
                                 ),
+                              _buildDetailRow(
+                                label: isLegacyFlow
+                                    ? 'Installment count'
+                                    : 'Down payment',
+                                value: isLegacyFlow
+                                    ? '${widget.purchase.numberOfInstallments ?? payments.length}'
+                                    : _formatMoney(
+                                        widget.purchase.downPaymentAmount ?? 0,
+                                      ),
                               ),
                               _buildDetailRow(
                                 label: 'Payment duration',
@@ -1254,7 +1314,9 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
                           child: Text(
                             widget.purchase.paymentPlan == 'once'
                                 ? 'This purchase is expected to be cleared in one payment.'
-                                : 'You still have ${_formatMoney(remainingBalance)} left on this plan. Pending installment amounts may include backend-applied late fees when payments are overdue.',
+                                : isLegacyFlow
+                                    ? 'You still have ${_formatMoney(remainingBalance)} left on this LGC plan. Previous delivery top-up amounts should not be counted inside the installment total anymore, and overdue installments may still include late fees.'
+                                    : 'You still have ${_formatMoney(remainingBalance)} left on this plan. Pending installment amounts may include backend-applied late fees when payments are overdue.',
                             style: GoogleFonts.manrope(
                               fontSize: 13.5,
                               height: 1.5,

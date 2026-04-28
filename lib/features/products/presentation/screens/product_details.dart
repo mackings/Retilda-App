@@ -40,6 +40,8 @@ class _ProductDetailsState extends State<ProductDetails> {
   String? _quotedDeliveryAddress;
   String? _quotedDeliveryState;
   bool? _deliveryAreaOperational;
+  Map<String, dynamic>? _deliveryQuoteDetails;
+  Map<String, num>? _quotedDeliveryCoordinates;
 
   void _clearDeliveryQuote() {
     if (_quotedDeliveryFee == null &&
@@ -58,7 +60,27 @@ class _ProductDetailsState extends State<ProductDetails> {
       _quotedDeliveryAddress = null;
       _quotedDeliveryState = null;
       _deliveryAreaOperational = null;
+      _deliveryQuoteDetails = null;
+      _quotedDeliveryCoordinates = null;
     });
+  }
+
+  Map<String, num>? _coordinatesFromDestination(Map<String, dynamic> data) {
+    if (data['coordinateSource']?.toString() != 'request') return null;
+    final coordinates = data['coordinates'];
+    if (coordinates is! Map) return null;
+    final lat = _readNum(coordinates['lat']);
+    final lng = _readNum(coordinates['lng']);
+    if (lat == null || lng == null) return null;
+    return {'lat': lat, 'lng': lng};
+  }
+
+  Map<String, dynamic> _deliveryQuotePayload(String address) {
+    return {
+      'address': address,
+      if (_quotedDeliveryCoordinates != null)
+        'coordinates': _quotedDeliveryCoordinates,
+    };
   }
 
   Future<void> _quoteProductDeliveryBeforePurchase() async {
@@ -98,9 +120,7 @@ class _ProductDetailsState extends State<ProductDetails> {
     try {
       final response = await _apiClient.post(
         'products/${widget.product.id}/delivery-quote',
-        body: {
-          'address': address,
-        },
+        body: _deliveryQuotePayload(address),
       );
 
       final decoded = jsonDecode(response.body);
@@ -134,6 +154,8 @@ class _ProductDetailsState extends State<ProductDetails> {
                   address;
           _quotedDeliveryState = destination['state']?.toString();
           _deliveryAreaOperational = destination['isOperational'] == true;
+          _deliveryQuoteDetails = quote;
+          _quotedDeliveryCoordinates = _coordinatesFromDestination(destination);
         });
       } else {
         setState(() {
@@ -157,7 +179,12 @@ class _ProductDetailsState extends State<ProductDetails> {
   String? selectedPurchaseType;
   String? selectedRepaymentFrequency;
   int? selectedDurationMonths;
+  String? selectedLegacyPaymentPlan;
+  int? selectedLegacyInstallments;
   String? _lastPreviewSignature;
+  String? _userPurchaseRule;
+  static final DateTime _purchaseRuleCutoffUtc =
+      DateTime.parse('2026-04-24T23:00:00.000Z');
 
   String? Insurance;
   bool loading = false;
@@ -321,6 +348,51 @@ class _ProductDetailsState extends State<ProductDetails> {
     } catch (_) {}
   }
 
+  String _resolveUserPurchaseRule(Map<String, dynamic>? user) {
+    final explicitRule = user?['userPurchaseRule']?.toString();
+    if (explicitRule == 'legacy' || explicitRule == 'new_update') {
+      return explicitRule!;
+    }
+
+    final createdAtRaw = user?['createdAt']?.toString();
+    final createdAt =
+        createdAtRaw == null ? null : DateTime.tryParse(createdAtRaw);
+    if (createdAt != null) {
+      return createdAt.toUtc().isBefore(_purchaseRuleCutoffUtc)
+          ? 'legacy'
+          : 'new_update';
+    }
+
+    return 'new_update';
+  }
+
+  int _legacyInstallmentCountFromDuration(int months, String paymentPlan) {
+    switch (paymentPlan) {
+      case 'weekly':
+        return months * 4;
+      case 'biweekly':
+        return months * 2;
+      case 'monthly':
+      default:
+        return months;
+    }
+  }
+
+  int _legacyDurationMonthsFromInstallments(
+    int installmentCount,
+    String paymentPlan,
+  ) {
+    switch (paymentPlan) {
+      case 'weekly':
+        return (installmentCount / 4).round();
+      case 'biweekly':
+        return (installmentCount / 2).round();
+      case 'monthly':
+      default:
+        return installmentCount;
+    }
+  }
+
   Future<void> _loadUserData() async {
     final userData = await _session.userData();
     if (userData != null) {
@@ -335,6 +407,7 @@ class _ProductDetailsState extends State<ProductDetails> {
       final bool isKycUploaded = user?['isKycUploaded'] == true;
       final num? sessionBalance =
           _readNum(user?['balance'] ?? userWallet?['balance']);
+      final resolvedRule = _resolveUserPurchaseRule(user);
 
       if (!mounted) return;
       setState(() {
@@ -345,6 +418,7 @@ class _ProductDetailsState extends State<ProductDetails> {
         Activated = userDirectdebit;
         _isKycVerified = isKycUploaded;
         balance = sessionBalance?.toString() ?? balance;
+        _userPurchaseRule = resolvedRule;
       });
 
       if (loadedWallet != null && loadedWallet.isNotEmpty) {
@@ -361,6 +435,14 @@ class _ProductDetailsState extends State<ProductDetails> {
   String? balance;
 
   bool get _isOutrightSelection => selectedPurchaseType == 'outright';
+
+  bool get _isLegacyUser => _userPurchaseRule == 'legacy';
+
+  bool get _canCreateLegacyInstallment => _isLegacyUser;
+
+  bool get _isLegacyInstallmentSelection =>
+      _canCreateLegacyInstallment &&
+      selectedPurchaseType == 'legacy_installment';
 
   bool get _isInstallmentSelection =>
       selectedPurchaseType != null && !_isOutrightSelection;
@@ -380,6 +462,10 @@ class _ProductDetailsState extends State<ProductDetails> {
   bool get _isPlanFullySelected {
     if (_isOutrightSelection) {
       return true;
+    }
+    if (_isLegacyInstallmentSelection) {
+      return selectedLegacyPaymentPlan != null &&
+          selectedLegacyInstallments != null;
     }
     return selectedPurchaseType != null &&
         selectedDurationMonths != null &&
@@ -501,7 +587,7 @@ class _ProductDetailsState extends State<ProductDetails> {
 
   num? _readNum(dynamic value) {
     if (value is num) return value;
-    if (value is String) return num.tryParse(value);
+    if (value is String) return num.tryParse(value.replaceAll(',', '').trim());
     return null;
   }
 
@@ -511,6 +597,11 @@ class _ProductDetailsState extends State<ProductDetails> {
 
   num? _currentProductChargeEstimate() {
     final price = widget.product.price.toDouble();
+    if (_isLegacyInstallmentSelection) {
+      final installments = selectedLegacyInstallments;
+      if (installments == null || installments <= 0) return null;
+      return price / installments;
+    }
     switch (selectedPurchaseType) {
       case 'outright':
         return price;
@@ -524,6 +615,9 @@ class _ProductDetailsState extends State<ProductDetails> {
   }
 
   String _currentProductChargeLabel() {
+    if (_isLegacyInstallmentSelection) {
+      return 'First installment now';
+    }
     switch (selectedPurchaseType) {
       case 'outright':
         return 'Product payment now';
@@ -544,10 +638,10 @@ class _ProductDetailsState extends State<ProductDetails> {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(26),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
@@ -560,9 +654,11 @@ class _ProductDetailsState extends State<ProductDetails> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                padding: const EdgeInsets.all(12),
+                width: 44,
+                height: 44,
                 decoration: BoxDecoration(
                   color: const Color(0xFFEAF3FB),
                   borderRadius: BorderRadius.circular(16),
@@ -570,6 +666,7 @@ class _ProductDetailsState extends State<ProductDetails> {
                 child: Icon(
                   Icons.local_shipping_outlined,
                   color: deepBlue,
+                  size: 22,
                 ),
               ),
               const SizedBox(width: 12),
@@ -577,38 +674,97 @@ class _ProductDetailsState extends State<ProductDetails> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    CustomText(
-                      "Step 2: Estimate delivery before purchase",
-                      fontSize: 15.sp,
-                      fontWeight: FontWeight.w700,
-                      color: deepBlue,
+                    Text(
+                      "Step 2",
+                      style: GoogleFonts.manrope(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        color: accent,
+                      ),
                     ),
-                    const SizedBox(height: 4),
-                    CustomText(
+                    const SizedBox(height: 2),
+                    Text(
+                      "Estimate delivery before purchase",
+                      style: GoogleFonts.spaceGrotesk(
+                        fontSize: 22,
+                        height: 1.08,
+                        fontWeight: FontWeight.w700,
+                        color: deepBlue,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
                       "Check the delivery fee for this exact product and address before you pay for it.",
-                      fontSize: 11.sp,
-                      color: Colors.grey[700],
+                      style: GoogleFonts.manrope(
+                        fontSize: 13.5,
+                        height: 1.4,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey[700],
+                      ),
                     ),
                   ],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 18),
+          Text(
+            "Delivery address",
+            style: GoogleFonts.manrope(
+              fontSize: 13.5,
+              fontWeight: FontWeight.w800,
+              color: deepBlue,
+            ),
+          ),
+          const SizedBox(height: 8),
           TextFormField(
             controller: _deliveryQuoteAddressController,
-            maxLines: 2,
+            minLines: 2,
+            maxLines: 3,
             onChanged: (_) => _clearDeliveryQuote(),
+            style: GoogleFonts.manrope(
+              fontSize: 15.5,
+              height: 1.35,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF263238),
+            ),
             decoration: InputDecoration(
-              labelText: "Delivery address",
               hintText: "e.g. Ikeja, Lagos, Nigeria",
-              prefixIcon: const Icon(Icons.location_on_outlined),
+              hintStyle: GoogleFonts.manrope(
+                fontSize: 15.5,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFF9CA3AF),
+              ),
+              prefixIcon: Icon(
+                Icons.location_on_outlined,
+                color: deepBlue,
+                size: 24,
+              ),
+              prefixIconConstraints: const BoxConstraints(
+                minWidth: 52,
+                minHeight: 64,
+              ),
+              filled: true,
+              fillColor: const Color(0xFFF8FAFC),
+              contentPadding: const EdgeInsets.fromLTRB(4, 18, 16, 18),
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(18),
+                borderSide: const BorderSide(color: Color(0xFFE5EAF0)),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(18),
+                borderSide: const BorderSide(
+                  color: Color(0xFFE5EAF0),
+                  width: 1.2,
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(18),
+                borderSide: BorderSide(color: deepBlue, width: 1.8),
               ),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
@@ -618,10 +774,10 @@ class _ProductDetailsState extends State<ProductDetails> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: accent,
                 foregroundColor: Colors.white,
-                minimumSize: const Size.fromHeight(52),
+                minimumSize: const Size.fromHeight(56),
                 elevation: 0,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(18),
                 ),
               ),
               icon: _deliveryQuoteLoading
@@ -638,26 +794,43 @@ class _ProductDetailsState extends State<ProductDetails> {
                 _deliveryQuoteLoading
                     ? 'Checking delivery estimate...'
                     : 'Estimate delivery',
-                style: GoogleFonts.poppins(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
+                style: GoogleFonts.manrope(
+                  fontSize: 15.5,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
               color: const Color(0xFFFFF7ED),
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(18),
               border: Border.all(color: const Color(0xFFF6D2B0)),
             ),
-            child: CustomText(
-              "Delivery is not charged during product checkout. This estimate shows the courier fee for the chosen address so the customer knows the full expected cost before buying. The delivery fee is paid later when delivery is requested for the completed purchase.",
-              fontSize: 10.8.sp,
-              color: const Color(0xFF7A4A00),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(
+                  Icons.info_outline_rounded,
+                  size: 20,
+                  color: Color(0xFFB26A00),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    "Delivery is paid later after purchase. This estimate shows the expected courier fee for the address you enter.",
+                    style: GoogleFonts.manrope(
+                      fontSize: 13,
+                      height: 1.4,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF7A4A00),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
           if (_deliveryQuoteError != null) ...[
@@ -717,6 +890,7 @@ class _ProductDetailsState extends State<ProductDetails> {
                     _planRow('Destination', _quotedDeliveryAddress!),
                   if (_quotedDeliveryState != null)
                     _planRow('Operational state', _quotedDeliveryState!),
+                  ..._deliveryQuoteBreakdownRows(),
                 ],
               ),
             ),
@@ -752,6 +926,37 @@ class _ProductDetailsState extends State<ProductDetails> {
     );
   }
 
+  List<Widget> _deliveryQuoteBreakdownRows() {
+    final quote = _deliveryQuoteDetails;
+    if (quote == null || quote.isEmpty) return const <Widget>[];
+
+    final zoneLabel = quote['deliveryZoneLabel']?.toString() ??
+        quote['deliveryZone']?.toString();
+    final roadDistance = _readNum(quote['estimatedRoadDistanceKm']);
+    final weightKg = _readNum(quote['weightKg']);
+    final baseFee = _readNum(quote['baseFee']);
+    final costPerKm = _readNum(quote['costPerKm']);
+    final distanceFee = _readNum(quote['distanceFee']);
+    final weightSurcharge = _readNum(quote['weightSurcharge']);
+
+    return [
+      if (zoneLabel != null) _planRow('Delivery zone', zoneLabel),
+      if (roadDistance != null)
+        _planRow('Road distance', '${roadDistance.toStringAsFixed(1)} km'),
+      if (weightKg != null)
+        _planRow(
+          'Product weight',
+          '${weightKg.toStringAsFixed(weightKg % 1 == 0 ? 0 : 1)} kg',
+        ),
+      if (baseFee != null) _planRow('Base fee', _formatMoney(baseFee)),
+      if (costPerKm != null) _planRow('Cost per km', _formatMoney(costPerKm)),
+      if (distanceFee != null)
+        _planRow('Distance fee', _formatMoney(distanceFee)),
+      if (weightSurcharge != null)
+        _planRow('Weight surcharge', _formatMoney(weightSurcharge)),
+    ];
+  }
+
   double _downPaymentPercent(String purchaseType) {
     switch (purchaseType) {
       case 'down_50':
@@ -762,6 +967,66 @@ class _ProductDetailsState extends State<ProductDetails> {
       default:
         return 1.0;
     }
+  }
+
+  TextStyle _purchaseDropdownTextStyle(Color deepBlue) {
+    return GoogleFonts.manrope(
+      fontSize: 15,
+      height: 1.2,
+      fontWeight: FontWeight.w800,
+      color: deepBlue,
+    );
+  }
+
+  InputDecoration _purchaseDropdownDecoration({
+    required String hint,
+    required IconData icon,
+    required Color deepBlue,
+    bool enabled = true,
+  }) {
+    final borderRadius = BorderRadius.circular(18);
+    final inactiveBorder = BorderSide(
+      color: enabled ? const Color(0xFFE5EAF0) : const Color(0xFFE8EAEE),
+      width: 1.2,
+    );
+
+    return InputDecoration(
+      hintText: hint,
+      hintStyle: GoogleFonts.manrope(
+        fontSize: 15,
+        height: 1.2,
+        fontWeight: FontWeight.w700,
+        color: const Color(0xFF6B7280),
+      ),
+      prefixIcon: Icon(
+        icon,
+        size: 20,
+        color: enabled ? deepBlue : const Color(0xFF9CA3AF),
+      ),
+      prefixIconConstraints: const BoxConstraints(
+        minWidth: 48,
+        minHeight: 54,
+      ),
+      filled: true,
+      fillColor: enabled ? const Color(0xFFF8FAFC) : const Color(0xFFF3F4F6),
+      contentPadding: const EdgeInsets.fromLTRB(4, 18, 14, 18),
+      border: OutlineInputBorder(
+        borderRadius: borderRadius,
+        borderSide: inactiveBorder,
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: borderRadius,
+        borderSide: inactiveBorder,
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: borderRadius,
+        borderSide: BorderSide(color: deepBlue, width: 1.8),
+      ),
+      disabledBorder: OutlineInputBorder(
+        borderRadius: borderRadius,
+        borderSide: inactiveBorder,
+      ),
+    );
   }
 
   double _repaymentFeePercent(String purchaseType, int months) {
@@ -801,14 +1066,18 @@ class _ProductDetailsState extends State<ProductDetails> {
   void _onPlanSelectionUpdated() {
     final purchaseType = selectedPurchaseType;
     final readyForPreview = purchaseType == 'outright' ||
+        (_isLegacyInstallmentSelection &&
+            selectedLegacyPaymentPlan != null &&
+            selectedLegacyInstallments != null) ||
         (purchaseType != null &&
+            !_isLegacyInstallmentSelection &&
             selectedDurationMonths != null &&
             selectedRepaymentFrequency != null);
 
     if (!readyForPreview) return;
 
     final signature =
-        '${selectedPurchaseType ?? ''}|${selectedDurationMonths ?? ''}|${selectedRepaymentFrequency ?? ''}';
+        '${selectedPurchaseType ?? ''}|${selectedDurationMonths ?? ''}|${selectedRepaymentFrequency ?? ''}|${selectedLegacyPaymentPlan ?? ''}|${selectedLegacyInstallments ?? ''}';
     if (signature == _lastPreviewSignature) return;
     _lastPreviewSignature = signature;
 
@@ -823,25 +1092,44 @@ class _ProductDetailsState extends State<ProductDetails> {
     if (purchaseType == null) return;
 
     final totalPrice = widget.product.price.toDouble();
-    final downPercent = _downPaymentPercent(purchaseType);
-    final downPayment = totalPrice * downPercent;
-    final remainingBalance = (totalPrice - downPayment).clamp(0, totalPrice);
-
     final isOutright = purchaseType == 'outright';
-    final frequency = selectedRepaymentFrequency;
-    final months = selectedDurationMonths;
-    final count = isOutright ? 0 : _installmentCount(months!, frequency!);
-    final repaymentFeePercent =
-        isOutright ? 0.0 : _repaymentFeePercent(purchaseType, months!);
+    final isLegacyInstallment = _isLegacyInstallmentSelection;
+    final frequency = isLegacyInstallment
+        ? selectedLegacyPaymentPlan
+        : selectedRepaymentFrequency;
+    final months = isLegacyInstallment
+        ? (selectedLegacyInstallments != null &&
+                selectedLegacyPaymentPlan != null
+            ? _legacyDurationMonthsFromInstallments(
+                selectedLegacyInstallments!,
+                selectedLegacyPaymentPlan!,
+              )
+            : null)
+        : selectedDurationMonths;
+    final count = isOutright
+        ? 0
+        : isLegacyInstallment
+            ? (selectedLegacyInstallments ?? 0)
+            : _installmentCount(months!, frequency!);
+    final eachInstallment = count > 0 ? (totalPrice / count) : 0.0;
+    final downPercent =
+        isLegacyInstallment ? 0.0 : _downPaymentPercent(purchaseType);
+    final downPayment =
+        isLegacyInstallment ? eachInstallment : totalPrice * downPercent;
+    final remainingBalance = (totalPrice - downPayment).clamp(0, totalPrice);
+    final repaymentFeePercent = isOutright || isLegacyInstallment
+        ? 0.0
+        : _repaymentFeePercent(purchaseType, months!);
     final repaymentFee = remainingBalance * repaymentFeePercent;
-    final totalRepaymentAmount = remainingBalance + repaymentFee;
+    final totalRepaymentAmount = isLegacyInstallment
+        ? totalPrice - downPayment
+        : remainingBalance + repaymentFee;
     final totalAmountToPay =
         isOutright ? totalPrice : downPayment + totalRepaymentAmount;
-    final eachInstallment = count > 0 ? (totalRepaymentAmount / count) : 0.0;
     final purchaseTypeLabel = switch (purchaseType) {
       'outright' => 'Outright payment',
-      'down_50' => 'Pay 50% now',
-      'down_40' => 'Pay 40% now',
+      'legacy_installment' => 'LGC installment',
+      'down_50' || 'down_40' => '${_formatMoney(downPayment)} now',
       _ => purchaseType.replaceAll('_', ' '),
     };
     final frequencyLabel = switch (frequency) {
@@ -852,10 +1140,14 @@ class _ProductDetailsState extends State<ProductDetails> {
     };
     final planExplanation = isOutright
         ? 'You are paying the full product price once. There will be no follow-up installment payments for this order.'
-        : 'You will pay ${_formatMoney(downPayment)} today, then complete ${_formatMoney(totalRepaymentAmount)} with $count $frequencyLabel payments of ${_formatMoney(eachInstallment)}.';
+        : isLegacyInstallment
+            ? 'You are on the LGC installment flow. You will pay ${_formatMoney(downPayment)} now, then complete the remaining ${_formatMoney(totalPrice - downPayment)} across $count $frequencyLabel payments.'
+            : 'You will pay ${_formatMoney(downPayment)} today, then complete ${_formatMoney(totalRepaymentAmount)} with $count $frequencyLabel payments of ${_formatMoney(eachInstallment)}.';
     final nextStepText = isOutright
         ? 'After this, you can continue to payment and complete checkout immediately.'
-        : 'After this, choose your preferred payment method to continue with this installment plan.';
+        : isLegacyInstallment
+            ? 'This uses the LGC purchase flow, so the app will send paymentPlan and numberOfInstallments instead of the new purchaseType fields.'
+            : 'After this, choose your preferred payment method to continue with this installment plan.';
 
     showModalBottomSheet(
       context: context,
@@ -976,7 +1268,11 @@ class _ProductDetailsState extends State<ProductDetails> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    isOutright ? 'Pay now' : 'Down payment now',
+                                    isOutright
+                                        ? 'Pay now'
+                                        : isLegacyInstallment
+                                            ? 'First installment now'
+                                            : 'Down payment now',
                                     style: GoogleFonts.manrope(
                                       fontSize: 12.5,
                                       fontWeight: FontWeight.w700,
@@ -1011,7 +1307,9 @@ class _ProductDetailsState extends State<ProductDetails> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      'Next payments',
+                                      isLegacyInstallment
+                                          ? 'Remaining installments'
+                                          : 'Next payments',
                                       style: GoogleFonts.manrope(
                                         fontSize: 12.5,
                                         fontWeight: FontWeight.w700,
@@ -1065,20 +1363,31 @@ class _ProductDetailsState extends State<ProductDetails> {
                                     _planRow(
                                       isOutright
                                           ? 'Amount to pay'
-                                          : 'Down payment now',
+                                          : isLegacyInstallment
+                                              ? 'First installment now'
+                                              : 'Down payment now',
                                       _formatMoney(isOutright
                                           ? totalPrice
                                           : downPayment),
                                     ),
                                     if (!isOutright) ...[
-                                      _planRow('Remaining before fee',
-                                          _formatMoney(remainingBalance)),
                                       _planRow(
-                                        'Installment fee',
-                                        '${(repaymentFeePercent * 100).round()}% (${_formatMoney(repaymentFee)})',
+                                        isLegacyInstallment
+                                            ? 'Remaining installments'
+                                            : 'Remaining before fee',
+                                        _formatMoney(remainingBalance),
                                       ),
-                                      _planRow('Repayment total',
-                                          _formatMoney(totalRepaymentAmount)),
+                                      if (!isLegacyInstallment)
+                                        _planRow(
+                                          'Installment fee',
+                                          _formatMoney(repaymentFee),
+                                        ),
+                                      _planRow(
+                                        isLegacyInstallment
+                                            ? 'Remaining total'
+                                            : 'Repayment total',
+                                        _formatMoney(totalRepaymentAmount),
+                                      ),
                                       _planRow('Repayment frequency',
                                           frequencyLabel),
                                       _planRow('Repayment duration',
@@ -1199,18 +1508,19 @@ class _ProductDetailsState extends State<ProductDetails> {
   }
 
   Future<void> makeBuyProductRequest(
-    String token,
     String productId,
-    String purchaseType,
-    int durationMonths,
-    String repaymentFrequency,
   ) async {
     try {
-      Map<String, dynamic> requestBody = {
+      final Map<String, dynamic> requestBody = {
         "productId": productId,
-        "purchaseType": purchaseType,
-        "durationMonths": durationMonths,
-        "repaymentFrequency": repaymentFrequency,
+        if (_isLegacyInstallmentSelection) ...{
+          "paymentPlan": selectedLegacyPaymentPlan,
+          "numberOfInstallments": selectedLegacyInstallments,
+        } else ...{
+          "purchaseType": selectedPurchaseType,
+          "durationMonths": selectedDurationMonths,
+          "repaymentFrequency": selectedRepaymentFrequency,
+        },
       };
 
       final response = await _apiClient.post(
@@ -1264,18 +1574,8 @@ class _ProductDetailsState extends State<ProductDetails> {
       return;
     }
 
-    if (token != null &&
-        productId != null &&
-        selectedPurchaseType != null &&
-        selectedDurationMonths != null &&
-        selectedRepaymentFrequency != null) {
-      await makeBuyProductRequest(
-        token!,
-        productId!,
-        selectedPurchaseType!,
-        selectedDurationMonths!,
-        selectedRepaymentFrequency!,
-      );
+    if (token != null && productId != null && _isPlanFullySelected) {
+      await makeBuyProductRequest(productId!);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: CustomText('Please complete purchase requirements'),
@@ -1302,11 +1602,7 @@ class _ProductDetailsState extends State<ProductDetails> {
       return;
     }
 
-    if (token == null ||
-        productId == null ||
-        selectedPurchaseType == null ||
-        selectedDurationMonths == null ||
-        selectedRepaymentFrequency == null) {
+    if (token == null || productId == null || !_isPlanFullySelected) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: CustomText('Please complete purchase requirements'),
       ));
@@ -1318,9 +1614,14 @@ class _ProductDetailsState extends State<ProductDetails> {
         'buyProductOnInstallmentUsingCard',
         body: {
           "productId": productId,
-          "purchaseType": selectedPurchaseType,
-          "durationMonths": selectedDurationMonths,
-          "repaymentFrequency": selectedRepaymentFrequency,
+          if (_isLegacyInstallmentSelection) ...{
+            "paymentPlan": selectedLegacyPaymentPlan,
+            "numberOfInstallments": selectedLegacyInstallments,
+          } else ...{
+            "purchaseType": selectedPurchaseType,
+            "durationMonths": selectedDurationMonths,
+            "repaymentFrequency": selectedRepaymentFrequency,
+          },
         },
       );
 
@@ -1723,10 +2024,10 @@ class _ProductDetailsState extends State<ProductDetails> {
                 Container(
                   width: double.infinity,
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(22),
+                    borderRadius: BorderRadius.circular(26),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withOpacity(0.05),
@@ -1738,107 +2039,324 @@ class _ProductDetailsState extends State<ProductDetails> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      CustomText(
-                        "Step 1: Choose how you want to buy",
-                        fontSize: 15.sp,
-                        fontWeight: FontWeight.w700,
-                        color: deepBlue,
-                      ),
-                      const SizedBox(height: 4),
-                      CustomText(
-                        "Pick a plan first. Retilda will then show the payment routes that match it.",
-                        fontSize: 11.sp,
-                        color: Colors.grey[700],
-                      ),
-                      const SizedBox(height: 14),
-                      DropdownButtonFormField<String>(
-                        value: selectedPurchaseType,
-                        decoration: InputDecoration(
-                          labelText: "Purchase type",
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFEAF4FB),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Icon(
+                              Icons.payments_rounded,
+                              color: deepBlue,
+                              size: 22,
+                            ),
                           ),
-                        ),
-                        items: const [
-                          DropdownMenuItem(
-                            value: "outright",
-                            child: Text("Outright (100% upfront)"),
-                          ),
-                          DropdownMenuItem(
-                            value: "down_50",
-                            child: Text("Down 50% upfront"),
-                          ),
-                          DropdownMenuItem(
-                            value: "down_40",
-                            child: Text("Down 40% upfront"),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  "Step 1",
+                                  style: GoogleFonts.manrope(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w800,
+                                    color: accent,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  "Choose how you want to buy",
+                                  style: GoogleFonts.spaceGrotesk(
+                                    fontSize: 22,
+                                    height: 1.05,
+                                    fontWeight: FontWeight.w700,
+                                    color: deepBlue,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ],
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        _isLegacyUser
+                            ? "Pick a plan first. Older accounts can use down-payment plans, and may still use the LGC installment option."
+                            : "Pick a plan first. Retilda will then show the payment routes that match it.",
+                        style: GoogleFonts.manrope(
+                          fontSize: 13.5,
+                          height: 1.45,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey[700],
+                        ),
+                      ),
+                      if ((_userPurchaseRule ?? '').isNotEmpty) ...[
+                        const SizedBox(height: 14),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 12,
+                          ),
+                          decoration: BoxDecoration(
+                            color: _isLegacyUser
+                                ? const Color(0xFFFFF4E8)
+                                : const Color(0xFFEAF4FB),
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(
+                                _isLegacyUser
+                                    ? Icons.history_rounded
+                                    : Icons.verified_rounded,
+                                size: 18,
+                                color: _isLegacyUser
+                                    ? const Color(0xFFB26A00)
+                                    : deepBlue,
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  _isLegacyUser
+                                      ? 'Older account: you can use down-payment plans or LGC installment.'
+                                      : 'Installment checkout uses the Down 40% or Down 50% plans.',
+                                  style: GoogleFonts.manrope(
+                                    fontSize: 13,
+                                    height: 1.35,
+                                    fontWeight: FontWeight.w800,
+                                    color: _isLegacyUser
+                                        ? const Color(0xFFB26A00)
+                                        : deepBlue,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 18),
+                      DropdownButtonFormField<String>(
+                        value: selectedPurchaseType,
+                        isExpanded: true,
+                        icon: const Icon(Icons.keyboard_arrow_down_rounded),
+                        dropdownColor: Colors.white,
+                        style: _purchaseDropdownTextStyle(deepBlue),
+                        decoration: _purchaseDropdownDecoration(
+                          hint: "Purchase type",
+                          icon: Icons.shopping_bag_outlined,
+                          deepBlue: deepBlue,
+                        ),
+                        items: _canCreateLegacyInstallment
+                            ? const [
+                                DropdownMenuItem(
+                                  value: "outright",
+                                  child: Text("Outright (100% upfront)"),
+                                ),
+                                DropdownMenuItem(
+                                  value: "down_50",
+                                  child: Text("Down 50% upfront"),
+                                ),
+                                DropdownMenuItem(
+                                  value: "down_40",
+                                  child: Text("Down 40% upfront"),
+                                ),
+                                DropdownMenuItem(
+                                  value: "legacy_installment",
+                                  child: Text("LGC installment plan"),
+                                ),
+                              ]
+                            : const [
+                                DropdownMenuItem(
+                                  value: "outright",
+                                  child: Text("Outright (100% upfront)"),
+                                ),
+                                DropdownMenuItem(
+                                  value: "down_50",
+                                  child: Text("Down 50% upfront"),
+                                ),
+                                DropdownMenuItem(
+                                  value: "down_40",
+                                  child: Text("Down 40% upfront"),
+                                ),
+                              ],
                         onChanged: (value) {
                           setState(() {
                             selectedPurchaseType = value;
                             if (value == "outright") {
                               selectedDurationMonths = null;
                               selectedRepaymentFrequency = null;
+                              selectedLegacyPaymentPlan = null;
+                              selectedLegacyInstallments = null;
+                            } else if (value == "legacy_installment") {
+                              selectedDurationMonths = null;
+                              selectedRepaymentFrequency = null;
+                            } else {
+                              selectedLegacyPaymentPlan = null;
+                              selectedLegacyInstallments = null;
                             }
                           });
                           _onPlanSelectionUpdated();
                         },
                       ),
-                      const SizedBox(height: 12),
-                      DropdownButtonFormField<int>(
-                        value: selectedDurationMonths,
-                        decoration: InputDecoration(
-                          labelText: "Duration (months)",
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
+                      if (_isLegacyInstallmentSelection) ...[
+                        const SizedBox(height: 12),
+                        DropdownButtonFormField<String>(
+                          value: selectedLegacyPaymentPlan,
+                          isExpanded: true,
+                          icon: const Icon(Icons.keyboard_arrow_down_rounded),
+                          dropdownColor: Colors.white,
+                          style: _purchaseDropdownTextStyle(deepBlue),
+                          decoration: _purchaseDropdownDecoration(
+                            hint: "LGC payment plan",
+                            icon: Icons.calendar_month_outlined,
+                            deepBlue: deepBlue,
                           ),
+                          items: const [
+                            DropdownMenuItem(
+                              value: "weekly",
+                              child: Text("Weekly"),
+                            ),
+                            DropdownMenuItem(
+                              value: "biweekly",
+                              child: Text("Biweekly"),
+                            ),
+                            DropdownMenuItem(
+                              value: "monthly",
+                              child: Text("Monthly"),
+                            ),
+                          ],
+                          onChanged: (value) {
+                            setState(() {
+                              selectedLegacyPaymentPlan = value;
+                              selectedLegacyInstallments = null;
+                            });
+                            _onPlanSelectionUpdated();
+                          },
                         ),
-                        items: const [
-                          DropdownMenuItem(value: 2, child: Text("2 months")),
-                          DropdownMenuItem(value: 4, child: Text("4 months")),
-                          DropdownMenuItem(value: 6, child: Text("6 months")),
-                        ],
-                        onChanged: selectedPurchaseType == "outright"
-                            ? null
-                            : (value) {
-                                setState(() {
-                                  selectedDurationMonths = value;
-                                });
-                                _onPlanSelectionUpdated();
-                              },
-                      ),
-                      const SizedBox(height: 12),
-                      DropdownButtonFormField<String>(
-                        value: selectedRepaymentFrequency,
-                        decoration: InputDecoration(
-                          labelText: "Repayment frequency",
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
+                        const SizedBox(height: 12),
+                        DropdownButtonFormField<int>(
+                          value: selectedLegacyInstallments,
+                          isExpanded: true,
+                          icon: const Icon(Icons.keyboard_arrow_down_rounded),
+                          dropdownColor: Colors.white,
+                          style: _purchaseDropdownTextStyle(deepBlue),
+                          decoration: _purchaseDropdownDecoration(
+                            hint: "Number of installments",
+                            icon: Icons.format_list_numbered_rounded,
+                            deepBlue: deepBlue,
+                            enabled: selectedLegacyPaymentPlan != null,
                           ),
+                          items: (selectedLegacyPaymentPlan == null
+                                  ? const <int>[]
+                                  : <int>[
+                                      _legacyInstallmentCountFromDuration(
+                                        2,
+                                        selectedLegacyPaymentPlan!,
+                                      ),
+                                      _legacyInstallmentCountFromDuration(
+                                        4,
+                                        selectedLegacyPaymentPlan!,
+                                      ),
+                                      _legacyInstallmentCountFromDuration(
+                                        6,
+                                        selectedLegacyPaymentPlan!,
+                                      ),
+                                    ])
+                              .toSet()
+                              .map(
+                                (count) => DropdownMenuItem(
+                                  value: count,
+                                  child: Text(
+                                    '$count installments (${_legacyDurationMonthsFromInstallments(count, selectedLegacyPaymentPlan!)} months)',
+                                  ),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: selectedLegacyPaymentPlan == null
+                              ? null
+                              : (value) {
+                                  setState(() {
+                                    selectedLegacyInstallments = value;
+                                  });
+                                  _onPlanSelectionUpdated();
+                                },
                         ),
-                        items: const [
-                          DropdownMenuItem(
-                            value: "weekly",
-                            child: Text("Weekly"),
+                      ] else ...[
+                        const SizedBox(height: 12),
+                        DropdownButtonFormField<int>(
+                          value: selectedDurationMonths,
+                          isExpanded: true,
+                          icon: const Icon(Icons.keyboard_arrow_down_rounded),
+                          dropdownColor: Colors.white,
+                          style: _purchaseDropdownTextStyle(deepBlue),
+                          decoration: _purchaseDropdownDecoration(
+                            hint: "Duration (months)",
+                            icon: Icons.schedule_rounded,
+                            deepBlue: deepBlue,
+                            enabled: selectedPurchaseType != null &&
+                                selectedPurchaseType != "outright",
                           ),
-                          DropdownMenuItem(
-                            value: "biweekly",
-                            child: Text("Biweekly"),
+                          items: const [
+                            DropdownMenuItem(value: 2, child: Text("2 months")),
+                            DropdownMenuItem(value: 4, child: Text("4 months")),
+                            DropdownMenuItem(value: 6, child: Text("6 months")),
+                          ],
+                          onChanged: selectedPurchaseType == null ||
+                                  selectedPurchaseType == "outright"
+                              ? null
+                              : (value) {
+                                  setState(() {
+                                    selectedDurationMonths = value;
+                                  });
+                                  _onPlanSelectionUpdated();
+                                },
+                        ),
+                        const SizedBox(height: 12),
+                        DropdownButtonFormField<String>(
+                          value: selectedRepaymentFrequency,
+                          isExpanded: true,
+                          icon: const Icon(Icons.keyboard_arrow_down_rounded),
+                          dropdownColor: Colors.white,
+                          style: _purchaseDropdownTextStyle(deepBlue),
+                          decoration: _purchaseDropdownDecoration(
+                            hint: "Repayment frequency",
+                            icon: Icons.repeat_rounded,
+                            deepBlue: deepBlue,
+                            enabled: selectedPurchaseType != null &&
+                                selectedPurchaseType != "outright",
                           ),
-                          DropdownMenuItem(
-                            value: "monthly",
-                            child: Text("Monthly"),
-                          ),
-                        ],
-                        onChanged: selectedPurchaseType == "outright"
-                            ? null
-                            : (value) {
-                                setState(() {
-                                  selectedRepaymentFrequency = value;
-                                });
-                                _onPlanSelectionUpdated();
-                              },
-                      ),
+                          items: const [
+                            DropdownMenuItem(
+                              value: "weekly",
+                              child: Text("Weekly"),
+                            ),
+                            DropdownMenuItem(
+                              value: "biweekly",
+                              child: Text("Biweekly"),
+                            ),
+                            DropdownMenuItem(
+                              value: "monthly",
+                              child: Text("Monthly"),
+                            ),
+                          ],
+                          onChanged: selectedPurchaseType == null ||
+                                  selectedPurchaseType == "outright"
+                              ? null
+                              : (value) {
+                                  setState(() {
+                                    selectedRepaymentFrequency = value;
+                                  });
+                                  _onPlanSelectionUpdated();
+                                },
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -1925,17 +2443,21 @@ class _ProductDetailsState extends State<ProductDetails> {
                         actionLabel:
                             _isInstallmentSelection && _isPlanFullySelected
                                 ? (_isKycVerified ? 'Select' : 'Verify BVN')
-                                : 'Choose installment plan',
+                                : 'Choose purchase plan',
                         onPressed: _isInstallmentSelection &&
                                 _isPlanFullySelected
                             ? () {
                                 _showPaymentActionSheet(
                                   title: 'Installment card payment',
                                   summary: _isKycVerified
-                                      ? 'This starts installment checkout with your card. Down_40 and down_50 card checkout does not require direct debit.'
+                                      ? _isLegacyInstallmentSelection
+                                          ? 'This starts LGC installment checkout with your card using your selected payment plan and installment count.'
+                                          : 'This starts installment checkout with your card. Down_40 and down_50 card checkout does not require direct debit.'
                                       : 'BVN verification must be completed before installment card checkout can start.',
                                   detail: _isKycVerified
-                                      ? 'Choose this if you want to pay the required down payment by card and continue without connecting a bank account for direct debit.'
+                                      ? _isLegacyInstallmentSelection
+                                          ? 'Choose this if you want to pay the first LGC installment by card. The app will send paymentPlan and numberOfInstallments for this checkout.'
+                                          : 'Choose this if you want to pay the required down payment by card and continue without connecting a bank account for direct debit.'
                                       : 'The backend blocks installment checkout until KYC is complete. Verify BVN first, then return here to continue.',
                                   continueLabel: _isKycVerified
                                       ? 'Continue to card payment'
@@ -1999,7 +2521,7 @@ class _ProductDetailsState extends State<ProductDetails> {
                         actionLabel:
                             _isInstallmentSelection && _isPlanFullySelected
                                 ? (_isKycVerified ? 'Select' : 'Verify BVN')
-                                : 'Choose installment plan',
+                                : 'Choose purchase plan',
                         onPressed: _isInstallmentSelection &&
                                 _isPlanFullySelected
                             ? () {
@@ -2008,7 +2530,9 @@ class _ProductDetailsState extends State<ProductDetails> {
                                   summary: !_isKycVerified
                                       ? 'BVN verification must be completed before wallet installment checkout can start.'
                                       : _walletCanCoverCurrentPurchase
-                                          ? 'Your wallet balance can cover the required upfront payment for this plan.'
+                                          ? _isLegacyInstallmentSelection
+                                              ? 'Your wallet balance can cover the first installment required for this LGC plan.'
+                                              : 'Your wallet balance can cover the required upfront payment for this plan.'
                                           : Activated == true
                                               ? 'This continues your wallet installment flow.'
                                               : 'This option needs bank connection before checkout can continue.',
@@ -2017,7 +2541,9 @@ class _ProductDetailsState extends State<ProductDetails> {
                                       : _walletCanCoverCurrentPurchase
                                           ? 'Available wallet balance: ${_formatMoney(_walletBalanceAmount ?? 0)}. Required now: ${_formatMoney(_requiredWalletCheckoutAmount ?? 0)}. You can continue without setting up direct debit.'
                                           : Activated == true
-                                              ? 'Your account is already connected. Continue to proceed with wallet installment checkout for this product.'
+                                              ? _isLegacyInstallmentSelection
+                                                  ? 'Your account is already connected. Continue to proceed with the LGC installment checkout for this product.'
+                                                  : 'Your account is already connected. Continue to proceed with wallet installment checkout for this product.'
                                               : 'Available wallet balance: ${_formatMoney(_walletBalanceAmount ?? 0)}. Required now: ${_formatMoney(_requiredWalletCheckoutAmount ?? 0)}. Wallet installment checkout may use direct debit for scheduled repayments when wallet funds are not enough, so you will connect your account before continuing.',
                                   continueLabel: !_isKycVerified
                                       ? 'Verify BVN'

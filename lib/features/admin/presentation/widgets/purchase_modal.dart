@@ -54,7 +54,7 @@ class _PurchaseDetailsModalState extends State<PurchaseDetailsModal> {
 
   Color _deliveryAccent(GlancePurchase purchase) {
     final status = purchase.deliveryPaymentStatus ?? '';
-    if (status == 'paid' || purchase.deliveryRequested) {
+    if (status == 'paid' && purchase.deliveryRequested) {
       return const Color(0xFF1E8E5A);
     }
     if (status == 'pending') {
@@ -65,7 +65,7 @@ class _PurchaseDetailsModalState extends State<PurchaseDetailsModal> {
 
   String _deliveryLabel(GlancePurchase purchase) {
     final status = purchase.deliveryPaymentStatus ?? '';
-    if (status == 'paid' || purchase.deliveryRequested) {
+    if (status == 'paid' && purchase.deliveryRequested) {
       return 'Delivery paid';
     }
     if (status == 'pending') {

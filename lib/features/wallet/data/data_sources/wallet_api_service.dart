@@ -31,8 +31,9 @@ class WalletApiService {
   }
 
   Future<Map<String, dynamic>> makeInstallmentPaymentUsingWallet(
-      String productId,
-      {String? purchaseId}) async {
+    String? productId, {
+    String? purchaseId,
+  }) async {
     String? token = await _getToken();
     if (token == null) {
       return {
@@ -41,9 +42,19 @@ class WalletApiService {
       };
     }
 
+    if ((purchaseId == null || purchaseId.isEmpty) &&
+        (productId == null || productId.isEmpty)) {
+      return {
+        'success': false,
+        'message': 'Purchase details not found.',
+      };
+    }
+
     final requestBody = {
-      "productId": productId,
-      if (purchaseId != null && purchaseId.isNotEmpty) "purchaseId": purchaseId,
+      if (purchaseId != null && purchaseId.isNotEmpty)
+        "purchaseId": purchaseId
+      else
+        "productId": productId,
     };
 
     try {
@@ -80,8 +91,10 @@ class WalletApiService {
     }
   }
 
-  Future<Map<String, dynamic>> makeInstallmentPaymentUsingCard(String productId,
-      {String? purchaseId}) async {
+  Future<Map<String, dynamic>> makeInstallmentPaymentUsingCard(
+    String? productId, {
+    String? purchaseId,
+  }) async {
     String? token = await _getToken();
     if (token == null) {
       return {
@@ -90,9 +103,19 @@ class WalletApiService {
       };
     }
 
-    final Map<String, String> requestBody = {
-      'productId': productId,
-      if (purchaseId != null && purchaseId.isNotEmpty) 'purchaseId': purchaseId,
+    if ((purchaseId == null || purchaseId.isEmpty) &&
+        (productId == null || productId.isEmpty)) {
+      return {
+        'success': false,
+        'message': 'Purchase details not found.',
+      };
+    }
+
+    final Map<String, dynamic> requestBody = {
+      if (purchaseId != null && purchaseId.isNotEmpty)
+        'purchaseId': purchaseId
+      else
+        'productId': productId,
     };
 
     try {
@@ -155,12 +178,18 @@ class WalletApiService {
         'requestForGoodsDeliveryCalculation/$purchaseId',
       );
 
-      final responseData = jsonDecode(response.body);
+      final decoded = jsonDecode(response.body);
+      final responseData =
+          decoded is Map<String, dynamic> ? decoded : const <String, dynamic>{};
+      final data = responseData['data'] is Map
+          ? Map<String, dynamic>.from(responseData['data'])
+          : responseData;
       if (response.statusCode == 200 && responseData['success'] == true) {
         return {
           'success': true,
           'message': responseData['message'] ?? 'Delivery eligibility checked.',
-          'data': responseData['data'],
+          'statusCode': response.statusCode,
+          'data': data,
           'raw': responseData,
         };
       }
@@ -169,67 +198,10 @@ class WalletApiService {
         'success': false,
         'message':
             responseData['message'] ?? 'Unable to check delivery eligibility.',
-        'data': responseData['data'],
+        'statusCode': response.statusCode,
+        'data': data,
         'raw': responseData,
       };
-    } catch (_) {
-      return {
-        'success': false,
-        'message': 'Network error. Please try again.',
-      };
-    }
-  }
-
-  Future<Map<String, dynamic>> topUpWalletForDelivery({
-    String? purchaseId,
-    String? productId,
-    dynamic targetAmount,
-  }) async {
-    String? token = await _getToken();
-    if (token == null) {
-      return {
-        'success': false,
-        'message': 'Authentication token not found',
-      };
-    }
-
-    if ((purchaseId == null || purchaseId.isEmpty) &&
-        (productId == null || productId.isEmpty)) {
-      return {
-        'success': false,
-        'message': 'Purchase details not found.',
-      };
-    }
-
-    final Map<String, dynamic> requestBody = {
-      if (purchaseId != null && purchaseId.isNotEmpty)
-        'purchaseId': purchaseId
-      else
-        'productId': productId,
-      if (targetAmount != null) 'targetAmount': targetAmount,
-    };
-
-    try {
-      final response = await _apiClient.post(
-        'installmentRepaymentUsingWalletByPercentage',
-        body: requestBody,
-      );
-
-      final responseData = jsonDecode(response.body);
-
-      if (response.statusCode == 200 && responseData['success'] == true) {
-        return {
-          'success': true,
-          'message': 'Top-up successful',
-          'data': responseData,
-        };
-      } else {
-        return {
-          'success': false,
-          'message': responseData['message'] ?? 'An error occurred.',
-          'data': responseData,
-        };
-      }
     } catch (_) {
       return {
         'success': false,

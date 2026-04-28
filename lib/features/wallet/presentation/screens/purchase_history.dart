@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -24,29 +25,48 @@ class _PurchaseHistoryState extends ConsumerState<PurchaseHistory> {
   late final AppSession _session = AppSession();
   late final ApiClient _apiClient = ApiClient(session: _session);
   List<Purchase> _purchases = [];
+  String? _userPurchaseRule;
 
   String? _token;
   String? _userId;
   bool _isLoading = true;
 
-  Future<PurchaseResponse> fetchPurchases(String userId, String token) async {
-    final response = await _apiClient.get('getAllPendingPurchases');
+  Future<PurchaseResponse> fetchPurchases(String userId) async {
+    final response = await _apiClient.get('purchases/$userId');
 
     if (response.statusCode == 200) {
+      _debugLogPurchaseResponse(response.body);
       return PurchaseResponse.fromJson(jsonDecode(response.body));
     } else {
       throw Exception('Failed to load purchases');
     }
   }
 
+  void _debugLogPurchaseResponse(String body) {
+    if (!kDebugMode) return;
+    const chunkSize = 800;
+    for (var index = 0; index < body.length; index += chunkSize) {
+      final end =
+          index + chunkSize > body.length ? body.length : index + chunkSize;
+      debugPrint(
+          '[PurchaseHistory][purchases body] ${body.substring(index, end)}');
+    }
+  }
+
   Future<void> _refreshPurchases() async {
     if (_token != null && _userId != null) {
       try {
-        final apiResponse = await fetchPurchases(_userId!, _token!);
+        final apiResponse = await fetchPurchases(_userId!);
         setState(() {
-          _purchases = apiResponse.data!.purchasesData!;
+          _purchases = apiResponse.data?.purchasesData ?? [];
+          _userPurchaseRule = apiResponse.data?.userPurchaseRule;
         });
-      } catch (_) {}
+      } catch (error, stackTrace) {
+        if (kDebugMode) {
+          debugPrint('[PurchaseHistory] Failed to refresh purchases: $error');
+          debugPrint('$stackTrace');
+        }
+      }
     }
   }
 
@@ -60,12 +80,16 @@ class _PurchaseHistoryState extends ConsumerState<PurchaseHistory> {
         _userId = userId;
       });
 
-      fetchPurchases(userId, token).then((apiResponse) {
+      fetchPurchases(userId).then((apiResponse) {
         setState(() {
-          _purchases = apiResponse.data!.purchasesData!;
+          _purchases = apiResponse.data?.purchasesData ?? [];
+          _userPurchaseRule = apiResponse.data?.userPurchaseRule;
           _isLoading = false;
         });
       }).catchError((error) {
+        if (kDebugMode) {
+          debugPrint('[PurchaseHistory] Failed to load purchases: $error');
+        }
         setState(() {
           _isLoading = false;
         });
@@ -128,6 +152,10 @@ class _PurchaseHistoryState extends ConsumerState<PurchaseHistory> {
     final totalPaid = _purchases.fold<num>(
       0,
       (sum, purchase) => sum + purchase.totalPaidComputed,
+    );
+    final pendingBalance = _purchases.fold<num>(
+      0,
+      (sum, purchase) => sum + purchase.totalOutstandingComputed,
     );
 
     return Container(
@@ -230,7 +258,9 @@ class _PurchaseHistoryState extends ConsumerState<PurchaseHistory> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Total paid so far',
+                        _userPurchaseRule == 'legacy'
+                            ? 'Paid so far'
+                            : 'Total paid so far',
                         style: GoogleFonts.manrope(
                           fontSize: 11.5,
                           fontWeight: FontWeight.w700,
@@ -253,6 +283,38 @@ class _PurchaseHistoryState extends ConsumerState<PurchaseHistory> {
               ],
             ),
           ),
+          const SizedBox(height: 10),
+          if ((_userPurchaseRule ?? '').isNotEmpty)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Purchase rule: ${_userPurchaseRule == 'legacy' ? 'LGC' : 'NEW'}',
+                      style: GoogleFonts.manrope(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    'Pending ${_formatMoney(pendingBalance)}',
+                    style: GoogleFonts.spaceGrotesk(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ),
         ],
       ),
     );
@@ -327,8 +389,12 @@ class _PurchaseHistoryState extends ConsumerState<PurchaseHistory> {
     final remaining = purchase.totalOutstandingComputed;
     final planLabel = purchase.paymentPlan == 'once'
         ? 'One-time payment'
-        : (purchase.purchaseType ?? purchase.paymentPlan ?? 'Installment plan')
-            .replaceAll('_', ' ');
+        : purchase.isLegacyFlow
+            ? 'LGC ${purchase.paymentPlan ?? 'installment'}'
+            : (purchase.purchaseType ??
+                    purchase.paymentPlan ??
+                    'Installment plan')
+                .replaceAll('_', ' ');
 
     return InkWell(
       borderRadius: BorderRadius.circular(24),
@@ -447,7 +513,9 @@ class _PurchaseHistoryState extends ConsumerState<PurchaseHistory> {
                       Text(
                         purchase.paymentPlan == 'once'
                             ? 'Paid ${_formatMoney(totalPaid)} once for this order.'
-                            : 'Paid ${_formatMoney(totalPaid)} out of ${_formatMoney(totalToPay)} so far.',
+                            : purchase.isLegacyFlow
+                                ? 'LGC plan: paid ${_formatMoney(totalPaid)} out of ${_formatMoney(totalToPay)} so far.'
+                                : 'Paid ${_formatMoney(totalPaid)} out of ${_formatMoney(totalToPay)} so far.',
                         style: GoogleFonts.manrope(
                           fontSize: 13.5,
                           height: 1.45,
@@ -489,6 +557,25 @@ class _PurchaseHistoryState extends ConsumerState<PurchaseHistory> {
                       ),
                     ],
                   ),
+                  if (purchase.purchaseRuleMismatch == true) ...[
+                    const SizedBox(height: 10),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFF4E8),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Text(
+                        'This purchase was created with the previous purchase model.',
+                        style: GoogleFonts.manrope(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFFB26A00),
+                        ),
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 12),
                   ClipRRect(
                     borderRadius: BorderRadius.circular(999),
