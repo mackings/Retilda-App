@@ -13,7 +13,8 @@ class OrderStatusResponse {
     return OrderStatusResponse(
       success: json['success'],
       message: json['message'],
-      data: json['data'] != null ? OrderStatusData.fromJson(json['data']) : null,
+      data:
+          json['data'] != null ? OrderStatusData.fromJson(json['data']) : null,
     );
   }
 
@@ -31,6 +32,12 @@ class OrderStatusData {
   final String? orderStatus;
   final String? deliveryStatus;
   final String? paymentPlan;
+  final String? userPurchaseRule;
+  final String? purchaseFlowVersion;
+  final bool? purchaseRuleMismatch;
+  final String? recurringPaymentMethod;
+  final String? recurringPaymentStatus;
+  final Map<String, dynamic>? recurringCard;
   final List<dynamic>? payments;
 
   OrderStatusData({
@@ -38,6 +45,12 @@ class OrderStatusData {
     this.orderStatus,
     this.deliveryStatus,
     this.paymentPlan,
+    this.userPurchaseRule,
+    this.purchaseFlowVersion,
+    this.purchaseRuleMismatch,
+    this.recurringPaymentMethod,
+    this.recurringPaymentStatus,
+    this.recurringCard,
     this.payments,
   });
 
@@ -47,6 +60,14 @@ class OrderStatusData {
       orderStatus: json['orderStatus'],
       deliveryStatus: json['deliveryStatus'],
       paymentPlan: json['paymentPlan'],
+      userPurchaseRule: json['userPurchaseRule']?.toString(),
+      purchaseFlowVersion: json['purchaseFlowVersion']?.toString(),
+      purchaseRuleMismatch: json['purchaseRuleMismatch'] == true,
+      recurringPaymentMethod: json['recurringPaymentMethod']?.toString(),
+      recurringPaymentStatus: json['recurringPaymentStatus']?.toString(),
+      recurringCard: json['recurringCard'] is Map
+          ? Map<String, dynamic>.from(json['recurringCard'])
+          : null,
       payments: json['payments'],
     );
   }
@@ -57,6 +78,12 @@ class OrderStatusData {
       'orderStatus': orderStatus,
       'deliveryStatus': deliveryStatus,
       'paymentPlan': paymentPlan,
+      'userPurchaseRule': userPurchaseRule,
+      'purchaseFlowVersion': purchaseFlowVersion,
+      'purchaseRuleMismatch': purchaseRuleMismatch,
+      'recurringPaymentMethod': recurringPaymentMethod,
+      'recurringPaymentStatus': recurringPaymentStatus,
+      'recurringCard': recurringCard,
       'payments': payments,
     };
   }
@@ -77,7 +104,8 @@ class UpdateOrderStatusResponse {
     return UpdateOrderStatusResponse(
       success: json['success'],
       message: json['message'],
-      data: json['data'] != null ? OrderStatusData.fromJson(json['data']) : null,
+      data:
+          json['data'] != null ? OrderStatusData.fromJson(json['data']) : null,
     );
   }
 }

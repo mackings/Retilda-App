@@ -32,6 +32,7 @@ class Product {
   final List<String> categories;
   final String specification;
   final String brand;
+  final num? deliveryWeightKg;
 
   Product({
     required this.id,
@@ -42,6 +43,7 @@ class Product {
     required this.categories,
     required this.specification,
     required this.brand,
+    this.deliveryWeightKg,
   });
 
   factory Product.fromJson(Map<String, dynamic> json) {
@@ -54,6 +56,8 @@ class Product {
       categories: json['categories'] != null ? List<String>.from(json['categories']) : [],
       specification: json['specification'] ?? "",
       brand: json['brand'] ?? "",
+      deliveryWeightKg:
+          json['deliveryWeightKg'] is num ? json['deliveryWeightKg'] as num : null,
     );
   }
 }

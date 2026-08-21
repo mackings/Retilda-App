@@ -142,9 +142,129 @@ class WalletApiService {
           };
         }
       } else {
+        String errorMessage = 'Request failed with status: ${response.statusCode}';
+        try {
+          final responseData = jsonDecode(response.body);
+          if (responseData is Map && responseData.containsKey('message')) {
+            errorMessage = responseData['message'];
+          }
+        } catch (_) {}
+
         return {
           'success': false,
-          'message': 'Request failed with status: ${response.statusCode}',
+          'message': errorMessage,
+        };
+      }
+    } catch (_) {
+      return {
+        'success': false,
+        'message': 'Network error. Please try again.',
+      };
+    }
+  }
+
+  Future<Map<String, dynamic>> payDebtUsingWallet(String purchaseId) async {
+    String? token = await _getToken();
+    if (token == null) {
+      return {
+        'success': false,
+        'message': 'Authentication token not found',
+      };
+    }
+
+    if (purchaseId.isEmpty) {
+      return {
+        'success': false,
+        'message': 'Purchase details not found.',
+      };
+    }
+
+    try {
+      final response = await _apiClient.post(
+        'debt/payUsingWallet',
+        body: {'purchaseId': purchaseId},
+      );
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        return {
+          'success': true,
+          'message': responseData['message'] ?? 'Debt paid successfully!',
+          'data': responseData['data'],
+        };
+      } else {
+        String errorMessage = 'Payment failed';
+        try {
+          final responseData = jsonDecode(response.body);
+          if (responseData is Map && responseData.containsKey('message')) {
+            errorMessage = responseData['message'];
+          }
+        } catch (_) {}
+
+        return {
+          'success': false,
+          'message': errorMessage,
+        };
+      }
+    } catch (_) {
+      return {
+        'success': false,
+        'message': 'Network error. Please try again.',
+      };
+    }
+  }
+
+  Future<Map<String, dynamic>> payDebtUsingCard(String purchaseId) async {
+    String? token = await _getToken();
+    if (token == null) {
+      return {
+        'success': false,
+        'message': 'Authentication token not found',
+      };
+    }
+
+    if (purchaseId.isEmpty) {
+      return {
+        'success': false,
+        'message': 'Purchase details not found.',
+      };
+    }
+
+    try {
+      final response = await _apiClient.post(
+        'debt/payUsingCard',
+        body: {'purchaseId': purchaseId},
+      );
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+
+        if (responseData['success'] == true &&
+            responseData['data'] != null &&
+            responseData['data']['paymentUrl'] != null) {
+          return {
+            'success': true,
+            'paymentUrl': responseData['data']['paymentUrl'],
+            'data': responseData,
+          };
+        } else {
+          return {
+            'success': false,
+            'message': 'Invalid response from server',
+          };
+        }
+      } else {
+        String errorMessage = 'Request failed with status: ${response.statusCode}';
+        try {
+          final responseData = jsonDecode(response.body);
+          if (responseData is Map && responseData.containsKey('message')) {
+            errorMessage = responseData['message'];
+          }
+        } catch (_) {}
+
+        return {
+          'success': false,
+          'message': errorMessage,
         };
       }
     } catch (_) {

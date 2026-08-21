@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -13,8 +14,13 @@ import 'package:sizer/sizer.dart';
 
 class UpdateDetails extends StatefulWidget {
   final Product product;
+  final bool openWeightModalOnLoad;
 
-  const UpdateDetails({Key? key, required this.product}) : super(key: key);
+  const UpdateDetails({
+    Key? key,
+    required this.product,
+    this.openWeightModalOnLoad = false,
+  }) : super(key: key);
 
   @override
   State<UpdateDetails> createState() => _UpdateDetailsState();
@@ -24,7 +30,9 @@ class _UpdateDetailsState extends State<UpdateDetails> {
   late final ApiClient _apiClient = ApiClient(session: AppSession());
   bool loading = false;
   final _formKey = GlobalKey<FormState>();
+  final _weightFormKey = GlobalKey<FormState>();
   final _priceController = TextEditingController();
+  final _weightController = TextEditingController();
 
   List<CartItem> cartItems = [];
 
@@ -51,6 +59,11 @@ class _UpdateDetailsState extends State<UpdateDetails> {
         Navigator.pop(context);
       }
     });
+    if (widget.openWeightModalOnLoad) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _showUpdateWeightModal(context);
+      });
+    }
     super.initState();
   }
 
@@ -109,6 +122,57 @@ class _UpdateDetailsState extends State<UpdateDetails> {
       setState(() {
         loading = false;
       });
+    }
+  }
+
+  Future<void> _updateWeight() async {
+    if (!_weightFormKey.currentState!.validate()) return;
+
+    setState(() {
+      loading = true;
+    });
+
+    final parsedWeight = double.tryParse(_weightController.text.trim());
+    Map<String, dynamic> body = {
+      "deliveryWeightKg": parsedWeight?.toString() ?? '',
+    };
+
+    try {
+      final response = await _apiClient.put(
+        'updateProductByPrice/${widget.product.id}',
+        auth: AuthScope.privileged,
+        body: body,
+      );
+
+      if (!mounted) return;
+      if (response.statusCode == 200) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text("Weight updated successfully!"),
+        ));
+      } else {
+        String errorMessage = "Failed to update weight";
+        try {
+          final decoded = json.decode(response.body);
+          if (decoded is Map && decoded['message'] != null) {
+            errorMessage = decoded['message'].toString();
+          }
+        } catch (_) {}
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(errorMessage),
+        ));
+      }
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text("Unable to update weight. Please try again."),
+      ));
+    } finally {
+      if (mounted) {
+        setState(() {
+          loading = false;
+        });
+      }
     }
   }
 
@@ -341,6 +405,122 @@ class _UpdateDetailsState extends State<UpdateDetails> {
     );
   }
 
+  void _showUpdateWeightModal(BuildContext context) {
+    _weightController.text =
+        widget.product.deliveryWeightKg?.toString() ?? '';
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.18),
+              blurRadius: 20,
+              offset: const Offset(0, -6),
+            )
+          ],
+        ),
+        child: SafeArea(
+          top: false,
+          child: Padding(
+            padding: EdgeInsets.only(
+              left: 20,
+              right: 20,
+              top: 18,
+              bottom: MediaQuery.of(context).viewInsets.bottom + 12,
+            ),
+            child: Form(
+              key: _weightFormKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 42,
+                      height: 5,
+                      margin: const EdgeInsets.only(bottom: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                  CustomText(
+                    "Update delivery weight",
+                    fontWeight: FontWeight.w800,
+                    fontSize: 12.sp,
+                  ),
+                  const SizedBox(height: 6),
+                  CustomText(
+                    "Only the delivery weight will be updated — nothing else about this listing changes.",
+                    color: Colors.grey[700],
+                  ),
+                  const SizedBox(height: 14),
+                  TextFormField(
+                    controller: _weightController,
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
+                    decoration: InputDecoration(
+                      labelText: "Weight (kg)",
+                      hintText: "Enter weight (e.g., 22.5)",
+                      filled: true,
+                      fillColor: const Color(0xFFF6F7FB),
+                      prefixIcon: const Icon(Icons.scale_outlined),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return "Please enter a valid weight";
+                      }
+                      if (double.tryParse(value.trim()) == null) {
+                        return "Enter a number, e.g. 22.5";
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: RButtoncolor,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      onPressed: loading ? null : _updateWeight,
+                      child: loading
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Text("Save weight"),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     const Color pageBg = Color(0xFFF6F7FB);
@@ -542,6 +722,28 @@ class _UpdateDetailsState extends State<UpdateDetails> {
                       ),
                     ),
                   ],
+                ),
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: RButtoncolor,
+                      side: BorderSide(color: RButtoncolor),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    onPressed:
+                        loading ? null : () => _showUpdateWeightModal(context),
+                    icon: const Icon(Icons.scale_outlined),
+                    label: CustomText(
+                      "Update weight",
+                      fontWeight: FontWeight.w700,
+                      color: RButtoncolor,
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 10),
                 TextButton.icon(

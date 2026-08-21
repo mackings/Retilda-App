@@ -45,7 +45,11 @@ class _UpdateAllDetailsState extends State<UpdateAllDetails> {
       'key': 'availableStock',
       'type': TextInputType.number
     },
-    {'label': 'Weight', 'key': 'weight', 'type': TextInputType.number},
+    {
+      'label': 'Weight (kg)',
+      'key': 'deliveryWeightKg',
+      'type': TextInputType.number
+    },
     {'label': 'Width', 'key': 'width', 'type': TextInputType.number},
     {'label': 'Height', 'key': 'height', 'type': TextInputType.number},
     {'label': 'Length', 'key': 'length', 'type': TextInputType.number},
@@ -116,9 +120,22 @@ class _UpdateAllDetailsState extends State<UpdateAllDetails> {
     try {
       final fields = <String, String>{};
       for (var field in _fields) {
-        fields[field['key']] = field['type'] == TextInputType.number
-            ? int.tryParse(_controllers[field['key']]!.text)?.toString() ?? '0'
-            : _controllers[field['key']]!.text;
+        final key = field['key'] as String;
+        final text = _controllers[key]!.text.trim();
+
+        if (key == 'deliveryWeightKg') {
+          // Preserve decimals (e.g. "22.5") and omit when blank so the
+          // backend keeps the existing value instead of zeroing it out.
+          final parsedWeight = double.tryParse(text);
+          if (parsedWeight != null) {
+            fields[key] = parsedWeight.toString();
+          }
+          continue;
+        }
+
+        fields[key] = field['type'] == TextInputType.number
+            ? int.tryParse(text)?.toString() ?? '0'
+            : text;
       }
 
       final filePaths = <String, String>{};

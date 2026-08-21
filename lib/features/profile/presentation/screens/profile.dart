@@ -21,6 +21,7 @@ import 'package:retilda/Views/Admin/views/admin_invoices_screen.dart';
 import 'package:retilda/Views/Admin/views/admin_create_invoice_screen.dart';
 import 'package:retilda/Views/Admin/views/admin_create_staff_screen.dart';
 import 'package:retilda/Views/Geo/views/geo_admin_states_screen.dart';
+import 'package:retilda/features/admin/presentation/screens/missing_weight_screen.dart';
 import 'package:retilda/Views/Widgets/components.dart';
 import 'package:retilda/Views/Widgets/profiletile.dart';
 import 'package:retilda/Views/Widgets/widgets.dart';
@@ -415,7 +416,7 @@ class _ProfileState extends ConsumerState<Profile> {
                   ),
                   const SizedBox(height: 8),
                   CustomText(
-                    "Earn more by sharing your code with friends.",
+                    "New referral bonuses are temporarily paused — you can still redeem points you've already earned.",
                     fontSize: 11.sp,
                     color: Colors.grey[600],
                   ),
@@ -654,6 +655,20 @@ class _ProfileState extends ConsumerState<Profile> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(builder: (context) => Glace()),
+                        );
+                      },
+                    ),
+                  if (isAdmin)
+                    ProfileListItem(
+                      icon: Icons.scale_outlined,
+                      title: 'Missing weight',
+                      subtitle: 'Products still missing a delivery weight',
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const MissingWeightScreen(),
+                          ),
                         );
                       },
                     ),

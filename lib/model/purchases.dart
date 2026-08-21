@@ -116,6 +116,9 @@ class Purchase {
   final String? deliveryPaymentRequestedAt;
   final String? deliveryPaymentPaidAt;
   final String? deliveryRequestNotifiedAt;
+  final String? recurringPaymentMethod;
+  final String? recurringPaymentStatus;
+  final RecurringCard? recurringCard;
   final num? totalAmountToPay;
   final num? totalAmountPaid;
   final num? totalPaidForPurchase;
@@ -154,6 +157,9 @@ class Purchase {
     this.deliveryPaymentRequestedAt,
     this.deliveryPaymentPaidAt,
     this.deliveryRequestNotifiedAt,
+    this.recurringPaymentMethod,
+    this.recurringPaymentStatus,
+    this.recurringCard,
     this.totalAmountToPay,
     this.totalAmountPaid,
     this.totalPaidForPurchase,
@@ -238,11 +244,25 @@ class Purchase {
 
   bool get hasLockedDeliveryFee => isDeliveryCompleted;
 
+  bool get requiresActiveRecurringCard =>
+      recurringPaymentMethod == 'card' && paymentPlan != 'once';
+
+  bool get hasActiveRecurringCard =>
+      recurringPaymentStatus == 'active' && recurringCard?.active == true;
+
+  bool get canContinueDelivery =>
+      duePaymentCompleted == true &&
+      (!requiresActiveRecurringCard || hasActiveRecurringCard);
+
   Map<String, dynamic> get deliveryStateSnapshot {
     return {
-      'deliveryEligible': duePaymentCompleted == true,
+      'deliveryEligible': canContinueDelivery,
+      'baseDeliveryEligible': duePaymentCompleted == true,
       'deliveryRequirement':
           purchaseType == null ? 'legacy_60_percent' : 'down_payment',
+      'recurringPaymentMethod': recurringPaymentMethod,
+      'recurringPaymentStatus': recurringPaymentStatus,
+      'recurringCard': recurringCard?.toJson(),
       'deliveryStatus': deliveryStatus,
       'orderStatus': orderStatus,
       'deliveryRequested': deliveryRequested,
@@ -322,6 +342,13 @@ class Purchase {
           json['deliveryPaymentRequestedAt']?.toString(),
       deliveryPaymentPaidAt: json['deliveryPaymentPaidAt']?.toString(),
       deliveryRequestNotifiedAt: json['deliveryRequestNotifiedAt']?.toString(),
+      recurringPaymentMethod: json['recurringPaymentMethod']?.toString(),
+      recurringPaymentStatus: json['recurringPaymentStatus']?.toString(),
+      recurringCard: json['recurringCard'] is Map
+          ? RecurringCard.fromJson(Map<String, dynamic>.from(
+              json['recurringCard'],
+            ))
+          : null,
       totalAmountToPay: _readNum(json['totalAmountToPay']),
       totalAmountPaid: _readNum(json['totalAmountPaid']),
       totalPaidForPurchase: _readNum(json['totalPaidForPurchase']),
@@ -367,6 +394,9 @@ class Purchase {
       'deliveryPaymentRequestedAt': deliveryPaymentRequestedAt,
       'deliveryPaymentPaidAt': deliveryPaymentPaidAt,
       'deliveryRequestNotifiedAt': deliveryRequestNotifiedAt,
+      'recurringPaymentMethod': recurringPaymentMethod,
+      'recurringPaymentStatus': recurringPaymentStatus,
+      'recurringCard': recurringCard?.toJson(),
       'totalAmountToPay': totalAmountToPay,
       'totalAmountPaid': totalAmountPaid,
       'totalPaidForPurchase': totalPaidForPurchase,
@@ -374,6 +404,71 @@ class Purchase {
           ? List<dynamic>.from(payments!.map((item) => item.toJson()))
           : null,
       'createdAt': createdAt,
+    };
+  }
+}
+
+class RecurringCard {
+  final bool? active;
+  final bool? reusable;
+  final String? last4;
+  final String? cardType;
+  final String? bank;
+  final String? brand;
+  final String? expMonth;
+  final String? expYear;
+  final String? lastChargeAt;
+  final String? lastChargeStatus;
+  final String? lastChargeFailure;
+  final String? lastChargeAuthorizationUrl;
+
+  RecurringCard({
+    this.active,
+    this.reusable,
+    this.last4,
+    this.cardType,
+    this.bank,
+    this.brand,
+    this.expMonth,
+    this.expYear,
+    this.lastChargeAt,
+    this.lastChargeStatus,
+    this.lastChargeFailure,
+    this.lastChargeAuthorizationUrl,
+  });
+
+  factory RecurringCard.fromJson(Map<String, dynamic> json) {
+    return RecurringCard(
+      active: _readBool(json['active']),
+      reusable: _readBool(json['reusable']),
+      last4: json['last4']?.toString(),
+      cardType: json['cardType']?.toString(),
+      bank: json['bank']?.toString(),
+      brand: json['brand']?.toString(),
+      expMonth: json['expMonth']?.toString(),
+      expYear: json['expYear']?.toString(),
+      lastChargeAt: json['lastChargeAt']?.toString(),
+      lastChargeStatus: json['lastChargeStatus']?.toString(),
+      lastChargeFailure: json['lastChargeFailure']?.toString(),
+      lastChargeAuthorizationUrl:
+          json['lastChargeAuthorizationUrl']?.toString(),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'active': active,
+      'reusable': reusable,
+      'last4': last4,
+      'cardType': cardType,
+      'bank': bank,
+      'brand': brand,
+      'expMonth': expMonth,
+      'expYear': expYear,
+      'lastChargeAt': lastChargeAt,
+      'lastChargeStatus': lastChargeStatus,
+      'lastChargeFailure': lastChargeFailure,
+      'lastChargeAuthorizationUrl': lastChargeAuthorizationUrl,
     };
   }
 }

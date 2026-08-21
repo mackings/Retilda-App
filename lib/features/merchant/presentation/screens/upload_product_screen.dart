@@ -198,7 +198,7 @@ class _UploadProductsState extends ConsumerState<UploadProducts> {
         'availableStock': '1000',
         'categories': selectedCategory ?? '',
         'height': heightController.text,
-        'weight': weightController.text,
+        'deliveryWeightKg': weightController.text,
         'width': widthController.text,
         'length': lengthController.text,
       },

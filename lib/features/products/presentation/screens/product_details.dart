@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:retilda/Views/Auth/kyc.dart';
+import 'package:retilda/features/profile/presentation/screens/support.dart';
 import 'package:retilda/Views/Products/Connect/views/connect.dart';
 import 'package:retilda/Views/Products/cartpage.dart';
 import 'package:retilda/Views/Widgets/webview.dart';
@@ -552,6 +553,35 @@ class _ProductDetailsState extends State<ProductDetails> {
           context,
           MaterialPageRoute(
             builder: (context) => const KYC(),
+          ),
+        );
+      },
+    );
+  }
+
+  bool _isProductNotFoundResponse(int statusCode, String? message) {
+    if (statusCode != 404 || message == null) {
+      return false;
+    }
+    return message.toLowerCase().contains('product not found');
+  }
+
+  void _showProductNotFoundDialog([String? message]) {
+    showAppAlert(
+      context: context,
+      title: 'This item needs attention',
+      message: message ??
+          'This purchase is linked to a product our team needs to review before payment can continue. Please contact support so we can sort this out for you.',
+      tone: AppFeedbackTone.warning,
+      buttonText: 'Contact support',
+      secondaryButtonText: 'Okay',
+      icon: Icons.support_agent_rounded,
+      onButtonPressed: () {
+        Navigator.of(context).pop();
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const Support(),
           ),
         );
       },
@@ -1551,6 +1581,10 @@ class _ProductDetailsState extends State<ProductDetails> {
           _showKycRequiredDialog(errorMessage);
           return;
         }
+        if (_isProductNotFoundResponse(response.statusCode, errorMessage)) {
+          _showProductNotFoundDialog(errorMessage);
+          return;
+        }
         showAppAlert(
           context: context,
           title: 'Unable to continue',
@@ -1637,12 +1671,24 @@ class _ProductDetailsState extends State<ProductDetails> {
         if (responseData['success'] == true &&
             responseData['data'] != null &&
             responseData['data']['paymentUrl'] != null) {
-          Navigator.push(
+          await Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) =>
-                  WebViewScreen(url: responseData['data']['paymentUrl']),
+              builder: (context) => WebViewScreen(
+                url: responseData['data']['paymentUrl'],
+                title: 'Set up card payments',
+              ),
             ),
+          );
+          if (!mounted) return;
+          showAppAlert(
+            context: context,
+            title: 'Refresh purchase after payment',
+            message:
+                'After Paystack confirms this payment, open Purchase history and refresh. Delivery will continue only when the card recurring setup is active.',
+            tone: AppFeedbackTone.info,
+            buttonText: 'Okay',
+            icon: Icons.refresh_rounded,
           );
         } else {
           _showErrorDialog(
@@ -1657,6 +1703,10 @@ class _ProductDetailsState extends State<ProductDetails> {
         } catch (_) {}
         if (_isKycRequiredResponse(response.statusCode, errorMessage)) {
           _showKycRequiredDialog(errorMessage);
+          return;
+        }
+        if (_isProductNotFoundResponse(response.statusCode, errorMessage)) {
+          _showProductNotFoundDialog(errorMessage);
           return;
         }
         _showErrorDialog(context, errorMessage);

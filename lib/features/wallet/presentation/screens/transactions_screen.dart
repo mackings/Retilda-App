@@ -5,9 +5,12 @@ import 'package:intl/intl.dart';
 import 'package:retilda/Views/Widgets/widgets.dart';
 import 'package:retilda/core/presentation/widgets/dialogs.dart';
 import 'package:retilda/core/theme/app_theme.dart';
+import 'package:retilda/features/wallet/domain/entities/debt_summary.dart';
 import 'package:retilda/features/wallet/domain/entities/wallet_overview.dart';
 import 'package:retilda/features/wallet/domain/entities/wallet_transaction.dart';
+import 'package:retilda/features/wallet/presentation/providers/debt_providers.dart';
 import 'package:retilda/features/wallet/presentation/providers/wallet_providers.dart';
+import 'package:retilda/features/wallet/presentation/screens/debt_breakdown_screen.dart';
 import 'package:sizer/sizer.dart';
 
 class Transactions extends ConsumerStatefulWidget {
@@ -35,12 +38,14 @@ class _TransactionsState extends ConsumerState<Transactions>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       ref.invalidate(walletOverviewProvider);
+      ref.invalidate(debtSummaryProvider);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final overviewState = ref.watch(walletOverviewProvider);
+    final debtState = ref.watch(debtSummaryProvider);
     final filter = ref.watch(walletTransactionFilterProvider);
     final filteredTransactions = ref.watch(filteredWalletTransactionsProvider);
 
@@ -59,7 +64,10 @@ class _TransactionsState extends ConsumerState<Transactions>
               IconButton(
                 tooltip: 'Refresh',
                 icon: const Icon(Icons.refresh_rounded),
-                onPressed: () => ref.invalidate(walletOverviewProvider),
+                onPressed: () {
+                  ref.invalidate(walletOverviewProvider);
+                  ref.invalidate(debtSummaryProvider);
+                },
               ),
             ],
           ),
@@ -73,6 +81,7 @@ class _TransactionsState extends ConsumerState<Transactions>
                 color: AppTheme.accent,
                 onRefresh: () async {
                   ref.invalidate(walletOverviewProvider);
+                  ref.invalidate(debtSummaryProvider);
                   await ref.read(walletOverviewProvider.future);
                 },
                 child: ListView(
@@ -80,6 +89,16 @@ class _TransactionsState extends ConsumerState<Transactions>
                   padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
                   children: [
                     _WalletBalanceCard(overview: overview),
+                    debtState.when(
+                      loading: () => const SizedBox.shrink(),
+                      error: (_, __) => const SizedBox.shrink(),
+                      data: (debt) => debt.hasDebt
+                          ? Padding(
+                              padding: const EdgeInsets.only(top: 14),
+                              child: _DebtBadgeCard(debt: debt),
+                            )
+                          : const SizedBox.shrink(),
+                    ),
                     const SizedBox(height: 22),
                     Row(
                       children: [
@@ -390,6 +409,73 @@ class _WalletBalanceCard extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+class _DebtBadgeCard extends StatelessWidget {
+  const _DebtBadgeCard({required this.debt});
+
+  final DebtSummary debt;
+
+  static final NumberFormat _formatter = NumberFormat('#,##0.00');
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const DebtBreakdownScreen()),
+        );
+      },
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFF1E8),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFF8D8B8)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              height: 44,
+              width: 44,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.7),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: const Icon(
+                Icons.warning_amber_rounded,
+                color: Color(0xFFB54708),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  CustomText(
+                    'Late fee debt: N${_formatter.format(debt.totalDebt)}',
+                    fontSize: 14.5.sp,
+                    fontWeight: FontWeight.w800,
+                    color: const Color(0xFFB54708),
+                  ),
+                  const SizedBox(height: 2),
+                  CustomText(
+                    '${debt.purchases.length} purchase${debt.purchases.length == 1 ? '' : 's'} with overdue installments · View details',
+                    fontSize: 11.5.sp,
+                    color: Colors.black.withValues(alpha: 0.6),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right_rounded, color: Color(0xFFB54708)),
+          ],
+        ),
+      ),
     );
   }
 }

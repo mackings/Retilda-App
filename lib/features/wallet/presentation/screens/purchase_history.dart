@@ -395,6 +395,7 @@ class _PurchaseHistoryState extends ConsumerState<PurchaseHistory> {
                     purchase.paymentPlan ??
                     'Installment plan')
                 .replaceAll('_', ' ');
+    final recurringStatus = purchase.recurringPaymentStatus;
 
     return InkWell(
       borderRadius: BorderRadius.circular(24),
@@ -573,6 +574,47 @@ class _PurchaseHistoryState extends ConsumerState<PurchaseHistory> {
                           fontWeight: FontWeight.w700,
                           color: const Color(0xFFB26A00),
                         ),
+                      ),
+                    ),
+                  ],
+                  if (purchase.recurringPaymentMethod == 'card') ...[
+                    const SizedBox(height: 10),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: recurringStatus == 'active'
+                            ? const Color(0xFFEFFAF3)
+                            : const Color(0xFFFFF4E8),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            recurringStatus == 'active'
+                                ? Icons.credit_score_rounded
+                                : Icons.credit_card_off_rounded,
+                            size: 16,
+                            color: recurringStatus == 'active'
+                                ? const Color(0xFF127C3D)
+                                : const Color(0xFFB26A00),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              recurringStatus == 'active'
+                                  ? 'Recurring card active'
+                                  : 'Recurring card ${(recurringStatus ?? 'pending').replaceAll('_', ' ')}',
+                              style: GoogleFonts.manrope(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w800,
+                                color: recurringStatus == 'active'
+                                    ? const Color(0xFF127C3D)
+                                    : const Color(0xFFB26A00),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],

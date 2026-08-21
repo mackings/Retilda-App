@@ -7,6 +7,7 @@ import 'package:retilda/Views/Widgets/deliverymodal.dart';
 import 'package:retilda/Views/Widgets/widgets.dart';
 import 'package:retilda/core/presentation/widgets/dialogs.dart';
 import 'package:retilda/core/presentation/widgets/webview.dart';
+import 'package:retilda/features/profile/presentation/screens/support.dart';
 import 'package:retilda/model/purchases.dart';
 import 'package:sizer/sizer.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -135,6 +136,9 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
     if (_isDeliveryCompleted(data)) {
       return true;
     }
+    if (_recurringCardBlocksDelivery(data)) {
+      return false;
+    }
     if (data['deliveryPaymentStatus'] == 'pending') {
       return true;
     }
@@ -168,6 +172,39 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
             data['deliveryPaymentStatus'] == 'paid');
   }
 
+  bool _recurringCardBlocksDelivery(Map<String, dynamic>? data) {
+    if (data == null) return false;
+    return data['baseDeliveryEligible'] == true &&
+        data['recurringPaymentMethod'] == 'card' &&
+        data['recurringPaymentStatus'] != 'active';
+  }
+
+  String? _recurringChallengeUrlFromData(Map<String, dynamic>? data) {
+    final recurringCard = data?['recurringCard'];
+    if (recurringCard is! Map) return null;
+    final url = recurringCard['lastChargeAuthorizationUrl']?.toString();
+    if (url == null || url.isEmpty) return null;
+    return url;
+  }
+
+  String? get _recurringChallengeUrl =>
+      widget.purchase.recurringCard?.lastChargeAuthorizationUrl ??
+      _recurringChallengeUrlFromData(_effectiveDeliveryCalculation);
+
+  String _recurringStatusMessage(String? status) {
+    return switch (status) {
+      'active' => 'Card auto-charge is active for this purchase.',
+      'challenge_required' =>
+        'Paystack needs card authentication before automatic card repayment can continue.',
+      'failed' =>
+        'Automatic card repayment failed. Retry payment or contact support.',
+      'inactive' =>
+        'This card was not saved for recurring installments, so delivery cannot continue from this card setup.',
+      _ =>
+        'Card recurring setup has not been confirmed yet. Refresh this purchase after Paystack checkout.',
+    };
+  }
+
   bool _isCompletedDeliveryCalculationResponse(
     Map<String, dynamic>? data,
     String? message,
@@ -183,6 +220,11 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
     if (data == null) return 'Delivery options';
     if (_isDeliveryCompleted(data)) {
       return 'Delivery confirmed';
+    }
+    if (_recurringCardBlocksDelivery(data)) {
+      return widget.purchase.recurringPaymentStatus == 'challenge_required'
+          ? 'Authenticate card'
+          : 'Recurring card pending';
     }
     if (data['deliveryPaymentStatus'] == 'pending') {
       return 'Pay delivery fee';
@@ -200,6 +242,11 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
     if (data == null) return Icons.local_shipping_outlined;
     if (_isDeliveryCompleted(data)) {
       return Icons.check_circle_outline_rounded;
+    }
+    if (_recurringCardBlocksDelivery(data)) {
+      return widget.purchase.recurringPaymentStatus == 'challenge_required'
+          ? Icons.verified_user_outlined
+          : Icons.credit_card_off_rounded;
     }
     if (data['deliveryPaymentStatus'] == 'pending') {
       return Icons.local_shipping_outlined;
@@ -393,6 +440,32 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
     final lower = message.toLowerCase();
     final bool tokenExpired =
         lower.contains('token has expired') || lower.contains('401');
+    final bool productNotFound =
+        !tokenExpired && lower.contains('product not found');
+
+    if (productNotFound) {
+      showAppAlert(
+        context: context,
+        title: 'This item needs attention',
+        message:
+            'This purchase is linked to a product our team needs to review before payment can continue. Please contact support so we can sort this out for you.',
+        tone: AppFeedbackTone.warning,
+        buttonText: 'Contact support',
+        secondaryButtonText: 'Okay',
+        icon: Icons.support_agent_rounded,
+        onButtonPressed: () {
+          Navigator.of(context).pop();
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const Support(),
+            ),
+          );
+        },
+      );
+      return;
+    }
+
     showAppAlert(
       context: context,
       title: tokenExpired ? 'Session expired' : title,
@@ -482,6 +555,38 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
         tone: AppFeedbackTone.success,
         primaryLabel: 'Done',
         icon: Icons.check_circle_outline_rounded,
+      );
+      return;
+    }
+
+    if (_recurringCardBlocksDelivery(data)) {
+      final status = widget.purchase.recurringPaymentStatus ??
+          data?['recurringPaymentStatus']?.toString();
+      final challengeUrl = _recurringChallengeUrl;
+      if (status == 'challenge_required' &&
+          challengeUrl != null &&
+          challengeUrl.isNotEmpty) {
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => WebViewScreen(
+              url: challengeUrl,
+              title: 'Authenticate card',
+            ),
+          ),
+        );
+        if (!mounted) return;
+        Navigator.of(context).pop(true);
+        return;
+      }
+
+      await showAppNoticeSheet(
+        context: context,
+        title: 'Recurring card not ready',
+        message: _recurringStatusMessage(status),
+        tone: AppFeedbackTone.warning,
+        primaryLabel: 'Done',
+        icon: Icons.credit_card_off_rounded,
       );
       return;
     }
@@ -649,6 +754,9 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
                 widget.purchase.paymentPlan ??
                 'Plan')
             .replaceAll('_', ' ');
+    final recurringStatus = widget.purchase.recurringPaymentStatus;
+    final showRecurringCardStatus =
+        widget.purchase.recurringPaymentMethod == 'card';
 
     return Sizer(
       builder: (context, orientation, deviceType) {
@@ -896,6 +1004,103 @@ class _PurchasesummaryState extends ConsumerState<Purchasesummary> {
                           fontWeight: FontWeight.w700,
                           color: const Color(0xFFB26A00),
                         ),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                  ],
+                  if (showRecurringCardStatus) ...[
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: recurringStatus == 'active'
+                            ? const Color(0xFFEFFAF3)
+                            : const Color(0xFFFFF7ED),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: recurringStatus == 'active'
+                              ? const Color(0xFFB7E4C7)
+                              : const Color(0xFFF6D2B0),
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                recurringStatus == 'active'
+                                    ? Icons.credit_score_rounded
+                                    : Icons.credit_card_off_rounded,
+                                color: recurringStatus == 'active'
+                                    ? const Color(0xFF127C3D)
+                                    : const Color(0xFFB26A00),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Recurring card',
+                                  style: GoogleFonts.spaceGrotesk(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w700,
+                                    color: deepBlue,
+                                  ),
+                                ),
+                              ),
+                              Text(
+                                (recurringStatus ?? 'pending')
+                                    .replaceAll('_', ' '),
+                                style: GoogleFonts.manrope(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w800,
+                                  color: recurringStatus == 'active'
+                                      ? const Color(0xFF127C3D)
+                                      : const Color(0xFFB26A00),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            _recurringStatusMessage(recurringStatus),
+                            style: GoogleFonts.manrope(
+                              fontSize: 13,
+                              height: 1.45,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.black.withValues(alpha: 0.68),
+                            ),
+                          ),
+                          if (recurringStatus == 'challenge_required' &&
+                              (_recurringChallengeUrl ?? '').isNotEmpty) ...[
+                            const SizedBox(height: 12),
+                            SizedBox(
+                              width: double.infinity,
+                              child: FilledButton.icon(
+                                onPressed: () async {
+                                  final navigator = Navigator.of(context);
+                                  await Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => WebViewScreen(
+                                        url: _recurringChallengeUrl!,
+                                        title: 'Authenticate card',
+                                      ),
+                                    ),
+                                  );
+                                  if (!mounted) return;
+                                  navigator.pop(true);
+                                },
+                                icon: const Icon(Icons.open_in_new_rounded),
+                                label: Text(
+                                  'Authenticate card',
+                                  style: GoogleFonts.manrope(
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                     ),
                     const SizedBox(height: 14),

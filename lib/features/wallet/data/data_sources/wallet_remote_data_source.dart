@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:retilda/core/network/api_client.dart';
 import 'package:retilda/core/security/app_session.dart';
+import 'package:retilda/features/wallet/data/models/debt_summary_model.dart';
 import 'package:retilda/features/wallet/data/models/wallet_transaction_model.dart';
 
 class WalletRemoteDataSource {
@@ -52,6 +53,23 @@ class WalletRemoteDataSource {
     if (decoded['success'] == false || decoded['status'] == false) return null;
 
     return _extractBalance(decoded);
+  }
+
+  Future<DebtSummaryModel> getDebtSummary() async {
+    final response = await _apiClient.get('wallet/debt-summary');
+    if (response.statusCode != 200) {
+      throw Exception('Unable to load debt summary');
+    }
+
+    final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+    if (decoded['success'] != true) {
+      throw Exception('Unable to load debt summary');
+    }
+
+    final data = decoded['data'];
+    return DebtSummaryModel.fromJson(
+      data is Map<String, dynamic> ? data : const {},
+    );
   }
 
   double? _extractBalance(dynamic value) {

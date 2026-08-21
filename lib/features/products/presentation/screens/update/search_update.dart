@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:retilda/Views/Products/Update/alldetailsupdate.dart';
 import 'package:retilda/Views/Products/Update/updatedetails.dart';
-import 'package:retilda/Views/Products/details.dart';
 import 'package:retilda/Views/Widgets/components.dart';
 import 'package:retilda/Views/Widgets/productcard.dart';
 import 'package:retilda/Views/Widgets/widgets.dart';
@@ -13,12 +12,14 @@ import 'package:retilda/model/products.dart';
 import 'package:sizer/sizer.dart';
 
 class SearchUpdate extends StatefulWidget {
+  const SearchUpdate({super.key});
+
   @override
-  _SearchUpdateState createState() => _SearchUpdateState();
+  State<SearchUpdate> createState() => _SearchUpdateState();
 }
 
 class _SearchUpdateState extends State<SearchUpdate> {
-  TextEditingController _searchController = TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
   bool _isLoading = false;
   String? token;
   late final ApiClient _apiClient = ApiClient(session: AppSession());
@@ -32,7 +33,7 @@ class _SearchUpdateState extends State<SearchUpdate> {
     }
   }
 
-  void _searchProducts(BuildContext context, String query) async {
+  void _searchProducts(String query) async {
     setState(() {
       _isLoading = true;
     });
@@ -48,6 +49,7 @@ class _SearchUpdateState extends State<SearchUpdate> {
         final apiResponse = ApiResponse.fromJson(jsonResponse);
         final List<Product> searchResults = apiResponse.data;
 
+        if (!mounted) return;
         setState(() {
           _isLoading = false;
         });
@@ -60,12 +62,14 @@ class _SearchUpdateState extends State<SearchUpdate> {
           ),
         );
       } else {
+        if (!mounted) return;
         setState(() {
           _isLoading = false;
         });
         _showErrorDialog(context, 'Product Not Found');
       }
     } catch (error) {
+      if (!mounted) return;
       setState(() {
         _isLoading = false;
       });
@@ -97,6 +101,12 @@ class _SearchUpdateState extends State<SearchUpdate> {
   void initState() {
     _loadUserData();
     super.initState();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   @override
@@ -132,7 +142,7 @@ class _SearchUpdateState extends State<SearchUpdate> {
                         color: ROrange,
                       ),
                       onPressed: () {
-                        _searchProducts(context, _searchController.text);
+                        _searchProducts(_searchController.text);
                       },
                     ),
                   ),
@@ -157,7 +167,25 @@ class _SearchUpdateState extends State<SearchUpdate> {
 class SearchUpdateResultsScreen extends StatelessWidget {
   final List<Product> searchResults;
 
-  SearchUpdateResultsScreen({required this.searchResults});
+  const SearchUpdateResultsScreen({super.key, required this.searchResults});
+
+  void _openPriceUpdate(BuildContext context, Product product) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => UpdateDetails(product: product),
+      ),
+    );
+  }
+
+  void _openFullUpdate(BuildContext context, Product product) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => UpdateAllDetails(product: product),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -176,31 +204,21 @@ class SearchUpdateResultsScreen extends StatelessWidget {
               ),
               itemCount: searchResults.length,
               itemBuilder: (context, index) {
+                final product = searchResults[index];
                 return Padding(
                   padding: const EdgeInsets.all(10.0),
                   child: GestureDetector(
                     onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              UpdateDetails(product: searchResults[index]),
-                        ),
-                      );
+                      _openPriceUpdate(context, product);
                     },
                     onLongPress: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => UpdateAllDetails(
-                            product: searchResults[index],
-                          ),
-                        ),
-                      );
+                      _openFullUpdate(context, product);
                     },
                     child: ProductCard(
-                      product: searchResults[index],
-                      onTap: () {},
+                      product: product,
+                      onTap: () {
+                        _openPriceUpdate(context, product);
+                      },
                     ),
                   ),
                 );
