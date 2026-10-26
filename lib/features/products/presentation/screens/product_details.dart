@@ -330,6 +330,7 @@ class _ProductDetailsState extends State<ProductDetails> {
     );
   }
 
+
   Future<void> getWalletBalance(String walletAccountNumber) async {
     Map<String, String> requestBody = {
       'walletAccountNumber': walletAccountNumber,

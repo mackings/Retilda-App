@@ -11,6 +11,7 @@ import 'package:retilda/core/network/api_client.dart';
 import 'package:retilda/core/network/api_providers.dart';
 import 'package:retilda/core/security/app_session.dart';
 import 'package:retilda/core/theme/app_theme.dart';
+import 'package:retilda/core/utils/image_compression.dart';
 import 'package:retilda/model/categorymodel.dart';
 
 class UploadProducts extends ConsumerStatefulWidget {
@@ -22,13 +23,14 @@ class UploadProducts extends ConsumerStatefulWidget {
 
 class _UploadProductsState extends ConsumerState<UploadProducts> {
   bool isLoading = false;
+  bool isCompressing = false;
   bool isLoadingCategories = false;
   late final ApiClient _apiClient;
 
   List<String> categories = [];
   String? selectedCategory;
 
-  File? image1, image2, image3;
+  File? image1, image2;
   final picker = ImagePicker();
   final _formKey = GlobalKey<FormState>();
 
@@ -142,8 +144,6 @@ class _UploadProductsState extends ConsumerState<UploadProducts> {
           image1 = File(pickedFile.path);
         } else if (imageNumber == 2) {
           image2 = File(pickedFile.path);
-        } else if (imageNumber == 3) {
-          image3 = File(pickedFile.path);
         }
       }
     });
@@ -173,17 +173,22 @@ class _UploadProductsState extends ConsumerState<UploadProducts> {
 
     setState(() {
       isLoading = true;
+      isCompressing = true;
+    });
+
+    final compressed = await ImageCompression.fitToLimit([image1, image2]);
+
+    if (!mounted) return;
+    setState(() {
+      isCompressing = false;
     });
 
     final filePaths = <String, String>{};
-    if (image1 != null) {
-      filePaths['image1'] = image1!.path;
+    if (compressed[0] != null) {
+      filePaths['image1'] = compressed[0]!.path;
     }
-    if (image2 != null) {
-      filePaths['image2'] = image2!.path;
-    }
-    if (image3 != null) {
-      filePaths['image3'] = image3!.path;
+    if (compressed[1] != null) {
+      filePaths['image2'] = compressed[1]!.path;
     }
 
     final response = await _apiClient.multipart(
@@ -403,7 +408,7 @@ class _UploadProductsState extends ConsumerState<UploadProducts> {
                 _SectionTitle(
                   title: 'Category and media',
                   subtitle:
-                      'Choose a category and attach up to three product images.',
+                      'Choose a category and attach up to two product images.',
                 ),
                 const SizedBox(height: 12),
                 _FormCard(
@@ -468,14 +473,6 @@ class _UploadProductsState extends ConsumerState<UploadProducts> {
                             label: 'Image 2',
                           ),
                         ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: _ImagePickerCard(
-                            image: image3,
-                            onTap: () => pickImage(3),
-                            label: 'Image 3',
-                          ),
-                        ),
                       ],
                     ),
                   ],
@@ -504,7 +501,11 @@ class _UploadProductsState extends ConsumerState<UploadProducts> {
                           )
                         : const Icon(Icons.cloud_upload_rounded),
                     label: Text(
-                      isLoading ? 'Uploading product...' : 'Upload product',
+                      isCompressing
+                          ? 'Compressing images...'
+                          : isLoading
+                              ? 'Uploading product...'
+                              : 'Upload product',
                     ),
                   ),
                 ),

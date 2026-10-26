@@ -8,6 +8,7 @@ import 'package:retilda/Views/Widgets/components.dart';
 import 'package:retilda/Views/Widgets/widgets.dart';
 import 'package:retilda/core/network/api_client.dart';
 import 'package:retilda/core/security/app_session.dart';
+import 'package:retilda/core/utils/image_compression.dart';
 import 'package:retilda/model/products.dart';
 import 'package:sizer/sizer.dart';
 
@@ -27,7 +28,8 @@ class _UpdateAllDetailsState extends State<UpdateAllDetails> {
   late final ApiClient _apiClient = ApiClient(session: AppSession());
 
   final Map<String, TextEditingController> _controllers = {};
-  final List<File?> _selectedImages = [null, null, null];
+  final List<File?> _selectedImages = [null, null];
+  bool isCompressing = false;
 
   final List<Map<String, dynamic>> _fields = [
     {'label': 'Name', 'key': 'name', 'type': TextInputType.text},
@@ -138,10 +140,20 @@ class _UpdateAllDetailsState extends State<UpdateAllDetails> {
             : text;
       }
 
+      setState(() {
+        isCompressing = true;
+      });
+      final compressedImages =
+          await ImageCompression.fitToLimit(_selectedImages);
+      if (!mounted) return;
+      setState(() {
+        isCompressing = false;
+      });
+
       final filePaths = <String, String>{};
-      for (int i = 0; i < _selectedImages.length; i++) {
-        if (_selectedImages[i] != null) {
-          filePaths['image${i + 1}'] = _selectedImages[i]!.path;
+      for (int i = 0; i < compressedImages.length; i++) {
+        if (compressedImages[i] != null) {
+          filePaths['image${i + 1}'] = compressedImages[i]!.path;
         }
       }
 
@@ -298,11 +310,11 @@ class _UpdateAllDetailsState extends State<UpdateAllDetails> {
                   Wrap(
                     spacing: 10,
                     runSpacing: 10,
-                    children: List.generate(3, (index) {
+                    children: List.generate(2, (index) {
                       return GestureDetector(
                         onTap: () => _pickImage(index),
                         child: Container(
-                          width: MediaQuery.of(context).size.width / 3.7,
+                          width: MediaQuery.of(context).size.width / 2.3,
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(14),
@@ -372,7 +384,11 @@ class _UpdateAllDetailsState extends State<UpdateAllDetails> {
                             )
                           : const Icon(Icons.save_outlined),
                       label: CustomText(
-                        loading ? 'Updating...' : 'Update product',
+                        isCompressing
+                            ? 'Compressing images...'
+                            : loading
+                                ? 'Updating...'
+                                : 'Update product',
                         color: Colors.white,
                         fontWeight: FontWeight.w700,
                       ),
